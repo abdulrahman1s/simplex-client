@@ -1,7 +1,7 @@
 # simplex-client
 
-A SimpleX Chat protocol client in Rust: connect, chat, run groups, send files, with a
-discord.js-sized API on top.
+A SimpleX Chat protocol client in Rust: connect, chat, run groups and send files through a
+small, plain API.
 
 [![CI](https://github.com/abdulrahman1s/simplex-client/actions/workflows/ci.yml/badge.svg)](https://github.com/abdulrahman1s/simplex-client/actions/workflows/ci.yml)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
