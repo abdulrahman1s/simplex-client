@@ -1,3 +1,4 @@
+//! Chat items: pages, changes and ids that are never reused.
 use super::{Bed, both};
 
 fn page_returns_the_newest_items_oldest_first_and_honours_the_before_cursor(d: Bed) {

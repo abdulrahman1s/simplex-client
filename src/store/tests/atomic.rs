@@ -1,3 +1,4 @@
+//! Batches: all of them or none.
 use super::{Bed, both};
 use crate::store::{Op, StoreError};
 

@@ -1,4 +1,5 @@
 //! The client in a browser tab or node: JS bindings, a single-threaded runtime driven by one timer, and relays through a WebSocket tunnel.
+mod answers;
 mod client;
 mod clock;
 mod codec;

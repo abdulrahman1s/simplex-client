@@ -1,3 +1,4 @@
+//! Snapshots: only ciphertext, the key check, total parsing, and either backend saved.
 use super::{Bed, both};
 use crate::store::{Store, StoreError};
 

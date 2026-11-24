@@ -1,3 +1,4 @@
+//! Opening again: the right key reads back, a wrong one is refused, ids stay used.
 use super::{Bed, both};
 use crate::store::StoreError;
 

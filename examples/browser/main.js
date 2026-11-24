@@ -46,7 +46,8 @@ function showMessage(m) {
   if (!current || m.chat.t !== "direct" || m.chat.c !== current) return;
   const p = document.createElement("p");
   p.className = m.mine ? "mine" : "";
-  p.textContent = m.text;
+  // Notices (a friend connected, a call ended) carry no text; show their kind instead.
+  p.textContent = m.text || `(${m.body.t})`;
   $("messages").append(p);
   $("messages").scrollTop = $("messages").scrollHeight;
 }

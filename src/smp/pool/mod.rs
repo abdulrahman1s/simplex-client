@@ -1,4 +1,6 @@
 //! Relays through a WebSocket byte tunnel: one sans-I/O `SmpSession` per relay over a pipe the owner dials, reconnecting with back-off (the Worker's tunnel protocol v1).
+mod dial;
+mod ending;
 mod link;
 mod pipe;
 mod slot;

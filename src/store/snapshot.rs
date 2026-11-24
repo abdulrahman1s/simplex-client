@@ -1,8 +1,8 @@
 //! A store as one byte string: every sealed row in a versioned, length-prefixed format.
-//!
-//! `MAGIC || version (u32 LE) || meta || kv || items || files || seq || last item id`, each table
-//! a count and its rows, each blob a u32 LE length and its bytes. Values stay sealed, so the
-//! bytes hold what the SQLite file holds: namespaces, counters and ciphertext.
+
+// `MAGIC || version (u32 LE) || meta || kv || items || files || seq || last item id`, each table
+// a count and its rows, each blob a u32 LE length and its bytes. Values stay sealed, so the
+// bytes hold what the SQLite file holds: namespaces, counters and ciphertext.
 
 use super::StoreError;
 use super::handle::Store;

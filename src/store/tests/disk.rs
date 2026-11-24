@@ -1,3 +1,4 @@
+//! The SQLite file holds no plaintext.
 use super::Dir;
 use crate::store::Store;
 
