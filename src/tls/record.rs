@@ -33,13 +33,20 @@ impl Protection {
         }
     }
 
-    fn next_nonce(&mut self) -> [u8; 12] {
+    /// A wrapped sequence number would reuse a nonce, so the connection ends first (RFC 8446 section 5.3).
+    fn next_nonce(&mut self) -> Result<[u8; 12], TlsError> {
         let mut nonce = self.iv;
         for (n, s) in nonce[4..].iter_mut().zip(self.seq.to_be_bytes()) {
             *n ^= s;
         }
-        self.seq += 1;
-        nonce
+        self.seq = (self.seq.checked_add(1)).ok_or(TlsError::Internal("record sequence number"))?;
+        Ok(nonce)
+    }
+
+    #[cfg(all(test, feature = "native"))]
+    pub(super) fn at_seq(mut self, seq: u64) -> Self {
+        self.seq = seq;
+        self
     }
 
     /// A whole record (header and ciphertext) carrying `content` of type `ty`.
@@ -48,7 +55,7 @@ impl Protection {
         inner.push(ty);
         let len = inner.len() + TAG_LEN;
         let header = [APPLICATION_DATA, 3, 3, (len >> 8) as u8, len as u8];
-        let nonce = self.next_nonce();
+        let nonce = self.next_nonce()?;
         let sealed = self
             .aead
             .encrypt(
@@ -64,7 +71,7 @@ impl Protection {
 
     /// The inner content type and content of a protected record.
     pub(super) fn open(&mut self, header: &[u8], body: &[u8]) -> Result<(u8, Vec<u8>), TlsError> {
-        let nonce = self.next_nonce();
+        let nonce = self.next_nonce()?;
         let mut inner = self
             .aead
             .decrypt(
@@ -75,6 +82,10 @@ impl Protection {
                 },
             )
             .map_err(|_| TlsError::BadRecordMac)?;
+        // TLSInnerPlaintext, padding included, is at most 2^14 + 1 bytes (RFC 8446 section 5.4).
+        if inner.len() > MAX_PLAINTEXT + 1 {
+            return Err(TlsError::RecordOverflow);
+        }
         while inner.last() == Some(&0) {
             inner.pop();
         }
@@ -126,7 +137,7 @@ impl Inbound {
         if major != 3 {
             return Err(TlsError::Illegal("record version"));
         }
-        if len > MAX_CIPHERTEXT {
+        if len > MAX_CIPHERTEXT || (ty != APPLICATION_DATA && len > MAX_PLAINTEXT) {
             return Err(TlsError::RecordOverflow);
         }
         if self.buf.len() < 5 + len {

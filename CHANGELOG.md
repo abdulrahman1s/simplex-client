@@ -82,3 +82,7 @@ All notable changes to this project are documented here. The format follows
 - TLS refuses handshake messages that span a key change (RFC 8446 section 5.1): the encrypted
   server flight sent unencrypted in the ServerHello record, anything after the server Finished
   in its record, and anything after a KeyUpdate in its record.
+- Stricter TLS 1.3 checks: the ServerHello must carry `supported_versions` = TLS 1.3, an
+  extension type may appear once, EncryptedExtensions may only answer what the ClientHello
+  offered, a CertificateRequest must carry `signature_algorithms`, records over the plaintext
+  limit are refused with `record_overflow`, and a record sequence number never wraps.

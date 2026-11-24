@@ -83,12 +83,17 @@ pub(super) fn take_handshake_message(pending: &mut Vec<u8>) -> Option<(u8, Vec<u
     Some((raw[0], raw))
 }
 
-/// Extensions of a hello or EncryptedExtensions body as `(type, data)` pairs.
+/// Extensions of a hello or EncryptedExtensions body as `(type, data)` pairs; a type may appear
+/// once (RFC 8446 section 4.2).
 pub(super) fn extensions(block: &[u8]) -> Result<Vec<(u16, &[u8])>, TlsError> {
     let mut r = Reader::new(block);
-    let mut out = Vec::new();
+    let mut out: Vec<(u16, &[u8])> = Vec::new();
     while !r.is_empty() {
-        out.push((r.u16()?, r.vec16()?));
+        let (ty, data) = (r.u16()?, r.vec16()?);
+        if out.iter().any(|(seen, _)| *seen == ty) {
+            return Err(TlsError::Illegal("duplicate extension"));
+        }
+        out.push((ty, data));
     }
     Ok(out)
 }
@@ -131,6 +136,14 @@ mod tests {
         let mut r = Reader::new(&[1, 2]);
         r.u8().unwrap();
         assert!(matches!(r.finish(), Err(TlsError::Decode(_))));
+    }
+
+    #[test]
+    fn an_extension_type_may_appear_only_once() {
+        let block = [extension(16, &[1]), extension(16, &[2])].concat();
+        assert!(matches!(extensions(&block), Err(TlsError::Illegal(_))));
+        let block = [extension(16, &[1]), extension(10, &[2])].concat();
+        assert_eq!(extensions(&block).unwrap().len(), 2);
     }
 
     #[test]

@@ -11,8 +11,8 @@ pub(super) const GROUP_X25519: u16 = 0x001d;
 pub(super) const EXT_ALPN: u16 = 16;
 pub(super) const EXT_SUPPORTED_VERSIONS: u16 = 43;
 pub(super) const EXT_KEY_SHARE: u16 = 51;
-const EXT_SUPPORTED_GROUPS: u16 = 10;
-const EXT_SIGNATURE_ALGORITHMS: u16 = 13;
+pub(super) const EXT_SUPPORTED_GROUPS: u16 = 10;
+pub(super) const EXT_SIGNATURE_ALGORITHMS: u16 = 13;
 
 pub(super) struct ClientHello {
     /// The record to send.

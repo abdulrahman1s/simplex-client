@@ -29,12 +29,20 @@ pub(super) fn server_flight(
         data.extend(list);
         ee = extension(16, &data);
     }
+    if let Some(ty) = o.ee_extension {
+        ee.extend(extension(ty, &[]));
+    }
     let mut body = Vec::new();
     put_u16(&mut body, ee.len());
     body.extend(ee);
     add(handshake_message(8, &body), transcript);
     if o.cert_request {
-        add(handshake_message(13, &[1, 0xaa, 0, 0]), transcript);
+        let request: &[u8] = if o.cert_request_bare {
+            &[1, 0xaa, 0, 0]
+        } else {
+            &[1, 0xaa, 0, 8, 0, 13, 0, 4, 0, 2, 8, 7]
+        };
+        add(handshake_message(13, request), transcript);
     }
     let chain = if o.empty_chain { &[][..] } else { chain };
     let mut list = Vec::new();

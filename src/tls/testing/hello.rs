@@ -19,7 +19,10 @@ pub(super) fn server_hello(o: &MockOpts, eph: &KeyPair, random: [u8; 32]) -> Vec
     let mut share = 0x001du16.to_be_bytes().to_vec();
     put_u16(&mut share, 32);
     share.extend_from_slice(eph.public.as_bytes());
-    let exts = [extension(43, &[3, 4]), extension(51, &share)].concat();
+    let mut exts = extension(51, &share);
+    if !o.no_supported_versions {
+        exts.extend(extension(43, &[3, 4]));
+    }
     let mut body = vec![3, 3];
     body.extend_from_slice(&random);
     body.extend_from_slice(&[0, 0x13, 0x03, 0]);

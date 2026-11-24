@@ -14,6 +14,14 @@ pub(crate) struct MockOpts {
     pub empty_chain: bool,
     pub hrr: bool,
     pub cert_request: bool,
+    /// A CertificateRequest without signature_algorithms.
+    pub cert_request_bare: bool,
+    /// An extra, empty extension of this type in EncryptedExtensions.
+    pub ee_extension: Option<u16>,
+    /// A ServerHello without supported_versions.
+    pub no_supported_versions: bool,
+    /// An application record of 2^14 + 200 bytes of plaintext.
+    pub oversized_app: bool,
     pub compat_ccs: bool,
     pub coalesce: bool,
     /// ServerHello and the whole flight in one plaintext record.
@@ -47,6 +55,10 @@ impl Default for MockOpts {
             empty_chain: false,
             hrr: false,
             cert_request: false,
+            cert_request_bare: false,
+            ee_extension: None,
+            no_supported_versions: false,
+            oversized_app: false,
             compat_ccs: false,
             coalesce: false,
             plaintext_flight: false,

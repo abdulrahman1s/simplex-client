@@ -36,6 +36,9 @@ pub(super) fn app_phase(
         }
         sock.write_all(&rec)?;
     }
+    if o.oversized_app {
+        sock.write_all(&tx.seal(APPLICATION_DATA, &[0x41; 16384 + 200])?)?;
+    }
     if !o.second_data.is_empty() {
         sock.write_all(&tx.seal(APPLICATION_DATA, &o.second_data)?)?;
     }

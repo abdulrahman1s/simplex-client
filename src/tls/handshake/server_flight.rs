@@ -2,7 +2,8 @@
 use super::super::error::TlsError;
 use super::super::wire::{Reader, extensions};
 use super::client_hello::{
-    EXT_ALPN, EXT_KEY_SHARE, EXT_SUPPORTED_VERSIONS, GROUP_X25519, SUITE_CHACHA20_POLY1305,
+    EXT_ALPN, EXT_KEY_SHARE, EXT_SIGNATURE_ALGORITHMS, EXT_SUPPORTED_GROUPS,
+    EXT_SUPPORTED_VERSIONS, GROUP_X25519, SUITE_CHACHA20_POLY1305,
 };
 
 pub(super) const SERVER_HELLO: u8 = 2;
@@ -35,16 +36,20 @@ pub(super) fn parse_server_hello(body: &[u8]) -> Result<[u8; 32], TlsError> {
     if r.u8()? != 0 {
         return Err(TlsError::Illegal("compression"));
     }
-    let mut key = None;
+    let (mut key, mut tls13) = (None, false);
     for (ty, data) in extensions(r.vec16()?)? {
         match ty {
-            EXT_SUPPORTED_VERSIONS if data == [3, 4] => {}
+            EXT_SUPPORTED_VERSIONS if data == [3, 4] => tls13 = true,
             EXT_SUPPORTED_VERSIONS => return Err(TlsError::Illegal("not TLS 1.3")),
             EXT_KEY_SHARE => key = Some(parse_key_share(data)?),
             _ => return Err(TlsError::Unsupported("ServerHello extension")),
         }
     }
     r.finish()?;
+    // Without supported_versions the server chose TLS 1.2 or older (RFC 8446 section 4.2.1).
+    if !tls13 {
+        return Err(TlsError::Illegal("not TLS 1.3"));
+    }
     key.ok_or(TlsError::Protocol("ServerHello without key_share"))
 }
 
@@ -69,6 +74,13 @@ pub(super) fn parse_encrypted_extensions(
     let mut r = Reader::new(body);
     let exts = extensions(r.vec16()?)?;
     r.finish()?;
+    // Only answers to what the ClientHello offered may come back here (RFC 8446 section 4.2).
+    if exts
+        .iter()
+        .any(|(ty, _)| !matches!(*ty, EXT_ALPN | EXT_SUPPORTED_GROUPS))
+    {
+        return Err(TlsError::Unsupported("EncryptedExtensions extension"));
+    }
     let Some((_, data)) = exts.into_iter().find(|(ty, _)| *ty == EXT_ALPN) else {
         return Ok(None);
     };
@@ -85,9 +97,19 @@ pub(super) fn parse_encrypted_extensions(
         .ok_or(TlsError::Alpn)
 }
 
-/// The request context to echo in our (empty) Certificate.
+/// The request context to echo in our (empty) Certificate; signature_algorithms is required
+/// (RFC 8446 section 4.3.2).
 pub(super) fn parse_certificate_request(body: &[u8]) -> Result<Vec<u8>, TlsError> {
-    Reader::new(body).vec8().map(<[u8]>::to_vec)
+    let mut r = Reader::new(body);
+    let context = r.vec8()?.to_vec();
+    let exts = extensions(r.vec16()?)?;
+    r.finish()?;
+    if !exts.iter().any(|(ty, _)| *ty == EXT_SIGNATURE_ALGORITHMS) {
+        return Err(TlsError::Protocol(
+            "CertificateRequest without signature_algorithms",
+        ));
+    }
+    Ok(context)
 }
 
 /// The DER certificates of the server's Certificate message, leaf first.

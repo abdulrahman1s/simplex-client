@@ -2,6 +2,7 @@
 
 mod boundaries;
 mod client;
+mod conformance;
 mod der;
 mod handshake;
 mod identity;
