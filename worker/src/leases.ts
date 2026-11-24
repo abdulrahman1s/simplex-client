@@ -40,9 +40,12 @@ export function admit(s: CounterState, id: string, rules: CounterRules, now: num
   return "ok";
 }
 
-/** Extends a live tunnel's lease, or takes it again if it lapsed; renewal never hits a limit. */
+/**
+ * Extends a live tunnel's lease. A released or lapsed lease stays gone: a renewal still in
+ * flight when the tunnel ends must not take its slot back.
+ */
 export function renew(s: CounterState, id: string, now: number, leaseMs: number): void {
-  s.leases[id] = now + leaseMs;
+  if (id in s.leases) s.leases[id] = now + leaseMs;
 }
 
 export function release(s: CounterState, id: string): void {

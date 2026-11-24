@@ -97,6 +97,16 @@ describe("counter admission", () => {
     expect(Object.keys(s.leases)).toEqual(["live"]);
   });
 
+  it("does not bring back a lease that a late renewal reaches after its release", () => {
+    const s = emptyState();
+    const one = { ...rules, maxOpen: 1 };
+    expect(admit(s, "a", one, 0)).toBe("ok");
+    release(s, "a");
+    renew(s, "a", 1, one.leaseMs);
+    expect(s.leases).toEqual({});
+    expect(admit(s, "b", one, 2)).toBe("ok");
+  });
+
   it("reports when it next changes, and nothing once empty", () => {
     const s = emptyState();
     expect(nextExpiry(s)).toBeNull();
