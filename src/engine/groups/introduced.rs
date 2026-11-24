@@ -2,7 +2,9 @@
 
 use super::role::{at_least, may_admit};
 use crate::agent::links::ConnectionLink;
-use crate::chat::group::{GroupMemberRole, IntroInvitation, MemberInfo};
+use crate::chat::group::{
+    GroupMemberRole, IntroInvitation, MemberInfo, MemberRestrictionStatus, MemberRestrictions,
+};
 use crate::chat::version::CHAT_INITIAL_VRANGE;
 use crate::chat::{ChatEvent, ChatMessage};
 use crate::engine::agent_port::AgentPort;
@@ -11,7 +13,14 @@ use crate::engine::machine::Engine;
 use crate::engine::records::{ConnKind, ConnRecord, MemberCategory, MemberStatus};
 
 impl<A: AgentPort> Engine<A> {
-    pub(crate) fn on_mem_intro(&mut self, group: i64, sender: i64, info: MemberInfo) -> Result<()> {
+    /// `restrictions`: the member is blocked for everyone (Store/Groups.hs `createIntroReMember`).
+    pub(crate) fn on_mem_intro(
+        &mut self,
+        group: i64,
+        sender: i64,
+        info: MemberInfo,
+        restrictions: Option<&MemberRestrictions>,
+    ) -> Result<()> {
         let from = self.member(group, sender)?;
         if from.category != MemberCategory::Host {
             self.log.line(format_args!(
@@ -50,6 +59,8 @@ impl<A: AgentPort> Engine<A> {
             None,
         )?;
         m.conn = Some(conn);
+        m.blocked_by_admin =
+            restrictions.is_some_and(|r| r.restriction == MemberRestrictionStatus::Blocked);
         let member = m.id;
         self.save_member(m)?;
         self.save_conn(ConnRecord {

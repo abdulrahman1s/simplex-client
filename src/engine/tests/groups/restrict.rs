@@ -126,3 +126,47 @@ fn a_member_blocked_for_everyone_is_left_out_of_the_history() {
     t.agent(AgentEvent::Con { conn });
     assert!(history(&t, conn).is_empty());
 }
+
+#[test]
+fn a_member_introduced_as_blocked_for_everyone_is_kept_blocked() {
+    use super::members_join::joined_team;
+    use super::members_support::info;
+    let mut t = T::started();
+    let (g, _, host_conn) = joined_team(&mut t);
+    let carol = info("carol", GroupMemberRole::Member);
+    let intro = ChatEvent::GrpMemIntro {
+        member_info: carol.clone(),
+        restrictions: Some(MemberRestrictions {
+            restriction: MemberRestrictionStatus::Blocked,
+        }),
+    };
+    t.peer_says(&host_conn, 10, intro);
+    assert!(
+        t.e.member_by_id(g, &carol.member_id)
+            .unwrap()
+            .blocked_by_admin
+    );
+}
+
+#[test]
+fn a_host_introduces_a_member_blocked_for_everyone_as_blocked() {
+    use super::history::{dave_accepted, team};
+    use super::members_support::sent_on;
+    use crate::engine::agent_port::AgentEvent;
+    let mut t = T::started();
+    let (g, _) = team(&mut t, false);
+    let carol = t.e.state.members_of(g).next().unwrap().id;
+    let mut c = t.e.member(g, carol).unwrap();
+    c.blocked_by_admin = true;
+    t.e.save_member(c).unwrap();
+    let conn = dave_accepted(&mut t, g);
+    t.agent(AgentEvent::Con { conn });
+    let restrictions = sent_on(&t, conn).into_iter().find_map(|e| match e {
+        ChatEvent::GrpMemIntro { restrictions, .. } => Some(restrictions),
+        _ => None,
+    });
+    assert_eq!(
+        restrictions.unwrap().map(|r| r.restriction),
+        Some(MemberRestrictionStatus::Blocked)
+    );
+}

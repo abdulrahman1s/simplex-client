@@ -27,9 +27,10 @@ impl<A: AgentPort> Engine<A> {
             ChatEvent::GrpMemNew { member_info, scope } => {
                 self.on_mem_new(ctx, &member_info, scope.as_ref())
             }
-            ChatEvent::GrpMemIntro { member_info, .. } => {
-                self.on_mem_intro(group, sender, member_info)
-            }
+            ChatEvent::GrpMemIntro {
+                member_info,
+                restrictions,
+            } => self.on_mem_intro(group, sender, member_info, restrictions.as_ref()),
             ChatEvent::GrpMemInv { member_id, intro } => {
                 self.on_mem_inv(group, sender, &member_id, intro)
             }

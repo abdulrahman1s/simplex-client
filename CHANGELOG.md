@@ -107,7 +107,8 @@ All notable changes to this project are documented here. The format follows
   messages are collapsed and never unread, their mentions are dropped, their pictures are not
   fetched by themselves and their items stay out of the history a host sends. A
   `ChatNotice::MemberBlocked` item tells it, and an unblock undoes it. The user's own unblock
-  does not.
+  does not. `x.grp.mem.intro` carries the block both ways (`memberRestrictions`), so a member
+  who joins later learns of it.
 - A friend's deletion of its own message is taken only if the relay took it within 78 hours
   of the message (`limits::RCV_DELETE_WINDOW_MS`, Subscriber.hs `rcvItemDeletable`); a later
   one is ignored. `AgentEvent::Msg` carries the relay's time (`broker_ts`) for it.
