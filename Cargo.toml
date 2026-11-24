@@ -34,7 +34,7 @@ chacha20poly1305 = "0.11.0"
 ed25519-dalek = "3.0.0"
 ed448-goldilocks = "=0.14.0-pre.15"
 cipher = "0.5"
-getrandom = "0.3"
+getrandom = "0.4"
 # Only named so `wasm` can turn on its JS backend; the RustCrypto crates pull it in.
 getrandom04 = { package = "getrandom", version = "0.4", optional = true }
 hkdf = "0.13.0"
