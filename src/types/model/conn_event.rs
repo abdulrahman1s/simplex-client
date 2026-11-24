@@ -1,4 +1,4 @@
-//! What a connection-event notice says: the phase of an address switch, the state of a ratchet re-sync and a broken message chain (CIContent/Events.hs `RcvConnEvent`, `SndConnEvent`; CIContent.hs `msgIntegrityError`).
+//! What a connection-event notice says: the phase of an address switch, the state of a ratchet re-sync, a broken message chain and a message that did not decrypt (CIContent/Events.hs `RcvConnEvent`, `SndConnEvent`; CIContent.hs `msgIntegrityError`, `msgDecryptErrorText`).
 
 use serde::{Deserialize, Serialize};
 
@@ -39,4 +39,19 @@ pub enum IntegrityError {
     BadHash,
     /// "duplicate message ID"
     Duplicate,
+}
+
+/// `MsgDecryptError` of `CIRcvDecryptionError`: "decryption error, possibly due to the device
+/// change", with why.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DecryptError {
+    /// "header": no key opened the ratchet header.
+    Header,
+    /// "too many skipped messages"
+    TooManySkipped,
+    /// "earlier message"
+    Earlier,
+    /// The message itself did not open.
+    Other,
 }

@@ -7,6 +7,7 @@ mod change;
 mod codes;
 mod conn_events;
 mod contact;
+mod decrypt_error;
 mod fake_agent;
 mod files;
 mod friend_pq;

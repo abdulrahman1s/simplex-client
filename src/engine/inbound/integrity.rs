@@ -24,6 +24,10 @@ impl<A: AgentPort> Engine<A> {
         };
         let notice = ChatNotice::Integrity(shown(e));
         if let Some(friend) = self.state.friend_of(conn) {
+            // A blocked friend's chat keeps nothing that arrives.
+            if self.friend(friend)?.blocked {
+                return Ok(());
+            }
             return self.notice(friend, notice);
         }
         if let Some((group, member)) = self.state.member_of(conn) {

@@ -90,6 +90,13 @@ pub enum AgentEvent {
         conn: ConnId,
         err: AgentFailure,
     },
+    /// A message on `conn` did not decrypt (`RSYNC` with `A_CRYPTO`); `count` is 1, or the
+    /// messages skipped for `TooManySkipped`.
+    DecryptError {
+        conn: ConnId,
+        error: crate::types::model::DecryptError,
+        count: u32,
+    },
     /// The links of a `create_address`: the full one and the short one when the relay stores it.
     Address {
         conn: ConnId,

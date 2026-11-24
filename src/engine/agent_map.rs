@@ -4,7 +4,10 @@ use super::agent_port::{AgentEvent, AgentFailure, AgentMsgId, ConnId};
 use super::log::Log;
 use crate::agent::AgentError;
 use crate::agent::client::{self, AgentEvent as Native};
+use crate::agent::resync::crypto_sync_state;
+use crate::ratchet::RatchetError;
 use crate::smp::SmpServer;
+use crate::types::model::DecryptError;
 
 pub(super) const fn conn_id(c: client::ConnId) -> ConnId {
     ConnId(c.0)
@@ -44,6 +47,33 @@ pub(super) fn failure(e: &AgentError) -> AgentFailure {
         | AgentError::Expired
         | AgentError::Unsupported(_) => AgentFailure::Other(detail),
     }
+}
+
+/// Subscriber.hs `agentMsgDecryptError`: the `A_CRYPTO` errors a message that did not decrypt
+/// gives, which the agent reports once per message.
+fn decrypt_error(e: &AgentError) -> Option<(DecryptError, u32)> {
+    let AgentError::Ratchet(e) = e else {
+        return None;
+    };
+    // The errors that move the ratchet-sync state are exactly `A_CRYPTO`'s.
+    crypto_sync_state(e)?;
+    Some(match e {
+        RatchetError::HeaderKey => (DecryptError::Header, 1),
+        RatchetError::TooManySkipped(n) => (DecryptError::TooManySkipped, *n),
+        RatchetError::EarlierMessage(_) => (DecryptError::Earlier, 1),
+        RatchetError::AesDecrypt
+        | RatchetError::Crypto(_)
+        | RatchetError::LargeMsg
+        | RatchetError::Header(_)
+        | RatchetError::State
+        | RatchetError::KemState
+        | RatchetError::DuplicateMessage
+        | RatchetError::Kem(_)
+        | RatchetError::Version
+        | RatchetError::BadState(_)
+        | RatchetError::Decode(_)
+        | RatchetError::Encode(_) => (DecryptError::Other, 1),
+    })
 }
 
 /// `None` for what the engine does not act on (logged where it says something).
@@ -102,9 +132,16 @@ pub(super) fn event(e: Native, log: &Log) -> Option<AgentEvent> {
         Native::Down { server } => AgentEvent::Down {
             server: host(&server),
         },
-        Native::Err { conn, err } => AgentEvent::Err {
-            conn: conn_id(conn),
-            err: failure(&err),
+        Native::Err { conn, err } => match decrypt_error(&err) {
+            Some((error, count)) => AgentEvent::DecryptError {
+                conn: conn_id(conn),
+                error,
+                count,
+            },
+            None => AgentEvent::Err {
+                conn: conn_id(conn),
+                err: failure(&err),
+            },
         },
         Native::Mwarn { conn, msg_id, err } => {
             log.line(format_args!(
@@ -214,6 +251,27 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    #[test]
+    fn a_message_that_did_not_decrypt_is_a_decryption_error_and_others_stay_errors() {
+        use crate::ratchet::RatchetError as E;
+        let err = |e| Native::Err {
+            conn: client::ConnId(1),
+            err: AgentError::Ratchet(e),
+        };
+        let got = |e| match event(err(e), &Log::discard()) {
+            Some(AgentEvent::DecryptError { error, count, .. }) => Some((error, count)),
+            _ => None,
+        };
+        assert_eq!(got(E::HeaderKey), Some((DecryptError::Header, 1)));
+        assert_eq!(
+            got(E::TooManySkipped(700)),
+            Some((DecryptError::TooManySkipped, 700))
+        );
+        assert_eq!(got(E::EarlierMessage(3)), Some((DecryptError::Earlier, 1)));
+        assert_eq!(got(E::AesDecrypt), Some((DecryptError::Other, 1)));
+        assert_eq!(got(E::Version), None);
     }
 
     #[test]

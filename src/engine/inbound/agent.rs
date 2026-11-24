@@ -52,6 +52,9 @@ impl<A: AgentPort> Engine<A> {
                 Ok(())
             }
             AgentEvent::Err { conn, err } => self.on_conn_error(&conn, &err),
+            AgentEvent::DecryptError { conn, error, count } => {
+                self.on_decrypt_error(&conn, error, count)
+            }
             AgentEvent::RatchetSync { conn, state } => self.on_ratchet_sync(&conn, state),
             AgentEvent::Switch { conn, phase } => self.on_switch(&conn, phase),
             e @ (AgentEvent::Address { conn, .. } | AgentEvent::Req { conn, .. }) => {
