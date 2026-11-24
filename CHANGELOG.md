@@ -93,6 +93,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- `x.grp.link.acpt` acts only on a member waiting for approval or review. 7.1.4 takes any
+  member, so a moderator could demote an owner or bring a removed member back; such a message
+  is now ignored.
 - A moderator's "block for all" (`x.grp.mem.restrict`) is applied, as `xGrpMemRestrict` does:
   the member is kept as `blocked_by_admin`, shown as `blocked` in the member list, their
   messages are collapsed and never unread, their mentions are dropped, their pictures are not

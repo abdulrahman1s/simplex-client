@@ -39,6 +39,16 @@ impl<A: AgentPort> Engine<A> {
                 "x.grp.link.acpt error: referenced member does not exist",
             ));
         };
+        // Stricter than 7.1.4, whose `xGrpLinkAcpt` takes any member: a moderator could demote an owner or revive a removed member.
+        if !matches!(
+            m.status,
+            MemberStatus::PendingApproval | MemberStatus::PendingReview
+        ) {
+            return Err(fail(
+                Code::RequestFailed,
+                "x.grp.link.acpt: member is not pending",
+            ));
+        }
         let mut m = m;
         m.role = role.clone();
         m.status = if m.conn.is_some() {
