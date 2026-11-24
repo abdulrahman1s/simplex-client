@@ -12,7 +12,25 @@ use crate::crypto::{aead_encrypt, can_pad};
 use crate::encoding::{Decode, DecodeError, Decoder, Encode, EncodeError, Large, Version};
 
 /// What `encrypt_header` hands over for `encrypt_msg`, so the message can be encrypted later (and kept in the store until then).
-#[derive(Clone, PartialEq, Eq, Debug)]
+///
+/// It encrypts one body: `encrypt_msg` takes it by value and it has no `Clone`, since a second
+/// body under the same AES-GCM key and IV would leak both plaintexts and the GHASH key.
+///
+/// ```
+/// # use simplex_client::ratchet::MsgEncryptKey;
+/// fn seal(key: MsgEncryptKey) -> Option<Vec<u8>> {
+///     key.encrypt_msg(100, b"once").ok()
+/// }
+/// ```
+///
+/// ```compile_fail,E0382
+/// # use simplex_client::ratchet::MsgEncryptKey;
+/// fn seal_twice(key: MsgEncryptKey) {
+///     let _ = key.encrypt_msg(100, b"one");
+///     let _ = key.encrypt_msg(100, b"two");
+/// }
+/// ```
+#[derive(PartialEq, Eq, Debug)]
 pub struct MsgEncryptKey {
     version: Version,
     key: MessageKey,
@@ -101,11 +119,11 @@ impl Ratchet {
 
 impl MsgEncryptKey {
     /// `rcEncryptMsg`.
-    pub fn encrypt_msg(&self, padded_len: usize, msg: &[u8]) -> Result<Vec<u8>> {
+    pub fn encrypt_msg(self, padded_len: usize, msg: &[u8]) -> Result<Vec<u8>> {
         let ad = [self.ad.as_slice(), &self.enc_header].concat();
         let (body, tag) = aead_encrypt(&self.key.key.aes(), &self.key.iv, padded_len, &ad, msg)?;
         let wire = EncRatchetMessage {
-            header: self.enc_header.clone(),
+            header: self.enc_header,
             tag,
             body,
         };
