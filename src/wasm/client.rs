@@ -16,7 +16,7 @@ const EVENTS: &str = r#"
 export type ClientEvent =
   | "ready" | "message" | "messageUpdate" | "request"
   | "friendAdd" | "friendRemove" | "groupAdd" | "groupRemove" | "groupInvite"
-  | "memberAdd" | "offline" | "online" | "change" | "raw";
+  | "memberAdd" | "offline" | "online" | "change" | "raw" | "fileProgress";
 "#;
 
 /// A running client in this tab or process. Methods return Promises that reject with

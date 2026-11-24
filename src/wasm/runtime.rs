@@ -8,6 +8,7 @@ use crossbeam_channel::Receiver;
 
 use super::clock::JsClock;
 use super::console::Console;
+use super::files::Files;
 use super::options::{Options, Transport};
 use super::outcome::Outcome;
 use super::shared::Shared;
@@ -32,6 +33,7 @@ pub(super) struct Core {
     pub(super) jobs: Receiver<JobDone>,
     pub(super) smp_clock: Arc<dyn smp::Clock>,
     pub(super) waiters: Waiters,
+    pub(super) files: Files,
     pub(super) roster: Roster,
     /// The user's profile as the engine last said, for `user` and `setName`.
     pub(super) profile: Option<ChatProfile>,
@@ -57,6 +59,7 @@ impl Core {
         };
         let (tx, smp) = crossbeam_channel::unbounded();
         let shared = Rc::downgrade(shared);
+        let files_shared = std::rc::Weak::clone(&shared);
         let dialer: Box<dyn Dialer> = match &o.transport {
             Transport::Tunnel(url) => Box::new(WsDialer {
                 url: url.clone(),
@@ -78,6 +81,7 @@ impl Core {
             name: o.name.clone(),
             relays: o.relays.clone(),
         };
+        let files = Files::attach(&mut engine, &o.transport, o.token.clone(), files_shared);
         engine.start(&config)?;
         // `Ready` only reaches JS on the first flush, after `start` has resolved; `user` must
         // already answer then.
@@ -90,6 +94,7 @@ impl Core {
             jobs,
             smp_clock,
             waiters: Waiters::default(),
+            files,
             roster: Roster::default(),
             profile,
             log,
@@ -109,6 +114,8 @@ impl Core {
             Some(self.engine_due - wall),
             pool.map(|d| i64::try_from(d.saturating_sub(smp_now)).unwrap_or(i64::MAX)),
             self.waiters.next_deadline().map(|d| d - wall),
+            (self.files.next_deadline())
+                .map(|d| i64::try_from(d.saturating_sub(smp_now)).unwrap_or(i64::MAX)),
         ];
         let soonest = waits.into_iter().flatten().min().unwrap_or(i64::MAX);
         let floor = i64::try_from(MIN_SLEEP.as_millis()).unwrap_or(10);
@@ -118,6 +125,7 @@ impl Core {
 
     /// The network closes and every waiting call fails with `closed`; the store goes with it.
     pub(super) fn close(mut self) -> Outcome {
+        self.files.close();
         self.engine.agent.close();
         Outcome {
             calls: Vec::new(),

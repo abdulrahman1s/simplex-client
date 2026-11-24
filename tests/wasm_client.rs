@@ -2,6 +2,8 @@
 #![cfg(all(target_arch = "wasm32", feature = "wasm"))]
 #![allow(clippy::unwrap_used, reason = "tests")]
 
+#[path = "wasm_client/files.rs"]
+mod files;
 #[path = "wasm_client/objects.rs"]
 mod objects;
 #[path = "wasm_client/support.rs"]

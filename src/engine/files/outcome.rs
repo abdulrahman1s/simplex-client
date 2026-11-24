@@ -27,7 +27,7 @@ fn percent(done: u64, total: u64) -> u8 {
     u8::try_from(done.min(total) * 100 / total).unwrap_or(100)
 }
 
-/// Posts progress when it moved a step further than the last one posted.
+/// Posts progress when it moved a step further than the last one posted, and the end.
 pub(super) struct Throttle {
     key: FileKey,
     job: u64,
@@ -41,7 +41,7 @@ impl Throttle {
 
     pub(super) fn tell(&mut self, done: u64, total: u64, tx: &Sender<JobDone>) {
         let p = percent(done, total);
-        if p >= self.last.saturating_add(STEP) {
+        if p >= self.last.saturating_add(STEP) || (p == 100 && self.last < 100) {
             self.last = p;
             let (key, job) = (self.key, self.job);
             let progress = FileDone::Progress {
@@ -123,5 +123,15 @@ mod tests {
             })
             .collect();
         assert_eq!(seen, (1..=20).map(|n| n * 5).collect::<Vec<u8>>());
+    }
+
+    #[test]
+    fn the_end_is_posted_even_off_a_five_percent_step() {
+        let (tx, rx) = unbounded();
+        let mut progress = Throttle::new(FileKey { friend: 1, item: 2 }, 1);
+        for done in [96, 100, 100] {
+            progress.tell(done, 100, &tx);
+        }
+        assert_eq!(rx.try_iter().count(), 2, "96, then 100 once");
     }
 }
