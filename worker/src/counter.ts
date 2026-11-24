@@ -1,7 +1,7 @@
 // Counts one client's open tunnels. One SQLite-backed Durable Object per hashed IP; its storage
-// is deleted when the last tunnel closes, and an alarm clears leases whose release was lost.
+// is deleted when the last tunnel closes, and an alarm clears leases that were not renewed.
 import { DurableObject } from "cloudflare:workers";
-import { acquire, prune, type LeaseStore } from "./leases";
+import { acquire, prune, renew, type LeaseStore } from "./leases";
 
 export class TunnelCounter extends DurableObject {
   async acquire(id: string, max: number, ttlMs: number): Promise<boolean> {
@@ -9,6 +9,12 @@ export class TunnelCounter extends DurableObject {
     const ok = acquire(this.leases(), id, max, now + ttlMs, now);
     await this.tidy(now);
     return ok;
+  }
+
+  async renew(id: string, ttlMs: number): Promise<void> {
+    const now = Date.now();
+    renew(this.leases(), id, now + ttlMs);
+    await this.tidy(now);
   }
 
   async release(id: string): Promise<void> {

@@ -22,7 +22,8 @@ ratchet.
 **What the Worker operator and Cloudflare can see:**
 
 - your IP address;
-- the relay's host name and port;
+- the relay's host name and port. The Worker also looks the name up with Cloudflare's DNS
+  resolver (DNS over HTTPS, the name in the request body);
 - when you connect, and the timing and size of the traffic. SMP sends fixed 16 KiB blocks, so
   sizes say little beyond "a block went by".
 
@@ -68,7 +69,7 @@ One tunnel is one TCP socket.
 | `forbidden_host` | 1008 | A private, loopback, link-local, CGNAT or otherwise non-public address; a local name; or a host outside `ALLOWED_HOSTS` |
 | `unauthorized` | 1008 | The token is missing or wrong |
 | `not_tls` | 1008 | The first bytes are not a SimpleX ClientHello, or the ClientHello did not arrive within `HELLO_TIMEOUT_SECONDS` of `{"ok":true}` |
-| `connect_failed` | 1011 | The relay could not be reached within 10 s |
+| `connect_failed` | 1011 | The relay's name did not resolve, or the relay could not be reached within 10 s |
 | `idle` | 1008 | No bytes either way for `IDLE_TIMEOUT_SECONDS` |
 | `too_many_tunnels` | 1008 | This IP already has `MAX_TUNNELS_PER_IP` tunnels open |
 | `quota` | 1008 | The tunnel used up `MAX_BYTES_PER_TUNNEL` |
@@ -83,8 +84,9 @@ One tunnel is one TCP socket.
     6to4).
   - Non-canonical numeric forms (`127.1`, `2130706433`, `0x7f.0.0.1`) are refused.
   - Single-label names and names ending in `.local`, `.internal` or `.localhost` are refused.
-  - A public name that resolves to a private address cannot be caught without a DNS lookup.
-    Cloudflare's `connect()` refuses private and loopback addresses itself.
+  - Names are resolved by the Worker over DNS over HTTPS (IPv4 first, then IPv6), and the
+    resolved address goes through the same range checks. The Worker dials exactly that
+    address, so a public name pointing at a private network is refused as well.
 - **TLS check.**
   - The first TLS record must be a ClientHello offering only `smp/1` or `xftp/1` as ALPN, with
     no `server_name` (SNI) and no encrypted-client-hello extension. SimpleX clients contact
@@ -112,6 +114,7 @@ One tunnel is one TCP socket.
 | Bytes per tunnel, both directions | `MAX_BYTES_PER_TUNNEL` | 1073741824 (1 GiB) |
 | WebSocket frame size | `MAX_FRAME_BYTES` | 65536 (64 KiB). Larger frames from the client close the tunnel, and relay bytes are split to fit |
 | Client bytes waiting for the relay socket | fixed | 1 MiB. Writes to the relay are awaited in order, and a client that runs this far ahead is closed |
+| Relay name lookup | fixed | 3 s |
 | Relay connect time | fixed | 10 s |
 
 - **How IPs are used.** The client IP is hashed: SHA-256 over the `IP_SALT` secret and the IP,
@@ -119,14 +122,16 @@ One tunnel is one TCP socket.
   open-tunnel counter.
 - **The open-tunnel counter.** It is a SQLite-backed Durable Object (works on the Free plan),
   named by that hash. It holds one lease per open tunnel and deletes all of its storage when
-  the last one closes. A lease whose release was lost, for example because the Worker was
-  evicted, expires after the tunnel lifetime plus one minute.
+  the last one closes. Each open tunnel renews its lease every 10 minutes, and a lease lasts
+  30 minutes. If a release is lost, for example because the Worker was evicted, the slot frees
+  itself within 30 minutes, and so does the stored hash.
 - **Failing open.** If the counter or the rate limiter cannot be reached, the tunnel is
   allowed, so an outage there does not cut people off from their chats.
 
 Values that are missing, malformed or not positive fall back to the default. On the Workers
-Free plan, each tunnel is one request against the daily request allowance, plus two Durable
-Object calls (acquire and release).
+Free plan, each tunnel costs one request against the daily request allowance and one DNS
+lookup subrequest. It also makes Durable Object calls: one to acquire, one to release, and six
+renewals per hour while it stays open.
 
 ## Configuration
 
@@ -180,7 +185,7 @@ Notes for the Workers Free plan:
 ```sh
 npm ci
 npx tsc --noEmit   # type check
-npx vitest run     # unit tests: ClientHello check, host/port/token rules, limits, counter
+npx vitest run     # unit tests: ClientHello check, host/port/token rules, DNS, limits, leases
 npx wrangler dev   # local Worker on http://localhost:8787
 ```
 

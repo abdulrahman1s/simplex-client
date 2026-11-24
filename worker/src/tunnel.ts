@@ -4,13 +4,22 @@ import { connect } from "cloudflare:sockets";
 import { checkClientHello, MAX_HELLO_BYTES } from "./clienthello";
 import type { Env } from "./env";
 import { Meter, type Limits } from "./limits";
-import { checkTarget, parseHello, socketHostname, tokenEquals, type ErrorCode, type Policy } from "./validate";
+import { resolve } from "./dns";
+import {
+  checkAddress,
+  checkTarget,
+  isIpLiteral,
+  parseHello,
+  socketHostname,
+  tokenEquals,
+  type ErrorCode,
+  type Policy,
+} from "./validate";
 
 const CONNECT_TIMEOUT_MS = 10_000;
-const CONNECT_ATTEMPTS = 4;
-const TIMEOUT = new Error("timeout");
-/** How long a lost release keeps a lease, beyond the tunnel's own lifetime. */
-const LEASE_SLACK_MS = 60_000;
+/** An open tunnel renews its lease; one that stops renewing (a lost release) frees its slot. */
+const LEASE_MS = 30 * 60_000;
+const LEASE_RENEW_MS = 10 * 60_000;
 
 type Phase = "hello" | "connecting" | "probe" | "open" | "closed";
 
@@ -37,6 +46,7 @@ class Tunnel {
   private writer?: WritableStreamDefaultWriter<Uint8Array>;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private release?: () => Promise<void>;
+  private renewer: ReturnType<typeof setInterval> | null = null;
   private readonly meter: Meter;
 
   constructor(
@@ -84,38 +94,30 @@ class Tunnel {
     if ("error" in target) return this.fail(target.error);
     const token = this.cx.env.TUNNEL_TOKEN;
     if (token && !tokenEquals(hello.token ?? "", token)) return this.fail("unauthorized");
+    const address = await resolveAddress(target.host);
+    if (this.closed()) return;
+    if (address === null) return this.fail("connect_failed");
+    if (checkAddress(address)) return this.fail("forbidden_host");
     if (!(await this.acquire())) return this.fail("too_many_tunnels");
     if (this.closed()) return;
 
-    const socket = await this.dial(socketHostname(target.host), hello.port);
+    const socket = connect(
+      { hostname: socketHostname(address), port: hello.port },
+      { secureTransport: "off", allowHalfOpen: false },
+    );
+    this.socket = socket;
+    socket.closed.catch(() => undefined);
+    try {
+      await withTimeout(socket.opened, CONNECT_TIMEOUT_MS);
+    } catch {
+      return this.fail("connect_failed");
+    }
     if (this.closed()) return;
-    if (!socket) return this.fail("connect_failed");
     this.writer = socket.writable.getWriter();
     this.phase = "probe";
     this.ws.send(JSON.stringify({ ok: true }));
     this.arm(this.cx.limits.helloTimeoutMs); // the ClientHello must follow promptly
     void this.pump(socket);
-  }
-
-  /**
-   * Opens the relay socket. Cloudflare sometimes refuses a connect to a host name at once
-   * ("proxy request failed") and accepts the next try, so quick refusals are retried.
-   */
-  private async dial(hostname: string, port: number): Promise<Socket | null> {
-    for (let attempt = 1; attempt <= CONNECT_ATTEMPTS && !this.closed(); attempt++) {
-      const socket = connect({ hostname, port }, { secureTransport: "off", allowHalfOpen: false });
-      this.socket = socket;
-      socket.closed.catch(() => undefined);
-      try {
-        await withTimeout(socket.opened, CONNECT_TIMEOUT_MS);
-        return socket;
-      } catch (e) {
-        socket.close().catch(() => undefined);
-        if (e === TIMEOUT) return null;
-      }
-      await new Promise((r) => setTimeout(r, 100 * attempt));
-    }
-    return null;
   }
 
   /** Takes a lease on the client's counter. Fails open: an unreachable counter must not stop chat. */
@@ -125,14 +127,17 @@ class Tunnel {
     const stub = ns.getByName(this.cx.clientKey);
     const id = crypto.randomUUID();
     this.release = () => stub.release(id);
-    const { maxTunnelsPerIp, maxLifetimeMs } = this.cx.limits;
     try {
-      const ok = await stub.acquire(id, maxTunnelsPerIp, maxLifetimeMs + LEASE_SLACK_MS);
-      if (!ok) this.release = undefined;
-      return ok;
+      const ok = await stub.acquire(id, this.cx.limits.maxTunnelsPerIp, LEASE_MS);
+      if (!ok) {
+        this.release = undefined;
+        return false;
+      }
     } catch {
       return true;
     }
+    this.renewer = setInterval(() => void stub.renew(id, LEASE_MS).catch(() => undefined), LEASE_RENEW_MS);
+    return true;
   }
 
   private async forward(bytes: Uint8Array): Promise<void> {
@@ -208,6 +213,7 @@ class Tunnel {
     if (this.phase === "closed") return;
     this.phase = "closed";
     clearTimeout(this.timer);
+    clearInterval(this.renewer);
     try {
       this.ws.close(code, reason);
     } catch {
@@ -224,7 +230,17 @@ class Tunnel {
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(TIMEOUT), ms);
+    timer = setTimeout(() => reject(new Error("timeout")), ms);
   });
   return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * The address to dial: a literal as given, or a name's first resolved address. Dialling the
+ * address we checked means a name that points at a private network is refused too.
+ */
+async function resolveAddress(host: string): Promise<string | null> {
+  if (isIpLiteral(host)) return host;
+  const addresses = await resolve(host).catch(() => []);
+  return addresses[0] ?? null;
 }

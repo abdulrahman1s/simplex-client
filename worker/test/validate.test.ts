@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  checkAddress,
   checkTarget,
   originAllowed,
   parseHello,
@@ -110,6 +111,15 @@ describe("checkTarget hosts", () => {
     expect(target("relays.example.org", 5223, policy)).toEqual({ error: "forbidden_host" });
     expect(target("evilrelays.example.org", 5223, policy)).toEqual({ error: "forbidden_host" });
     expect(target("smp5.simplex.im", 5223, policy)).toEqual({ error: "forbidden_host" });
+  });
+});
+
+describe("checkAddress", () => {
+  it("refuses resolved addresses in private ranges and allows public ones", () => {
+    expect(checkAddress("10.1.2.3")).toBe("forbidden_host");
+    expect(checkAddress("fd00:0:0:0:0:0:0:1")).toBe("forbidden_host");
+    expect(checkAddress("172.236.220.91")).toBeNull();
+    expect(checkAddress("2600:3c17:0:0:2000:13ff:fe29:459d")).toBeNull();
   });
 });
 

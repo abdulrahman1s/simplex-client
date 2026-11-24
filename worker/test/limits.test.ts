@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ipKey } from "../src/ipkey";
-import { acquire, count, prune, type LeaseStore } from "../src/leases";
+import { acquire, count, prune, renew, type LeaseStore } from "../src/leases";
 import { DEFAULT_LIMITS, Meter, readLimits } from "../src/limits";
 
 describe("readLimits", () => {
@@ -86,6 +86,17 @@ describe("leases", () => {
     expect(prune(s, 150)).toBe(200);
     expect(prune(s, 400)).toBeNull();
     expect(count(s)).toBe(0);
+  });
+});
+
+describe("lease renewal", () => {
+  it("keeps a renewed lease past its first expiry and lets an unrenewed one lapse", () => {
+    const s = memStore();
+    acquire(s, "live", 2, 100, 0);
+    acquire(s, "lost", 2, 100, 0);
+    renew(s, "live", 200);
+    expect(prune(s, 150)).toBe(200);
+    expect([...s.map.keys()]).toEqual(["live"]);
   });
 });
 

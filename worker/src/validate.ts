@@ -68,12 +68,22 @@ export function checkTarget(
   if (host.startsWith("[") && host.endsWith("]")) host = host.slice(1, -1);
   if (host.endsWith(".")) host = host.slice(0, -1);
 
-  const error = host.includes(":") ? checkIpv6(host) : /^[0-9.]+$/.test(host) ? checkIpv4(host) : checkName(host);
+  const error = isIpLiteral(host) ? checkAddress(host) : checkName(host);
   if (error) return { error };
   if (policy.hosts.length > 0 && !policy.hosts.some((p) => hostMatches(host, p))) {
     return { error: "forbidden_host" };
   }
   return { host };
+}
+
+/** True for anything shaped like an address rather than a name, including malformed ones. */
+export function isIpLiteral(host: string): boolean {
+  return host.includes(":") || /^[0-9.]+$/.test(host);
+}
+
+/** Refuses non-public addresses; also used on the addresses a name resolves to. */
+export function checkAddress(ip: string): ErrorCode | null {
+  return ip.includes(":") ? checkIpv6(ip) : checkIpv4(ip);
 }
 
 /** `connect()` wants IPv6 literals in brackets; a bare one is refused. */

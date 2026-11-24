@@ -1,5 +1,6 @@
 // Open-tunnel leases for one client: the counting rule behind the per-IP Durable Object.
-// A lease is removed when its tunnel closes; its expiry only cleans up after a lost release.
+// A lease is removed when its tunnel closes. Open tunnels renew theirs, so a lost release frees
+// the slot within one lease period.
 
 export interface LeaseStore {
   entries(): Iterable<[string, number]>;
@@ -27,4 +28,9 @@ export function acquire(store: LeaseStore, id: string, max: number, expiresAt: n
   if (count(store) >= max) return false;
   store.put(id, expiresAt);
   return true;
+}
+
+/** Extends a live tunnel's lease, or takes it again if it lapsed; renewal never hits the cap. */
+export function renew(store: LeaseStore, id: string, expiresAt: number): void {
+  store.put(id, expiresAt);
 }
