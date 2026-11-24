@@ -16,6 +16,11 @@ All notable changes to this project are documented here. The format follows
 - Tunnel Worker: it looks the relay's name up while the per-IP counter decides, rather than
   after. A refused tunnel still reads `rate_limited` or `too_many_tunnels`, and now costs a
   DNS lookup too.
+- The JS packages are built with a `wasm-release` profile (fat LTO, one codegen unit) and
+  `wasm-opt -O3`: the module shrinks from 5.1 MB to 3.3 MB (1.5 MB to 1.3 MB gzipped),
+  Ed25519 signing and verifying get about 10% faster, and Ed448 key generation about 25%.
+  `scripts/build-js.sh` skips `wasm-opt` with a warning when binaryen is missing, except
+  under `REQUIRE_WASM_OPT`, which CI and the release set.
 
 ## [0.1.0] - 2026-11-24
 

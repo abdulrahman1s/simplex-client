@@ -105,3 +105,10 @@ opt-level = 3
 [[example]]
 name = "echo_bot"
 required-features = ["native"]
+
+# The JS packages (scripts/build-js.sh): whole-program optimisation for a smaller, faster
+# wasm module. Native release builds keep the default profile.
+[profile.wasm-release]
+inherits = "release"
+lto = "fat"
+codegen-units = 1

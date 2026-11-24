@@ -33,6 +33,7 @@
             pkgs.cargo-deny
             pkgs.cargo-nextest
             pkgs.wasm-bindgen-cli
+            pkgs.binaryen
             pkgs.wasm-pack
             pkgs.nodejs
             pkgs.clang

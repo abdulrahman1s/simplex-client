@@ -42,7 +42,18 @@ jobs:
           cargo test --locked
           cargo test --locked --target wasm32-unknown-unknown --no-default-features --features wasm
 
+      - name: Install binaryen (wasm-opt)
+        run: |
+          v=133
+          f="binaryen-version_$v-x86_64-linux.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$f" "https://github.com/WebAssembly/binaryen/releases/download/version_$v/$f"
+          echo "2dc9c7813f5375db93d96ead4b78222fcc3e2677bbb832297af4797782a37489  $RUNNER_TEMP/$f" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$f" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/binaryen-version_$v/bin" >> "$GITHUB_PATH"
+
       - name: Build the JS packages
+        env:
+          REQUIRE_WASM_OPT: "1"
         run: |
           scripts/build-js.sh
           npm test

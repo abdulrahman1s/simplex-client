@@ -58,7 +58,7 @@ natively instead.
 | | Official core | simplex-client |
 |---|---|---|
 | Native, x86_64 Linux | `libsimplex` + GHC runtime: **238 MB** · `simplex-chat` CLI: **87 MB** | a whole echo bot, SQLite included: **8.9 MB** (stripped release) |
-| Browser | no | **5.1 MB** wasm, **1.5 MB** gzipped |
+| Browser | no | **3.3 MB** wasm, **1.3 MB** gzipped |
 | Node.js and Bun | a CLI process beside yours, over a local WebSocket | in-process wasm, direct TCP |
 | Language | Haskell, with a C FFI or a JSON-over-WebSocket API | Rust crate or a JS class |
 | Runtime | GHC runtime and its threads | plain threads natively, one event loop in wasm; no async runtime |
@@ -156,9 +156,13 @@ Cloudflare Worker that only pipes bytes. TLS runs inside wasm, pinned by the rel
 fingerprint, so the tunnel sees ciphertext only. Files (XFTP) stay native-only.
 
 ```sh
-cargo build --lib --release --target wasm32-unknown-unknown --no-default-features --features wasm
-wasm-bindgen --target web --out-dir pkg target/wasm32-unknown-unknown/release/simplex_client.wasm
+cargo build --lib --profile wasm-release --target wasm32-unknown-unknown --no-default-features --features wasm
+wasm-bindgen --target web --out-dir pkg target/wasm32-unknown-unknown/wasm-release/simplex_client.wasm
+wasm-opt -O3 pkg/simplex_client_bg.wasm -o pkg/simplex_client_bg.wasm   # optional, binaryen
 ```
+
+The `wasm-release` profile adds fat LTO and one codegen unit to `release`. With `wasm-opt` the
+module is a third smaller than a plain release build (5.1 MB before).
 
 `getrandom` 0.3 needs its JS backend on wasm. This repository sets it in `.cargo/config.toml`;
 projects that depend on the crate must set it too:
@@ -210,7 +214,8 @@ bun add https://github.com/abdulrahman1s/simplex-client/releases/download/v0.1.0
 ```
 
 Installing from git (`npm install github:abdulrahman1s/simplex-client`) builds it instead,
-which needs Rust with the `wasm32-unknown-unknown` target and `wasm-bindgen-cli` 0.2.130.
+which needs Rust with the `wasm32-unknown-unknown` target and `wasm-bindgen-cli` 0.2.130. It
+runs binaryen's `wasm-opt` too when it is installed.
 
 ```js
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -415,7 +420,8 @@ cargo test --target wasm32-unknown-unknown --no-default-features --features wasm
 cargo deny check
 ```
 
-Wasm tests need `wasm-bindgen-cli` 0.2.130 (`wasm-bindgen-test-runner`) and node. The MSRV is
+Wasm tests need `wasm-bindgen-cli` 0.2.130 (`wasm-bindgen-test-runner`) and node, and
+`scripts/build-js.sh` uses binaryen's `wasm-opt`; `nix develop` has all three. The MSRV is
 Rust 1.95. See [AGENTS.md](AGENTS.md) for the code style.
 
 Live interop tests are `#[ignore]`d. They need a local `smp-server` and `xftp-server`:
