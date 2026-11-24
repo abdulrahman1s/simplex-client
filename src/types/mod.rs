@@ -10,5 +10,5 @@ pub mod request;
 pub use config::Config;
 pub use event::Event;
 pub use features::{REACTION_EMOJI, features_with, has_file_servers};
-pub use kind::{FileKind, RequestKind};
+pub use kind::{ErrorCode, FileKind, RequestKind};
 pub use request::Request;

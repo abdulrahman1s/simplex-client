@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use crate::types::model::{ChatNotice, MessageBody};
-use crate::types::{Event, Request, RequestKind};
+use crate::types::{ErrorCode, Event, Request, RequestKind};
 
 use super::{Call, FakeAgent, KEY, T, messages, x_info};
 use crate::chat::ids::XContactId;
@@ -68,9 +68,9 @@ fn rejected(t: &T) -> Vec<Vec<u8>> {
         .collect()
 }
 
-fn failed(out: &[Event]) -> (RequestKind, String) {
+fn failed(out: &[Event]) -> (RequestKind, ErrorCode) {
     match out {
-        [Event::Failed { request, code, .. }] => (*request, code.clone()),
+        [Event::Failed { request, code, .. }] => (*request, *code),
         other => panic!("{other:?}"),
     }
 }
@@ -168,7 +168,10 @@ fn an_address_whose_relay_does_not_answer_is_no_connection_and_can_be_asked_for_
     let mut t = T::started();
     t.e.agent.fail_next = Some(AgentFailure::Network("timeout".into()));
     let out = t.req(Request::CreateAddress);
-    assert_eq!(failed(&out), (RequestKind::Address, "ZN-CHT-004".into()));
+    assert_eq!(
+        failed(&out),
+        (RequestKind::Address, ErrorCode::NoConnection)
+    );
     assert!(t.e.state.address.creating.is_none());
     t.req(Request::CreateAddress);
     assert!(t.e.state.address.creating.is_some());
@@ -187,7 +190,10 @@ fn an_address_that_fails_while_it_is_made_is_reported_and_forgotten() {
     assert!(out.is_empty(), "made once more first (relays tests)");
     let conn = t.e.state.address.creating.unwrap();
     let out = t.agent(AgentEvent::Err { conn, err });
-    assert_eq!(failed(&out), (RequestKind::Address, "ZN-CHT-004".into()));
+    assert_eq!(
+        failed(&out),
+        (RequestKind::Address, ErrorCode::NoConnection)
+    );
     assert!(t.e.state.address.creating.is_none());
     assert!(
         t.e.agent.calls.contains(&Call::Delete { conn }),
@@ -370,7 +376,10 @@ fn rejecting_forgets_the_request_and_the_requester_is_not_told() {
     assert!(t.e.agent.sent().is_empty());
     assert!(t.e.state.friends.is_empty());
     let out = t.req(Request::Accept(1));
-    assert_eq!(failed(&out), (RequestKind::Answer, "ZN-CHT-006".into()));
+    assert_eq!(
+        failed(&out),
+        (RequestKind::Answer, ErrorCode::RequestFailed)
+    );
 }
 
 #[test]
@@ -397,7 +406,10 @@ fn accepting_a_request_that_the_agent_cannot_take_reports_it_and_keeps_the_reque
     asks(&mut t, conn, 1, contact("bob", None));
     t.e.agent.fail_next = Some(AgentFailure::Other("gone".into()));
     let out = t.req(Request::Accept(1));
-    assert_eq!(failed(&out), (RequestKind::Answer, "ZN-CHT-006".into()));
+    assert_eq!(
+        failed(&out),
+        (RequestKind::Answer, ErrorCode::RequestFailed)
+    );
     assert!(t.e.state.address.requests.contains_key(&1));
     assert!(t.e.state.friends.is_empty());
 }

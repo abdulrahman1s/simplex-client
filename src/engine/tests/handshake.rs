@@ -1,7 +1,7 @@
 //! Invitations and connecting (codec: an_invitation_…, connecting_…, the_users_own_link_…).
 
 use crate::types::model::{ChatNotice, MessageBody};
-use crate::types::{Event, Request, RequestKind};
+use crate::types::{ErrorCode, Event, Request, RequestKind};
 
 use super::{Call, T, messages, x_info};
 use crate::engine::agent_port::{AgentEvent, AgentFailure};
@@ -9,9 +9,9 @@ use crate::engine::agent_port::{AgentEvent, AgentFailure};
 pub const INVITATION: &str = "https://smp5.simplex.im/i#esW_-BXJI9zs4iGRV2SMHUzqpFv3QRe6/KaKvW0lOkJzcvIRVW-l0uomDrjYKjiaOkPIkxSvOB0o";
 const ADDRESS: &str = "https://smp6.simplex.im/a#0sPWloEa5zFH0sfc_vANe4RUUebBQSGcvTKpKRH300s";
 
-fn failed(out: &[Event]) -> (RequestKind, String) {
+fn failed(out: &[Event]) -> (RequestKind, ErrorCode) {
     match out {
-        [Event::Failed { request, code, .. }] => (*request, code.clone()),
+        [Event::Failed { request, code, .. }] => (*request, *code),
         other => panic!("{other:?}"),
     }
 }
@@ -56,7 +56,7 @@ fn an_invitation_whose_relay_does_not_answer_is_no_connection() {
     let out = t.req(Request::CreateInvite);
     assert_eq!(
         failed(&out),
-        (RequestKind::CreateInvite, "ZN-CHT-004".into())
+        (RequestKind::CreateInvite, ErrorCode::NoConnection)
     );
     assert!(t.e.state.inviting.is_none(), "a new one can be asked for");
 }
@@ -101,7 +101,7 @@ fn connecting_joins_with_our_profile_and_a_bad_link_never_reaches_the_network() 
     let calls = t.e.agent.calls.len();
     for bad in ["not a link", "", "https://example.com/x"] {
         let out = t.req(Request::Connect(bad.into()));
-        assert_eq!(failed(&out), (RequestKind::Connect, "ZN-CHT-005".into()));
+        assert_eq!(failed(&out), (RequestKind::Connect, ErrorCode::BadLink));
     }
     assert_eq!(t.e.agent.calls.len(), calls);
 }
@@ -117,7 +117,7 @@ fn the_users_own_link_and_a_known_one_connect_nothing() {
         short: Some(INVITATION.into()),
     });
     let out = t.req(Request::Connect(INVITATION.into()));
-    assert_eq!(failed(&out), (RequestKind::Connect, "ZN-CHT-005".into()));
+    assert_eq!(failed(&out), (RequestKind::Connect, ErrorCode::BadLink));
 
     let mut t = T::started();
     t.req(Request::Connect(INVITATION.into()));
@@ -131,7 +131,7 @@ fn the_users_own_link_and_a_known_one_connect_nothing() {
 fn channel_links_are_refused_as_links() {
     let mut t = T::started();
     let out = t.req(Request::Connect(ADDRESS.replace("/a#", "/c#")));
-    assert_eq!(failed(&out), (RequestKind::Connect, "ZN-CHT-005".into()));
+    assert_eq!(failed(&out), (RequestKind::Connect, ErrorCode::BadLink));
 }
 
 #[test]
@@ -142,7 +142,7 @@ fn a_join_the_relay_refuses_is_reported_as_a_bad_link_and_can_be_removed() {
     let err = AgentFailure::Other("AUTH".into());
     let out = t.agent(AgentEvent::Err { conn, err });
     let (kind, code) = failed(&out);
-    assert_eq!((kind, code.as_str()), (RequestKind::Connect, "ZN-CHT-005"));
+    assert_eq!((kind, code), (RequestKind::Connect, ErrorCode::BadLink));
     let id = *t.e.state.friends.keys().next().unwrap();
     t.req(Request::RemoveFriend(id));
     assert!(t.e.state.friends.is_empty());
@@ -164,5 +164,5 @@ fn our_invitation_pasted_back_after_it_was_answered_connects_nothing() {
         conn_info: x_info("bob"),
     });
     let out = t.req(Request::Connect(INVITATION.into()));
-    assert_eq!(failed(&out), (RequestKind::Connect, "ZN-CHT-005".into()));
+    assert_eq!(failed(&out), (RequestKind::Connect, ErrorCode::BadLink));
 }

@@ -1,7 +1,7 @@
 //! Joining by a group link: the contact connection becomes the group's (Subscriber.hs `saveConnInfo`, Commands.hs `connectViaContact`).
 
 use crate::types::model::{ChatNotice, Membership, MessageBody};
-use crate::types::{Event, Request, RequestKind};
+use crate::types::{ErrorCode, Event, Request, RequestKind};
 
 use super::links::{FULL, SHORT};
 use super::seed::profile;
@@ -92,7 +92,7 @@ fn a_channels_link_is_still_refused() {
                 request: RequestKind::Connect,
                 code,
                 ..
-            }] if code == "ZN-CHT-005"
+            }] if *code == ErrorCode::BadLink
         ));
     }
     assert!(t.e.agent.pq_seen.is_empty());

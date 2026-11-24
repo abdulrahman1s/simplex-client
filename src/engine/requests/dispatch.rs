@@ -13,7 +13,7 @@ impl<A: AgentPort> Engine<A> {
         if let Err(e) = self.route(request) {
             self.emit(Event::Failed {
                 request: kind,
-                code: e.code.as_str().to_owned(),
+                code: e.code,
                 detail: e.detail,
             });
         }

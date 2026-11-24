@@ -1,4 +1,4 @@
-//! The helper's log on standard error: one line per entry, never keys or message text.
+//! The engine's log: one line per entry, never keys or message text.
 
 use std::fmt;
 use std::io::Write;
@@ -21,7 +21,7 @@ impl Log {
     pub fn line(&self, args: fmt::Arguments<'_>) {
         let mut w = self.0.lock().unwrap_or_else(PoisonError::into_inner);
         // A log that cannot be written is no reason to stop chatting.
-        let _ = writeln!(w, "zaun-chat: {args}").and_then(|()| w.flush());
+        let _ = writeln!(w, "simplex-client: {args}").and_then(|()| w.flush());
     }
 }
 
