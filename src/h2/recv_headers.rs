@@ -1,16 +1,14 @@
 //! Response header blocks: HEADERS with CONTINUATION, decoded in order (RFC 9113 section 6.2, RFC 7541).
-use std::io::{Read, Write};
-
-use super::connection::Connection;
+use super::client::H2Client;
 use super::error::H2Error;
 use super::frames::{END_HEADERS, END_STREAM, FrameHeader, PRIORITY_FLAG};
 use super::recv::unpadded;
 use super::state::{Exchange, HeaderBlock};
 
-impl<T: Read + Write> Connection<T> {
+impl H2Client {
     pub(super) fn on_headers(
         &mut self,
-        ex: &mut Exchange,
+        ex: Option<&mut Exchange>,
         h: FrameHeader,
         p: &[u8],
     ) -> Result<(), H2Error> {
@@ -35,7 +33,7 @@ impl<T: Read + Write> Connection<T> {
 
     pub(super) fn on_continuation(
         &mut self,
-        ex: &mut Exchange,
+        ex: Option<&mut Exchange>,
         h: FrameHeader,
         p: &[u8],
     ) -> Result<(), H2Error> {
@@ -55,15 +53,15 @@ impl<T: Read + Write> Connection<T> {
 
     fn header_block(
         &mut self,
-        ex: &mut Exchange,
+        ex: Option<&mut Exchange>,
         stream: u32,
         bytes: &[u8],
         end_stream: bool,
     ) -> Result<(), H2Error> {
         let list = self.hpack.decode(bytes)?; // always: the dynamic table is connection state
-        if stream != ex.id {
+        let Some(ex) = ex.filter(|e| e.id == stream) else {
             return Ok(());
-        }
+        };
         if ex.headers.is_none() {
             let status = list
                 .iter()

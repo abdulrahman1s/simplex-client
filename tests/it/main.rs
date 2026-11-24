@@ -20,6 +20,7 @@ mod encoding;
 #[cfg(feature = "native")]
 mod h2_connection;
 mod h2_hpack;
+mod h2_sans_io;
 #[cfg(feature = "native")]
 mod h2_support;
 mod hex;
