@@ -1,4 +1,4 @@
-//! The user as host, on the connection with a member it invited: CONF with `x.grp.acpt` answered with `x.grp.mem.info`, then CON and the introductions (Subscriber.hs:797-808, :947-985).
+//! The user as host, on the connection with a member it invited: CONF with `x.grp.acpt` answered with `x.grp.mem.info`, then CON, the introductions and the history (Subscriber.hs:797-808, :947-985).
 
 use crate::types::model::ChatNotice;
 
@@ -63,7 +63,13 @@ impl<A: AgentPort> Engine<A> {
 
     /// CON with an invitee: connected, told, and introduced to everyone (`introduceToAll`); one
     /// who came by the group's link is the link's to admit first.
-    pub(crate) fn on_invitee_con(&mut self, group: i64, mut m: MemberRecord) -> Result<()> {
+    /// `flushed`: the user's items that just reached it from the queue, left out of history.
+    pub(crate) fn on_invitee_con(
+        &mut self,
+        group: i64,
+        mut m: MemberRecord,
+        flushed: &[i64],
+    ) -> Result<()> {
         let waits = pending(m.status);
         if !waits {
             m.status = MemberStatus::Connected;
@@ -81,10 +87,7 @@ impl<A: AgentPort> Engine<A> {
         }
         self.introduce_to_all(group, id)?;
         if history_on(&self.group(group)?) {
-            // `sendHistory` is not carried: groups made here have history off.
-            self.log.line(format_args!(
-                "history is on but is not sent to a new member"
-            ));
+            self.send_history(group, id, flushed)?;
         }
         Ok(())
     }

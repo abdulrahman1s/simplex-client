@@ -50,6 +50,10 @@ impl<A: AgentPort> Engine<A> {
                 if descriptions.len() < members.len() {
                     return Err(no_descriptions());
                 }
+                // `getRcvFileDescrBySndFileId`: a member's description serves the history.
+                if let (Some(_), Some(d)) = (members.first(), descriptions.first()) {
+                    (rec.descr, rec.descr_complete) = (d.clone(), true);
+                }
                 for (member, d) in members.into_iter().zip(&descriptions) {
                     for part in descr_parts(&shared, d, expires.as_ref()) {
                         let msg = ChatMessage::new(part)?;
@@ -103,7 +107,12 @@ fn no_descriptions() -> crate::engine::error::EngineError {
     fail(Code::RequestFailed, "not enough file descriptions to send")
 }
 
-fn descr_parts(shared: &[u8], description: &str, expires: Option<&String>) -> Vec<ChatEvent> {
+/// `splitFileDescr`: a description as its `x.msg.file.descr` parts.
+pub(crate) fn descr_parts(
+    shared: &[u8],
+    description: &str,
+    expires: Option<&String>,
+) -> Vec<ChatEvent> {
     let parts = split_description(description, DESCR_PART_SIZE, DESCR_PART_SIZE);
     parts
         .into_iter()

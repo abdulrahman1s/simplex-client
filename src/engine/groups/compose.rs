@@ -113,7 +113,7 @@ impl<A: AgentPort> Engine<A> {
 
     /// `prepareGroupMsg` `quoteData`: a deleted item or a notice cannot be quoted; the quote
     /// names its author's member id (the user's own for the user's).
-    fn group_quote(&mut self, g: &GroupRecord, item: i64) -> Result<(QuotedMsg, Quote)> {
+    pub(crate) fn group_quote(&mut self, g: &GroupRecord, item: i64) -> Result<(QuotedMsg, Quote)> {
         let q = self
             .item(ChatRef::Group(g.id), item)?
             .filter(|q| q.body != MessageBody::Deleted)

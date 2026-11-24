@@ -2,8 +2,8 @@
 
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
 use crate::types::FileKind;
+use serde::{Deserialize, Serialize};
 
 /// `rcvFileDescrWithinLimits`: a description of at most this many parts and characters.
 const MAX_PARTS: u32 = 1024;
@@ -31,7 +31,8 @@ pub struct FileRecord {
     pub accepted: bool,
     /// Received: the sender cancelled, so there is nothing left to fetch.
     pub sender_cancelled: bool,
-    /// Received: the description text so far, and the number of the last part added.
+    /// Received: the description text so far, and the number of the last part added. Sent in
+    /// a group: a member's whole description, for the group's history.
     pub descr: String,
     pub last_part: u32,
     pub descr_complete: bool,

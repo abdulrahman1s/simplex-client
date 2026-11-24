@@ -6,6 +6,7 @@ mod bad_signature;
 mod files;
 mod forward;
 mod forward_signed;
+mod history;
 mod leave;
 mod links;
 mod links_host;

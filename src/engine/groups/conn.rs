@@ -110,12 +110,14 @@ impl<A: AgentPort> Engine<A> {
             return Ok(());
         }
         let rejected = m.status.gone() || self.group(group)?.status == MemberStatus::Rejected;
-        if !rejected {
-            self.send_pending(group, member, *conn)?;
-        }
+        let flushed = if rejected {
+            Vec::new()
+        } else {
+            self.send_pending(group, member, *conn)?
+        };
         match m.category {
             MemberCategory::Host => self.on_host_con(group, m),
-            MemberCategory::Invitee => self.on_invitee_con(group, m),
+            MemberCategory::Invitee => self.on_invitee_con(group, m, &flushed),
             MemberCategory::Pre | MemberCategory::Post => self.on_peer_con(group, m),
         }
     }
