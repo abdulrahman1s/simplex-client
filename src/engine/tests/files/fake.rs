@@ -20,6 +20,8 @@ pub struct Script {
     pub save_as: String,
     pub uploads: Vec<FileKey>,
     pub downloads: Vec<FileKey>,
+    /// The most bytes each download was allowed to fetch.
+    pub max_sizes: Vec<u64>,
     pub flags: Vec<(FileKey, Arc<std::sync::atomic::AtomicBool>)>,
     /// The run number of each job started, in order.
     pub jobs: Vec<u64>,
@@ -65,6 +67,7 @@ impl Transfers for Fake {
         let key = req.key;
         let (hold, fail, name) = self.with(|s| {
             s.downloads.push(key);
+            s.max_sizes.push(req.max_size);
             s.jobs.push(req.job);
             s.flags.push((key, req.cancel));
             (s.hold, s.fail, s.save_as.clone())

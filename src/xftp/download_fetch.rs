@@ -33,6 +33,8 @@ pub(super) struct Fetch<'a> {
     pub(super) work_dir: &'a Path,
     pub(super) cancel: &'a AtomicBool,
     pub(super) clock: &'a dyn Clock,
+    /// The most encrypted bytes this download may write.
+    pub(super) max_size: u64,
 }
 
 /// Each replica in turn until one answers; a missing or refused chunk is tried elsewhere, a cancel is not.
@@ -82,6 +84,12 @@ pub(super) fn fetch(
             "a recipient description is needed to download".into(),
         ));
     }
+    if fd.size > f.max_size {
+        return Err(XftpError::File(format!(
+            "the file is larger than the {} bytes offered",
+            f.max_size
+        )));
+    }
     fs::create_dir_all(f.work_dir)?;
     let token = b64_encode(&random_array::<9>()?, false);
     let mut files = ChunkFiles(Vec::new());
@@ -89,6 +97,9 @@ pub(super) fn fetch(
     progress(0, fd.size);
     for chunk in &fd.chunks {
         let bytes = fetch_chunk(f, pool, chunk, &mut |n| progress(done + n as u64, fd.size))?;
+        if done + bytes.len() as u64 > f.max_size.min(fd.size) {
+            return Err(XftpError::Mismatch("file size"));
+        }
         let path = f.work_dir.join(format!("{token}.chunk{}", chunk.chunk_no));
         fs::write(&path, &bytes)?;
         files.0.push(path);

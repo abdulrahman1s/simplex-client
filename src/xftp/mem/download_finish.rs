@@ -1,4 +1,4 @@
-//! The end of an in-memory download: size, digest and tag checked, a redirect followed once (Agent.hs `decryptFile`, redirect handling).
+//! The end of an in-memory download: size, digest and tag checked (Agent.hs `decryptFile`).
 use subtle::ConstantTimeEq;
 
 use crate::crypto::{CbNonce, SbKey, sha512};
@@ -17,6 +17,10 @@ pub(super) fn check(fd: &FileDescription, limit: u64) -> Result<(), XftpError> {
         ));
     }
     fd.validate().map_err(XftpError::Description)?;
+    // Internal.hs `receiveViaCompleteFD`: 7.1.4 refuses redirects until it checks their relays.
+    if fd.redirect.is_some() {
+        return Err(XftpError::Description("redirect not allowed".into()));
+    }
     SbKey::from_slice(&fd.key)?;
     CbNonce::from_slice(&fd.nonce)?;
     if fd.digest.len() != 64 {
@@ -45,27 +49,9 @@ impl MemDownload {
             CbNonce::from_slice(&self.fd.nonce)?,
         );
         let (header, bytes) = decrypt_bytes(&std::mem::take(&mut self.fetched), &key, &nonce)?;
-        if !self.outer {
-            return Ok(Step::Done(Fetched {
-                file_name: header.file_name,
-                bytes,
-            }));
-        }
-        let inner = self.inner(&bytes)?;
-        *self = Self::new(&inner, self.limit)?;
-        self.next_step()
-    }
-
-    /// The description a redirect holds; its size and digest are what the redirect promised.
-    fn inner(&self, bytes: &[u8]) -> Result<FileDescription, XftpError> {
-        let text = std::str::from_utf8(bytes)
-            .map_err(|_| XftpError::Description("redirected description is not text".into()))?;
-        let inner = FileDescription::parse_valid(text).map_err(XftpError::Description)?;
-        let promised = self.fd.redirect.as_ref();
-        let same = promised.is_some_and(|r| r.size == inner.size && r.digest == inner.digest);
-        if inner.redirect.is_some() || !same {
-            return Err(XftpError::Mismatch("redirected description"));
-        }
-        Ok(inner)
+        Ok(Step::Done(Fetched {
+            file_name: header.file_name,
+            bytes,
+        }))
     }
 }

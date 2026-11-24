@@ -5,7 +5,7 @@ use crate::types::model::{ChatRef, FileState};
 use super::body::media_of;
 use super::transfers::{DownloadReq, FileKey};
 use crate::engine::agent_port::AgentPort;
-use crate::engine::error::{Code, Result, fail};
+use crate::engine::error::{Code, EngineError, Result, fail};
 use crate::engine::machine::Engine;
 use crate::engine::records::file::{FileRecord, Way};
 use crate::xftp::description::{FileDescription, Party};
@@ -57,6 +57,7 @@ impl<A: AgentPort> Engine<A> {
             fail(Code::RequestFailed, why.to_owned())
         };
         let fd = match FileDescription::parse_valid(&rec.descr) {
+            Ok(fd) if fd.redirect.is_some() => return Err(self.redirect_refused(key, rec)),
             Ok(fd) if fd.party == Party::Recipient && fd.size <= cap(size) => fd,
             Ok(_) => return Err(refused(self, rec, "file description does not fit the file")),
             Err(e) => return Err(refused(self, rec, &format!("bad file description: {e}"))),
@@ -79,9 +80,20 @@ impl<A: AgentPort> Engine<A> {
             description: fd,
             work_dir: self.files.dir.join("xftp-tmp"),
             dest_dir: self.files.dir.join("files"),
+            max_size: cap(size),
             cancel,
         };
         self.files.transfers.download(req, self.jobs.tx.clone());
         Ok(())
+    }
+
+    /// `receiveViaCompleteFD`: "TODO re-enable redirects with relay checks". A redirect could
+    /// send the download to servers the user never approved, so the file fails for good.
+    fn redirect_refused(&mut self, key: FileKey, mut rec: FileRecord) -> EngineError {
+        let (chat, item) = (key.chat(), key.item);
+        rec.accepted = false;
+        let _ = self.save_file(chat, item, &rec); // the failure reported is the reason
+        let _ = self.show_file(chat, item, &rec, FileState::Failed); // the same
+        fail(Code::RequestFailed, "redirect not allowed")
     }
 }

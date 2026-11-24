@@ -109,6 +109,7 @@ fn run_download(req: &DownloadReq, tx: &Sender<JobDone>) -> Result<std::path::Pa
         description: &req.description,
         work_dir: &req.work_dir,
         dest_dir: &req.dest_dir,
+        max_size: req.max_size,
     };
     let mut throttle = Throttle::new(req.key, req.job);
     let mut progress = |done, total| throttle.tell(done, total, tx);

@@ -93,6 +93,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- A received file description that is a redirect is refused, on native and in memory, as
+  simplex-chat 7.1.4 does ("redirect not allowed"): its inner description could send the
+  download to servers the user never approved. The file shows as failed. This client never
+  sends redirects in chat, as 7.1.4 does not.
+- `DownloadParams::max_size` (breaking): a native download fetches no more encrypted bytes than
+  the offer allows (`min(size, 5 GiB) + 10 MiB`), so a file offered as small cannot fill the
+  disk. `MemDownload::progress` now returns the pair itself.
 - A file description nested more than eight levels deep, or longer than its replica limit
   allows, is refused before parsing recurses. A line of dashes in a description used to
   overflow the stack and abort the process, with no click needed for pictures.

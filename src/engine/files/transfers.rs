@@ -80,6 +80,8 @@ pub struct DownloadReq {
     pub description: FileDescription,
     pub work_dir: PathBuf,
     pub dest_dir: PathBuf,
+    /// The most encrypted bytes to fetch: the size the offer allows (`maxRcvSize`).
+    pub max_size: u64,
     pub cancel: Arc<AtomicBool>,
 }
 

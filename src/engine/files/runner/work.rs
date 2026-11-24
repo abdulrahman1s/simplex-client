@@ -51,7 +51,7 @@ impl Work {
                 Some((machine.done() + now, machine.total()))
             }
             Self::Download(machine) => {
-                let (done, total) = machine.progress()?;
+                let (done, total) = machine.progress();
                 Some((
                     done + in_flight.map_or(0, |p| past_block(p.received)),
                     total,

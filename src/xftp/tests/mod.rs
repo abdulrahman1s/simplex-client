@@ -3,5 +3,6 @@ mod fake_h2;
 pub(crate) mod fake_server;
 pub(crate) mod fake_xftp;
 mod mem;
+mod native_limits;
 mod rig;
 mod session;
