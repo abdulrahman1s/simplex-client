@@ -38,7 +38,7 @@ fn the_clis_timer_is_adopted_and_both_sides_messages_disappear() {
     );
     until(&mut n, &mut c, "the engine adopts the timer", |n, _| {
         let f = &n.e.state.friends[&bob];
-        (f.my_timer.as_ref()?.ttl == Some(3)).then_some(())
+        (f.my_prefs.as_ref()?.timed_messages.as_ref()?.ttl == Some(3)).then_some(())
     });
 
     n.req(Request::Send {

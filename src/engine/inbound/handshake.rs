@@ -65,7 +65,7 @@ impl<A: AgentPort> Engine<A> {
             .ok_or_else(|| fail(Code::RequestFailed, "conn-info without a profile"))?;
         let id = self.store.next_id(keys::FRIEND_SEQ)?;
         let mut f = FriendRecord::new(id, *conn, self.clock.wall_ms());
-        apply_profile(&mut f, &profile);
+        apply_profile(self.state.user.prefs.as_ref(), &mut f, &profile);
         f.invited_with = links;
         let ours = conn_info(&self.state.user)?;
         self.agent.allow(&mut self.store, conn, ours)?;
@@ -87,7 +87,7 @@ impl<A: AgentPort> Engine<A> {
         let profile = received_profile(info)
             .ok_or_else(|| fail(Code::RequestFailed, "conn-info without a profile"))?;
         let mut f = self.friend(id)?;
-        apply_profile(&mut f, &profile);
+        apply_profile(self.state.user.prefs.as_ref(), &mut f, &profile);
         self.save_friend(f)?;
         self.refresh_friend_range_from(id, info)?;
         self.state.chats_dirty = true;

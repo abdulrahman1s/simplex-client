@@ -1,15 +1,14 @@
 //! SetTimer: the user turns disappearing messages on or off for a friend or a group (Commands.hs `SetContactTimedMessages` → `updateContactPrefs`; `SetGroupTimedMessages` → `runUpdateGroupProfile`).
 
-use crate::types::model::{ChatNotice, ChatRef, MessageAuthor};
+use crate::types::model::{ChatNotice, ChatRef};
 
-use super::rules::{friend_ttl, group_ttl, my_pref};
+use super::rules::{group_ttl, my_pref};
 use crate::chat::group_prefs::{FeatureEnabled, GroupFeature};
 use crate::chat::preferences::{FeatureAllowed, TimedPref};
 use crate::chat::{ChatEvent, ChatMessage};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
-use crate::engine::profile::sent_profile_to;
 use crate::limits::ROLE_TO_EDIT_GROUP;
 
 /// `SetGroupTimedMessages` off: the group keeps a day as its timer for next time.
@@ -33,10 +32,7 @@ impl<A: AgentPort> Engine<A> {
     /// for both sides, keeping the timer (`TMEDisableKeepTTL`). Their side is told only when
     /// the profile they see changes.
     fn set_friend_timer(&mut self, friend: i64, ttl: Option<i64>) -> Result<()> {
-        let mut f = self.friend(friend)?;
-        if !f.reachable() {
-            return Err(fail(Code::RequestFailed, "not connected"));
-        }
+        let f = self.friend(friend)?;
         let pref = match ttl {
             Some(ttl) => TimedPref {
                 allow: FeatureAllowed::Yes,
@@ -44,23 +40,12 @@ impl<A: AgentPort> Engine<A> {
             },
             None => TimedPref {
                 allow: FeatureAllowed::No,
-                ttl: my_pref(&f).ttl,
+                ttl: my_pref(self.state.user.prefs.as_ref(), &f).ttl,
             },
         };
-        if f.my_timer.as_ref() == Some(&pref) {
-            return Ok(());
-        }
-        let before = friend_ttl(&f);
-        let seen = sent_profile_to(&self.state.user, &f);
-        f.my_timer = Some(pref);
-        let changed = sent_profile_to(&self.state.user, &f) != seen;
-        self.save_friend(f)?;
-        if changed {
-            self.send_profile(friend)?;
-        }
-        self.timer_notice(friend, before, MessageAuthor::Me)?;
-        self.state.chats_dirty = true;
-        Ok(())
+        let mut prefs = f.my_prefs.clone().unwrap_or_default();
+        prefs.timed_messages = Some(pref);
+        self.update_friend_prefs(friend, Some(prefs))
     }
 
     /// The group's preference, sent with its profile in `x.grp.info`.

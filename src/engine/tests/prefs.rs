@@ -10,13 +10,13 @@ use crate::chat::ids::SharedMsgId;
 use crate::chat::preferences::FeatureAllowed;
 use crate::chat::reaction::MsgReaction;
 use crate::chat::{ChatEvent, parse_chat_messages};
-use crate::engine::records::friend::{Feature, PrefEnabled};
+use crate::types::model::{ChatFeature as Feature, PrefEnabled};
 
 #[test]
 fn a_friends_preferences_are_kept_from_their_profile_and_a_missing_one_is_the_default() {
     let mut t = T::started();
     let (bob, conn) = t.friend("bob");
-    let on = |t: &T, f| t.e.state.friends[&bob].enabled(f);
+    let on = |t: &T, f| t.e.enabled(&t.e.state.friends[&bob], f);
     let yes = PrefEnabled {
         for_user: true,
         for_contact: true,
@@ -65,7 +65,7 @@ fn preferences_decide_for_each_side_as_prefenabled_does() {
         p.files = pref(theirs);
         p.reactions = pref(theirs);
         f.prefs = Some(p);
-        f.enabled(user_default_of)
+        t.e.enabled(&f, user_default_of)
     };
     // The user's files are `always`, reactions `yes`.
     assert_eq!(

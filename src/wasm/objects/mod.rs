@@ -7,7 +7,7 @@ mod member;
 mod message;
 mod page;
 mod request;
-mod timer;
+pub(in crate::wasm) mod timer;
 
 pub use friend::Friend;
 pub use group::Group;

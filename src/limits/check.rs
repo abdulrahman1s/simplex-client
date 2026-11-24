@@ -82,6 +82,7 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::Delete { .. }
         | Request::SetMuted { .. }
         | Request::SetTimer { .. }
+        | Request::SetPrefs { .. }
         | Request::SetBlocked { .. }
         | Request::SetMemberBlocked { .. }
         | Request::ShowCode(_)

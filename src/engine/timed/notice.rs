@@ -18,7 +18,7 @@ impl<A: AgentPort> Engine<A> {
         before: Option<Option<i64>>,
         author: MessageAuthor,
     ) -> Result<()> {
-        let now = friend_ttl(&self.friend(friend)?);
+        let now = friend_ttl(self.state.user.prefs.as_ref(), &self.friend(friend)?);
         if now.flatten() == before.flatten() {
             return Ok(());
         }

@@ -1,7 +1,7 @@
 //! The friend's `x.call.*` events (Subscriber.hs `xCallInv`, `xCallOffer`, `xCallAnswer`, `xCallExtra`, `xCallEnd`).
 
 use crate::types::Event;
-use crate::types::model::{CallSignal, StreamSignal};
+use crate::types::model::{CallSignal, ChatFeature, StreamSignal};
 
 use super::line::Over;
 use super::state::{Call, Kind, Phase, RING_TTL_MS};
@@ -13,7 +13,6 @@ use crate::chat::version::{CALL_INITIAL_VERSION, SUPPORTED_CALL_VRANGE, VersionR
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::Result;
 use crate::engine::machine::Engine;
-use crate::engine::records::friend::Feature;
 
 /// A video call without the apps' encryption and without a key: a stream from another client.
 fn is_stream(inv: &CallInvitation) -> bool {
@@ -55,7 +54,10 @@ impl<A: AgentPort> Engine<A> {
 
     fn on_inv(&mut self, friend: i64, id: &CallId, inv: &CallInvitation) -> Result<()> {
         // Subscriber.hs `xCallInv`: `featureRejected CFCalls` when the user's side forbids calls.
-        if !self.friend(friend)?.enabled(Feature::Calls).for_contact {
+        if !self
+            .enabled(&self.friend(friend)?, ChatFeature::Calls)
+            .for_contact
+        {
             self.log
                 .line(format_args!("x.call.inv: calls are not allowed"));
             return Ok(());

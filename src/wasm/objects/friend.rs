@@ -106,6 +106,19 @@ impl Friend {
     }
 
     /// Disappearing messages for both sides: new messages last `seconds`, or `null` turns it off.
+    /// The user's preferences for this friend, over their own: `{ voice: "no" }`; a feature
+    /// left out follows the user's own.
+    #[wasm_bindgen(js_name = setPrefs, unchecked_return_type = "Promise<void>")]
+    pub fn set_prefs(&self, prefs: JsValue) -> js_sys::Promise {
+        super::timer::set_prefs(&self.shared, Some(self.info.id), &prefs)
+    }
+
+    /// What is on between the user and this friend: `{ voice: { for_user, for_contact }, … }`.
+    #[wasm_bindgen(getter)]
+    pub fn features(&self) -> JsValue {
+        plain(&self.info.features)
+    }
+
     #[wasm_bindgen(js_name = setTimer, unchecked_return_type = "Promise<void>")]
     pub fn set_timer(&self, seconds: Option<f64>) -> js_sys::Promise {
         super::timer::set_timer(&self.shared, self.chat(), seconds)

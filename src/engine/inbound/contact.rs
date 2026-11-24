@@ -27,8 +27,8 @@ impl<A: AgentPort> Engine<A> {
     pub(crate) fn on_x_info(&mut self, friend: i64, profile: &Profile) -> Result<()> {
         let mut f = self.friend(friend)?;
         let from = f.name.clone();
-        let timer = friend_ttl(&f);
-        apply_profile(&mut f, profile);
+        let timer = friend_ttl(self.state.user.prefs.as_ref(), &f);
+        apply_profile(self.state.user.prefs.as_ref(), &mut f, profile);
         let to = f.name.clone();
         self.save_friend(f)?;
         if from != to && !from.is_empty() {

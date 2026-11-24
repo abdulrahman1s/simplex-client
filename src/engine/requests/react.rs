@@ -1,6 +1,6 @@
 //! React: the user adds or takes back a reaction, to a friend or a group (Commands.hs `APIChatItemReaction`).
 
-use crate::types::model::{ChatRef, Reaction};
+use crate::types::model::{ChatFeature, ChatRef, Reaction};
 
 use crate::chat::ChatEvent;
 use crate::chat::ids::SharedMsgId;
@@ -9,7 +9,6 @@ use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::groups::policy;
 use crate::engine::machine::Engine;
-use crate::engine::records::friend::Feature;
 use crate::limits::{MAX_REACTIONS, wire_reaction};
 
 use super::change::has_content;
@@ -43,7 +42,10 @@ impl<A: AgentPort> Engine<A> {
     /// Whether the user may react in the chat: the friend's preferences, or the group's.
     fn reactions_on(&self, chat: ChatRef) -> Result<bool> {
         Ok(match chat {
-            ChatRef::Direct(friend) => self.friend(friend)?.enabled(Feature::Reactions).for_user,
+            ChatRef::Direct(friend) => {
+                self.enabled(&self.friend(friend)?, ChatFeature::Reactions)
+                    .for_user
+            }
             ChatRef::Group(group) => policy::on(&self.group(group)?, policy::Feature::Reactions),
         })
     }

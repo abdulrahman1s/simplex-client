@@ -4,18 +4,19 @@ use crate::types::model::Picture;
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
 
+use super::prefs::merge::{full, sent_to};
 use super::records::{FriendRecord, UserRecord};
-use super::timed::rules::my_pref;
 use crate::chat::compress::compress_to_limit;
 use crate::chat::image::ImageData;
 use crate::chat::limits::MAX_CONN_INFO_LENGTH_PQ;
 use crate::chat::profile::Profile;
 use crate::chat::{ChatEvent, ChatMessage, Result, parse_chat_messages};
 
-/// The user's profile as sent: the full default preferences, the line about them, the picture.
+/// The user's profile as sent: their preferences in full, the line about them, the picture.
 #[must_use]
 pub fn sent_profile(user: &UserRecord) -> Profile {
     let mut p = Profile::new(&user.name, "");
+    p.preferences = Some(full(user.prefs.as_ref()));
     p.short_descr = Some(user.about.clone()).filter(|a| !a.is_empty());
     p.image = user.picture.as_ref().map(data_uri);
     p
@@ -26,9 +27,7 @@ pub fn sent_profile(user: &UserRecord) -> Profile {
 #[must_use]
 pub fn sent_profile_to(user: &UserRecord, f: &FriendRecord) -> Profile {
     let mut p = sent_profile(user);
-    if let Some(prefs) = p.preferences.as_mut() {
-        prefs.timed_messages = Some(my_pref(f));
-    }
+    p.preferences = Some(sent_to(user.prefs.as_ref(), f.my_prefs.as_ref()));
     p
 }
 

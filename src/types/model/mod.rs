@@ -10,7 +10,8 @@ pub mod friend;
 pub mod group;
 pub mod message;
 pub mod picture;
-pub mod preview;
+pub mod prefs;
+mod preview;
 pub mod profile;
 pub mod stream;
 
@@ -23,6 +24,7 @@ pub use friend::{Friend, FriendRequest};
 pub use group::{ChatGroup, GroupMember, Membership};
 pub use message::{ChatMessage, Delivery, Mention, MessageAuthor, Quote, Reaction, Timed};
 pub use picture::Picture;
+pub use prefs::{Allow, ChatFeature, ChatPrefs, PrefEnabled};
 pub use preview::ChatPreview;
 pub use profile::{ChatProfile, MyStatus, Playing, Presence};
 pub use stream::{StreamRequest, StreamSignal};

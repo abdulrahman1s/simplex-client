@@ -16,6 +16,7 @@ small, plain API.
   their relay never sees your IP address
 - Chat messages, contacts, groups, replies, edits, deletes and reactions
 - Disappearing messages, for a friend or a group
+- Chat preferences (full delete, reactions, voice, files, calls), your own and per friend
 - XFTP file upload and download, with file crypto and descriptions, natively and in the
   browser, Node.js and Bun
 - Calls (signalling and frame crypto)
@@ -302,6 +303,23 @@ A friend's timer comes with their profile and becomes yours for them, as in the 
 apps. `friend.timer` and `group.timer` say which timer applies. A received message counts down
 only once it is read, so a bot that never calls `markRead()` keeps them; call it after
 handling a message if they should go.
+
+### Chat preferences
+
+Each friend gets your preferences in your profile, and the features on between you follow
+both sides' (Types/Preferences.hs `prefEnabled`). Set your own, or override them for one
+friend; each feature is `"always"`, `"yes"` or `"no"`, and one left out falls back to your own,
+then to the default.
+
+```js
+await client.setPrefs({ voice: "no", full_delete: "yes" }); // to each friend it changes
+await friend.setPrefs({ voice: "always" });                // just for this friend
+console.log(friend.features.voice); // { for_user: false, for_contact: true }
+```
+
+`"always"` keeps a feature on for your friend's messages even when they said no to it for
+yours. A friend's reaction, voice message, call or full delete that you don't allow is
+refused, as the official apps refuse it.
 
 ## Limits
 

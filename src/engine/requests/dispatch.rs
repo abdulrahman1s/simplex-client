@@ -75,6 +75,7 @@ impl<A: AgentPort> Engine<A> {
             }
             Request::SetMuted { chat, on } => self.set_muted(chat, on),
             Request::SetTimer { chat, ttl } => self.set_timer(chat, ttl),
+            Request::SetPrefs { friend, prefs } => self.set_prefs(friend, &prefs),
             Request::SetBlocked { friend, on } => self.set_blocked(friend, on),
             Request::SetMemberBlocked { group, member, on } => {
                 self.set_member_blocked(group, member, on)

@@ -2,7 +2,10 @@
 
 use super::Message;
 use crate::client::{Client, Result};
-use crate::types::model::{self as wire, ChatRef};
+use std::collections::BTreeMap;
+
+use crate::types::Request;
+use crate::types::model::{self as wire, ChatFeature, ChatPrefs, ChatRef, PrefEnabled};
 
 #[derive(Clone, Debug)]
 pub struct Friend {
@@ -76,5 +79,19 @@ impl Friend {
     /// both sides with `None`.
     pub fn set_timer(&self, ttl: Option<i64>) -> Result<()> {
         self.client.set_timer(self.chat(), ttl)
+    }
+
+    /// The user's preferences for this friend, over their own; a feature left out follows them.
+    pub fn set_prefs(&self, prefs: ChatPrefs) -> Result<()> {
+        self.client.request(Request::SetPrefs {
+            friend: Some(self.id()),
+            prefs,
+        })
+    }
+
+    /// What is on between the user and this friend, feature by feature.
+    #[must_use]
+    pub const fn features(&self) -> &BTreeMap<ChatFeature, PrefEnabled> {
+        &self.info.features
     }
 }

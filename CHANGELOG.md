@@ -30,6 +30,18 @@ All notable changes to this project are documented here. The format follows
   `Request`, `RequestKind` and `ChatNotice` have new variants and `ChatMessage`, `Friend` and
   `ChatGroup` new fields.
 
+- Chat preferences, the user's own and per friend, as SimpleX Chat 7.1.4 has them.
+  `Request::SetPrefs { friend, prefs }` (`client.set_prefs`, `friend.set_prefs`; JS
+  `client.setPrefs({ voice: "no" })`, `friend.setPrefs(...)`) sets full delete, reactions,
+  voice, files, calls and the "allow" of disappearing messages to `always`, `yes` or `no`,
+  for every friend or over the user's own for one. Each friend whose profile it changes is
+  sent the new one (`APIUpdateProfile`, `APISetContactPrefs`). What is on between the user and
+  a friend follows both sides (`prefEnabled`; only disappearing messages are symmetric), and
+  shows in `Friend.features` (JS `friend.features`); `Friend.prefs` and `ChatProfile.prefs` hold
+  what the user set. A voice message from a friend the user does not allow is no longer kept.
+  **Breaking:** `Request` and `RequestKind` have new variants, `Friend` and `ChatProfile` new
+  fields, and `UserRecord` is no longer `Eq`.
+
 ### Fixed
 
 - The profile sent to friends said disappearing messages were allowed, so an official app

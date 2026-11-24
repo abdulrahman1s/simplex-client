@@ -1,7 +1,7 @@
 //! A friend's messages: `x.msg.new` (with its quote), and their edits and deletions.
 
 use crate::types::Event;
-use crate::types::model::{ChatRef, MessageAuthor, MessageBody, Quote};
+use crate::types::model::{ChatFeature, ChatRef, MessageAuthor, MessageBody, Quote};
 
 use crate::chat::container::{MsgContainer, QuotedMsg};
 use crate::chat::content::MsgContent;
@@ -10,7 +10,6 @@ use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
 use crate::engine::quote::shown_quote;
 use crate::engine::records::ItemRecord;
-use crate::engine::records::friend::Feature;
 use crate::limits::RCV_DELETE_WINDOW_MS;
 
 impl<A: AgentPort> Engine<A> {
@@ -32,6 +31,12 @@ impl<A: AgentPort> Engine<A> {
                 .is_some()
         {
             return Ok(());
+        }
+        // Subscriber.hs `newContentMessage`: a voice message the user does not allow is not kept.
+        if matches!(c.content, MsgContent::Voice { .. })
+            && !self.enabled(&f, ChatFeature::Voice).for_contact
+        {
+            return Err(fail(Code::RequestFailed, "voice messages are not allowed"));
         }
         let size = c.file.as_ref().map_or(0, |i| i.file_size);
         let offer = c
@@ -127,8 +132,7 @@ impl<A: AgentPort> Engine<A> {
             ));
         }
         let full = self
-            .friend(friend)?
-            .enabled(Feature::FullDelete)
+            .enabled(&self.friend(friend)?, ChatFeature::FullDelete)
             .for_contact;
         self.finish_delete(friend, id, item, full)
     }

@@ -2,7 +2,7 @@
 //! `APIDeleteChatItem` broadcast; Subscriber.hs `deleteGroupCIs`, `markGroupCIsDeleted`).
 
 use crate::types::Event;
-use crate::types::model::{ChatMessage, ChatRef, MessageBody};
+use crate::types::model::{ChatFeature, ChatMessage, ChatRef, MessageBody};
 
 use crate::chat::ChatEvent;
 use crate::chat::ids::SharedMsgId;
@@ -10,7 +10,6 @@ use crate::engine::agent_port::AgentPort;
 use crate::engine::error::Result;
 use crate::engine::groups::policy;
 use crate::engine::machine::Engine;
-use crate::engine::records::friend::Feature;
 use crate::engine::records::{ItemRecord, NS, keys};
 use crate::limits::{DELETE_WINDOW_MS, ROLE_TO_DELETE_OWN};
 
@@ -30,7 +29,10 @@ impl<A: AgentPort> Engine<A> {
             },
         )?;
         let full = match chat {
-            ChatRef::Direct(friend) => self.friend(friend)?.enabled(Feature::FullDelete).for_user,
+            ChatRef::Direct(friend) => {
+                self.enabled(&self.friend(friend)?, ChatFeature::FullDelete)
+                    .for_user
+            }
             ChatRef::Group(group) => {
                 let g = self.group(group)?;
                 policy::allowed(&g, policy::Feature::FullDelete, &g.my_role)

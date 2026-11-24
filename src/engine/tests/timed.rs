@@ -58,6 +58,12 @@ pub(super) fn sent_timer(t: &T) -> Option<TimedPref> {
     infos.next_back()?.preferences?.timed_messages
 }
 
+/// The timer the user keeps for `friend`.
+pub(super) fn my_ttl(t: &T, friend: i64) -> Option<i64> {
+    let mine = t.e.state.friends[&friend].my_prefs.as_ref()?;
+    mine.timed_messages.as_ref()?.ttl
+}
+
 pub(super) fn ttl_sent(t: &T) -> Option<i64> {
     let mut news = sent_events(t).into_iter().filter_map(|e| match e {
         ChatEvent::MsgNew(c) => Some(c.ttl),
@@ -81,10 +87,7 @@ fn a_timer_set_for_a_friend_is_offered_and_both_sides_messages_go_after_it() {
         ttl: Some(3),
     };
     assert_eq!(sent_timer(&t), Some(offered));
-    assert_eq!(
-        t.e.state.friends[&bob].my_timer.as_ref().unwrap().ttl,
-        Some(3)
-    );
+    assert_eq!(my_ttl(&t, bob), Some(3));
 
     let mine = send(&mut t, chat, "hi");
     assert_eq!(ttl_sent(&t), Some(3), "the message carries its ttl");

@@ -1,38 +1,38 @@
 //! Whether a chat's messages disappear and after how long (Messages.hs `contactTimedTTL`, `groupTimedTTL`, `rcvCITimed_`; Internal.hs `sndCITimed_`).
 
-use crate::types::model::Timed;
+use crate::types::model::{ChatFeature, Timed};
 
 use crate::chat::group_prefs::FeatureEnabled;
-use crate::chat::preferences::{FeatureAllowed, TimedPref};
+use crate::chat::preferences::{Preferences, TimedPref};
+use crate::engine::prefs::merge::{allow_of, default_allow, pref_enabled, user_allow};
 use crate::engine::records::{FriendRecord, GroupRecord};
 
-/// `defaultChatPrefs`: allowed, with no timer.
+/// The user's preference for this friend: the "allow" from their override, the user's own or
+/// the default; the timer only from the override (no user-wide timer is ever set here).
 #[must_use]
-pub fn default_pref() -> TimedPref {
+pub fn my_pref(user: Option<&Preferences>, f: &FriendRecord) -> TimedPref {
+    let mine = f.my_prefs.as_ref();
     TimedPref {
-        allow: FeatureAllowed::Yes,
-        ttl: None,
+        allow: user_allow(user, mine, ChatFeature::TimedMessages),
+        ttl: mine.and_then(|p| p.timed_messages.as_ref()?.ttl),
     }
-}
-
-/// The user's preference for this friend: their own setting, or the default.
-#[must_use]
-pub fn my_pref(f: &FriendRecord) -> TimedPref {
-    f.my_timer.clone().unwrap_or_else(default_pref)
-}
-
-fn their_allow(f: &FriendRecord) -> FeatureAllowed {
-    let pref = f.prefs.as_ref().and_then(|p| p.timed_messages.as_ref());
-    pref.map_or(FeatureAllowed::Yes, |p| p.allow)
 }
 
 /// `contactTimedTTL`: `Some` when both sides allow it (`prefEnabled False`: any "no" turns it
 /// off for both), holding the user's timer, which is `None` while none is set.
 #[must_use]
-pub fn friend_ttl(f: &FriendRecord) -> Option<Option<i64>> {
-    let mine = my_pref(f);
-    let on = mine.allow != FeatureAllowed::No && their_allow(f) != FeatureAllowed::No;
-    on.then_some(mine.ttl)
+pub fn friend_ttl(user: Option<&Preferences>, f: &FriendRecord) -> Option<Option<i64>> {
+    let mine = my_pref(user, f);
+    let theirs = f
+        .prefs
+        .as_ref()
+        .and_then(|p| allow_of(p, ChatFeature::TimedMessages));
+    let on = pref_enabled(
+        ChatFeature::TimedMessages,
+        mine.allow,
+        theirs.unwrap_or(default_allow(ChatFeature::TimedMessages)),
+    );
+    (on.for_user && on.for_contact).then_some(mine.ttl)
 }
 
 /// `groupTimedTTL`: `Some` when the group has it on (off by default), with the group's timer.

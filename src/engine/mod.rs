@@ -17,6 +17,7 @@ pub mod jobs;
 mod load;
 pub mod log;
 pub mod machine;
+mod prefs;
 mod presets;
 mod profile;
 mod quote;

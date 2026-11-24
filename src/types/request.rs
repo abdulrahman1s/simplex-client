@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::kind::FileKind;
 use crate::types::model::bytes;
-use crate::types::model::{CallRequest, ChatProfile, ChatRef, Picture, StreamRequest};
+use crate::types::model::{CallRequest, ChatPrefs, ChatProfile, ChatRef, Picture, StreamRequest};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "t", content = "c", rename_all = "snake_case")]
@@ -83,6 +83,13 @@ pub enum Request {
     SetTimer {
         chat: ChatRef,
         ttl: Option<i64>,
+    },
+    /// Chat preferences: the user's own with `friend: None`, sent to every friend they change,
+    /// or the user's overrides for one friend. A feature left out is not set at that level;
+    /// disappearing messages keep their timer and their "allow" unless named.
+    SetPrefs {
+        friend: Option<i64>,
+        prefs: ChatPrefs,
     },
     SetBlocked {
         friend: i64,

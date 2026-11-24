@@ -23,6 +23,7 @@ pub fn kind_of(r: &Request) -> RequestKind {
         Request::React { .. } => K::React,
         Request::SetMuted { .. } => K::Mute,
         Request::SetTimer { .. } => K::Timer,
+        Request::SetPrefs { .. } => K::Prefs,
         Request::SetBlocked { .. } | Request::SetMemberBlocked { .. } => K::Block,
         Request::ShowCode(_) | Request::Verify { .. } => K::Code,
         Request::Members(_) => K::Members,

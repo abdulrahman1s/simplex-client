@@ -1,8 +1,8 @@
-//! Disappearing messages from JS: `setTimer` on a friend, and a message's `ttl` and `expiresAt`.
+//! Settings from JS: `setTimer` and `setPrefs` on a friend or the client, and a message's `ttl` and `expiresAt`.
 
 use serde_json::json;
 use simplex_client::types::model::{
-    ChatMessage, ChatRef, Delivery, Friend, MessageAuthor, MessageBody, Timed,
+    Allow, ChatMessage, ChatPrefs, ChatRef, Delivery, Friend, MessageAuthor, MessageBody, Timed,
 };
 use simplex_client::types::{Event, Request};
 use wasm_bindgen::JsValue;
@@ -86,5 +86,50 @@ async fn set_timer_takes_whole_seconds_or_null_and_a_message_shows_its_timer() {
         get(&msg, "expiresAt").is_undefined(),
         "unread: not counting yet"
     );
+    client.close();
+}
+
+#[test]
+async fn set_prefs_takes_each_feature_as_always_yes_or_no() {
+    fake_tunnel("silent");
+    let client = start(json!({})).unwrap();
+    sleep(20.0).await;
+    client.tap(true);
+    let added = Heard::on(&client, "friendAdd");
+    let bob = Friend {
+        id: 4,
+        name: "bob".into(),
+        ready: true,
+        ..Friend::default()
+    };
+    client.inject(chats(vec![bob]));
+    let friend = added.objects().pop().unwrap();
+    let prefs = super::support::to_js(&json!({ "voice": "no" }));
+    settle(call(&friend, "setPrefs", &[prefs])).await.unwrap();
+    let mine = super::support::to_js(&json!({ "calls": "always" }));
+    settle(client.set_prefs(mine).into()).await.unwrap();
+    let bad = super::support::to_js(&json!({ "voice": "maybe" }));
+    let refused = settle(call(&friend, "setPrefs", &[bad]))
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(from_js(&refused)["code"], "bad_argument");
+    let asked = client.tap(false);
+    let voice_no = ChatPrefs {
+        voice: Some(Allow::No),
+        ..ChatPrefs::default()
+    };
+    let calls_always = ChatPrefs {
+        calls: Some(Allow::Always),
+        ..ChatPrefs::default()
+    };
+    assert!(asked.contains(&Request::SetPrefs {
+        friend: Some(4),
+        prefs: voice_no
+    }));
+    assert!(asked.contains(&Request::SetPrefs {
+        friend: None,
+        prefs: calls_always
+    }));
     client.close();
 }

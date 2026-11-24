@@ -37,13 +37,14 @@ impl<A: AgentPort> Engine<A> {
             paper: p.paper,
             status: p.status,
             picture: self.state.user.picture.clone(),
+            prefs: self.state.user.prefs.clone(),
         };
         self.update_profile(user)
     }
 
     /// Commands.hs `updateProfile_`: checked and encoded before anything is kept, nothing sent
     /// when the profile as friends see it did not change.
-    pub(super) fn update_profile(&mut self, user: UserRecord) -> Result<()> {
+    pub(crate) fn update_profile(&mut self, user: UserRecord) -> Result<()> {
         let new = sent_profile(&user);
         if let Some(image) = &new.image
             && image.0.len() > MAX_PICTURE_URI
@@ -55,26 +56,26 @@ impl<A: AgentPort> Engine<A> {
         }
         let changed = new != sent_profile(&self.state.user);
         if changed {
-            // Each friend's copy differs only in their timer, so one that fits says all fit.
+            // Each friend's copy differs only in their overrides, so one that fits says all fit.
             let msg = ChatMessage::new(ChatEvent::Info {
                 profile: new,
                 member_key: None,
             })?;
             encode_chat_message(&msg, true)?;
         }
+        // Each friend whose profile this changes is sent theirs (`updateProfile_`).
+        let told: Vec<i64> = (self.state.friends.values())
+            .filter(|f| f.reachable())
+            .filter(|f| sent_profile_to(&user, f) != sent_profile_to(&self.state.user, f))
+            .map(|f| f.id)
+            .collect();
         self.save_user(user)?;
         self.emit(Event::Profile(self.state.user.to_wire()));
-        if changed {
-            let friends: Vec<i64> = (self.state.friends.values())
-                .filter(|f| f.reachable())
-                .map(|f| f.id)
-                .collect();
-            for friend in friends {
-                // One friend's relay failing is no reason to keep the profile from the rest.
-                if let Err(e) = self.send_profile(friend) {
-                    self.log
-                        .line(format_args!("profile not sent: {}", e.detail));
-                }
+        for friend in told {
+            // One friend's relay failing is no reason to keep the profile from the rest.
+            if let Err(e) = self.send_profile(friend) {
+                self.log
+                    .line(format_args!("profile not sent: {}", e.detail));
             }
         }
         Ok(())

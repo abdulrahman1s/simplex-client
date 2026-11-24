@@ -23,6 +23,7 @@ pub enum RequestKind {
     React,
     Mute,
     Timer,
+    Prefs,
     Block,
     Code,
     Members,

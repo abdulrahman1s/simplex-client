@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::Picture;
+use super::{ChatPrefs, Picture};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChatProfile {
@@ -11,6 +11,10 @@ pub struct ChatProfile {
     pub paper: Option<u8>,
     pub status: MyStatus,
     pub picture: Option<Picture>,
+    /// The user's chat preferences, as every friend is sent them unless overridden for one.
+    /// Read only here: `Request::SetPrefs` changes them, `SetProfile` leaves them.
+    #[serde(default)]
+    pub prefs: ChatPrefs,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

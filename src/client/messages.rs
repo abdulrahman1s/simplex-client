@@ -5,7 +5,7 @@ use std::path::Path;
 use super::error::{Result, unexpected};
 use super::handle::Client;
 use super::waiters::{Answer, Want};
-use crate::types::model::{ChatMessage, ChatRef};
+use crate::types::model::{ChatMessage, ChatPrefs, ChatRef};
 use crate::types::{Event, FileKind, Request, RequestKind};
 
 impl Client {
@@ -90,6 +90,14 @@ impl Client {
     /// Disappearing messages in `chat`: new ones last `ttl` seconds, or `None` to turn it off.
     pub fn set_timer(&self, chat: ChatRef, ttl: Option<i64>) -> Result<()> {
         self.request(Request::SetTimer { chat, ttl })
+    }
+
+    /// The user's chat preferences, sent to every friend they change (`Request::SetPrefs`).
+    pub fn set_prefs(&self, prefs: ChatPrefs) -> Result<()> {
+        self.request(Request::SetPrefs {
+            friend: None,
+            prefs,
+        })
     }
 
     /// Up to `count` messages before the message `before` (or the newest), oldest first.

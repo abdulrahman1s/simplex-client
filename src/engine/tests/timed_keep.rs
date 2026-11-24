@@ -99,6 +99,5 @@ fn the_same_profile_again_does_not_undo_the_users_timer() {
     // Their profile as the handshake had it: no timer, nothing changed since.
     t.peer_says(&conn, 1, super::profile::their_info(None, |_| {}));
     t.peer_says(&conn, 2, super::profile::their_info(None, |_| {}));
-    let mine = t.e.state.friends[&bob].my_timer.clone().unwrap();
-    assert_eq!(mine.ttl, Some(60));
+    assert_eq!(super::timed::my_ttl(&t, bob), Some(60));
 }

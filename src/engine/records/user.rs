@@ -3,13 +3,19 @@
 use crate::types::model::{ChatProfile, MyStatus, Picture};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+use crate::chat::preferences::Preferences;
+use crate::engine::prefs::wire::to_wire;
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct UserRecord {
     pub name: String,
     pub about: String,
     pub paper: Option<u8>,
     pub status: MyStatus,
     pub picture: Option<Picture>,
+    /// The user's chat preferences (`Profile.preferences`); `None` reads as the defaults.
+    #[serde(default)]
+    pub prefs: Option<Preferences>,
 }
 
 impl UserRecord {
@@ -29,6 +35,7 @@ impl UserRecord {
             paper: self.paper,
             status: self.status,
             picture: self.picture.clone(),
+            prefs: to_wire(self.prefs.as_ref()),
         }
     }
 }

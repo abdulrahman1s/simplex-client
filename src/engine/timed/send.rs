@@ -11,7 +11,7 @@ impl<A: AgentPort> Engine<A> {
     /// `contactTimedTTL` or `groupTimedTTL` of the chat.
     pub(crate) fn chat_ttl(&self, chat: ChatRef) -> Result<Option<Option<i64>>> {
         Ok(match chat {
-            ChatRef::Direct(f) => friend_ttl(&self.friend(f)?),
+            ChatRef::Direct(f) => friend_ttl(self.state.user.prefs.as_ref(), &self.friend(f)?),
             ChatRef::Group(g) => group_ttl(&self.group(g)?),
         })
     }

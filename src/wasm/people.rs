@@ -32,6 +32,12 @@ impl Client {
         self.shared.queue(Request::Connect(link.trim().to_owned()))
     }
 
+    /// The user's chat preferences, sent to every friend they change: `{ voice: "no", … }`.
+    #[wasm_bindgen(js_name = setPrefs, unchecked_return_type = "Promise<void>")]
+    pub fn set_prefs(&self, prefs: JsValue) -> js_sys::Promise {
+        super::objects::timer::set_prefs(&self.shared, None, &prefs)
+    }
+
     #[wasm_bindgen(js_name = setName, unchecked_return_type = "Promise<void>")]
     pub fn set_name(&self, name: &str) -> js_sys::Promise {
         let profile = {
