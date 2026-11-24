@@ -77,3 +77,8 @@ All notable changes to this project are documented here. The format follows
   switch started the v7 way still ends the v7 way.
 - A group member's chat version range follows each JSON message they send, not only the
   handshake (`updateMemberChatVRange`).
+
+### Security
+
+- The HPACK integer decoder refuses a sixth continuation byte before shifting, so a 32-bit
+  (wasm) build no longer shifts past its word size on a hostile header block.
