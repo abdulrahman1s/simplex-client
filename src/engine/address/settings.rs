@@ -44,19 +44,22 @@ impl<A: AgentPort> Engine<A> {
         self.update_profile(user)
     }
 
-    /// A request answered as it came, and the auto-reply kept for when the friend connects.
+    /// A request answered as it came.
     pub(crate) fn auto_answer(&mut self, request: i64) -> Result<()> {
-        let Some(a) = self.state.address.record.clone().filter(|a| a.auto_accept) else {
+        if !self
+            .state
+            .address
+            .record
+            .as_ref()
+            .is_some_and(|a| a.auto_accept)
+        {
             return Ok(());
-        };
+        }
         let req = self.request_of(request)?;
         if req.member.is_some() {
             return Ok(());
         }
-        let friend = self.accept_address_request(request, req, None)?;
-        if let Some(text) = a.auto_reply {
-            self.put(&reply_key(friend), &text)?;
-        }
+        self.accept_address_request(request, req, None)?;
         Ok(())
     }
 

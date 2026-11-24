@@ -88,3 +88,27 @@ fn the_address_shows_in_the_profile_until_it_is_taken_out_or_deleted() {
     t.req(Request::DeleteAddress);
     assert_eq!(link(&t), None, "a deleted address leaves the profile");
 }
+
+#[test]
+fn a_request_the_user_accepts_gets_the_auto_reply_too() {
+    let mut t = T::started();
+    let address = made(&mut t);
+    t.req(Request::SetAddressSettings {
+        auto_accept: false,
+        auto_reply: Some("welcome".into()),
+    });
+    asks(&mut t, address, 1, contact("dora", Some(b"r1")));
+    let request = *t.e.state.address.requests.keys().next().unwrap();
+    t.req(Request::Accept(request));
+    let conn = t.e.state.friends.values().next().unwrap().conn;
+    t.agent(AgentEvent::Conf {
+        conn,
+        conn_info: x_info("dora"),
+    });
+    let out = t.agent(AgentEvent::Con { conn });
+    assert!(
+        messages(&out)
+            .iter()
+            .any(|m| m.body == MessageBody::Text("welcome".into()))
+    );
+}

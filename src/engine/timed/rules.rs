@@ -11,6 +11,8 @@ use crate::engine::records::{FriendRecord, GroupRecord};
 /// the default; the timer only from the override (no user-wide timer is ever set here).
 #[must_use]
 pub fn my_pref(user: Option<&Preferences>, f: &FriendRecord) -> TimedPref {
+    // Incognito, the friend was sent the defaults, not the user's own (`mergeUserChatPrefs'`).
+    let user = user.filter(|_| f.incognito.is_none());
     let mine = f.my_prefs.as_ref();
     TimedPref {
         allow: user_allow(user, mine, ChatFeature::TimedMessages),

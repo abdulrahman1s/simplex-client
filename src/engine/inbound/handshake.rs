@@ -81,9 +81,9 @@ impl<A: AgentPort> Engine<A> {
             .ok_or_else(|| fail(Code::RequestFailed, "conn-info without a profile"))?;
         let id = self.store.next_id(keys::FRIEND_SEQ)?;
         let mut f = FriendRecord::new(id, *conn, self.clock.wall_ms());
+        f.incognito.clone_from(&incognito);
         apply_profile(self.state.user.prefs.as_ref(), &mut f, &profile);
         f.invited_with = links;
-        f.incognito.clone_from(&incognito);
         let ours = conn_info(&user_for(&self.state.user, &f))?;
         self.agent.allow(&mut self.store, conn, ours)?;
         self.save_friend(f)?;

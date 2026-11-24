@@ -46,7 +46,10 @@ impl<A: AgentPort> Engine<A> {
         if m.conn.is_none() || !m.status.current() {
             return Err(fail(Code::RequestFailed, "the member is not connected"));
         }
-        if m.friend.is_some() {
+        // A friend removed since leaves the member free to be asked again.
+        if m.friend
+            .is_some_and(|f| self.state.friends.contains_key(&f))
+        {
             return Err(fail(Code::RequestFailed, "member contact already exists"));
         }
         // `IKPQOff`, as upstream's member contacts start.

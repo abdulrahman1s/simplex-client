@@ -136,3 +136,17 @@ fn a_groups_messages_of_the_last_twelve_hours_stay() {
     later(&mut t, 12 * 3600);
     assert!(t.e.item(ChatRef::Group(g), fresh).unwrap().is_none());
 }
+
+#[test]
+fn an_unread_message_that_grows_old_leaves_the_unread_count() {
+    let mut t = T::started();
+    let (bob, conn) = t.friend("bob");
+    t.req(Request::SetMessageTtl {
+        chat: None,
+        ttl: Some(60),
+    });
+    says(&mut t, &conn, 1, "old");
+    assert_eq!(unread(&t, bob), 1);
+    later(&mut t, 61);
+    assert_eq!(unread(&t, bob), 0);
+}

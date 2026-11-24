@@ -1,7 +1,7 @@
 //! Old messages are deleted here as each chat's TTL says, every half hour (Commands.hs `expireChatItems`, `withExpirationDate`; Store/Messages.hs `deleteContactExpiredCIs`, `deleteGroupExpiredCIs`).
 
 use crate::types::Event;
-use crate::types::model::ChatRef;
+use crate::types::model::{ChatRef, MessageAuthor, MessageBody};
 
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::Result;
@@ -89,9 +89,16 @@ impl<A: AgentPort> Engine<A> {
             }
             before = Some(oldest);
         }
+        let mark = self.read_mark(chat);
         for (id, it) in old.into_iter().take(*budget) {
+            let unread = it.author != MessageAuthor::Me
+                && !matches!(it.body, MessageBody::Notice(_))
+                && id > mark;
             self.drop_item_file(chat, id)?;
             gone.push(self.remove_item(chat, id, &it)?);
+            if unread {
+                self.uncount(chat)?;
+            }
             *budget -= 1;
         }
         Ok(())

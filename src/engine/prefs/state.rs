@@ -13,7 +13,13 @@ impl<A: AgentPort> Engine<A> {
     /// One feature with this friend: the user's side against theirs, each missing one the default.
     #[must_use]
     pub(crate) fn enabled(&self, f: &FriendRecord, feature: ChatFeature) -> PrefEnabled {
-        let user = self.state.user.prefs.as_ref();
+        // Incognito, the friend was sent the defaults, not the user's own (`mergeUserChatPrefs'`).
+        let user = self
+            .state
+            .user
+            .prefs
+            .as_ref()
+            .filter(|_| f.incognito.is_none());
         let mine = user_allow(user, f.my_prefs.as_ref(), feature);
         let theirs = (f.prefs.as_ref())
             .and_then(|p| super::merge::allow_of(p, feature))

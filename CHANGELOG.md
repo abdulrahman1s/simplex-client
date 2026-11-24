@@ -114,7 +114,8 @@ All notable changes to this project are documented here. The format follows
 - Address settings: `Request::SetAddressSettings { auto_accept, auto_reply }`
   (`client.set_address_settings`; JS `setAddressSettings({ autoAccept, autoReply })`) accepts
   requests to the address as they come and sends the auto-reply to each friend made through it
-  once connected (`APISetAddressSettings`, Subscriber.hs `autoAccept`, `sendAutoReply`).
+  once connected, however the request was accepted (`APISetAddressSettings`, Subscriber.hs
+  `autoAccept`, `sendAutoReply`).
   `Request::ShareAddress(on)` (JS `shareAddress`) shows the address in the profile every
   friend gets (`APISetProfileAddress`), and deleting the address takes it out. A friend's shown
   address is in `Friend.address`; the settings in `ChatProfile`. **Breaking:** `Request` has
@@ -128,7 +129,10 @@ All notable changes to this project are documented here. The format follows
   the user only by a random name from upstream's word lists (`generateRandomProfile`), with
   the default preferences and no picture, in the invitation's link data, the handshake and
   every later profile. `Friend.incognito` holds the name. A retried invitation stays incognito.
-  Groups still get the user's own profile. **Breaking:** `Request` has new variants and
+  Joining a group through an incognito friend, inviting one into a group, and connecting to a
+  group link incognito are refused, as none of them could keep the user's profile out
+  (`CEContactIncognitoCantInvite`); an incognito friend is judged against the default
+  preferences, as they were sent (`mergeUserChatPrefs'`). **Breaking:** `Request` has new variants and
   `Friend` a new field; JS `createInvite` and `connect` take an optional options argument.
 
 ### Fixed

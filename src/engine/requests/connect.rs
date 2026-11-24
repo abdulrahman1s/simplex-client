@@ -95,10 +95,15 @@ impl<A: AgentPort> Engine<A> {
             self.state.chats_dirty = true;
             return Ok(());
         }
-        // Incognito, whoever answers knows the user only by a random name (`APIConnect`).
-        let incognito = (incognito && !matches!(kind, Kind::Group))
-            .then(random_name)
-            .flatten();
+        // Incognito, whoever answers knows the user only by a random name (`APIConnect`). Groups
+        // would get the user's own profile from their members, so none is joined incognito here.
+        if incognito && matches!(kind, Kind::Group) {
+            return Err(fail(
+                Code::NotAllowed,
+                "a group is not joined incognito here",
+            ));
+        }
+        let incognito = incognito.then(random_name).flatten();
         let me = incognito
             .as_deref()
             .map_or_else(|| self.state.user.clone(), incognito_user);

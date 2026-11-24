@@ -33,7 +33,18 @@ impl<A: AgentPort> Engine<A> {
                 ));
             }
             MemberStatus::Invited => {}
-            _ => {
+            MemberStatus::Rejected
+            | MemberStatus::Removed
+            | MemberStatus::Left
+            | MemberStatus::GroupDeleted
+            | MemberStatus::Unknown
+            | MemberStatus::Introduced
+            | MemberStatus::IntroInvited
+            | MemberStatus::Accepted
+            | MemberStatus::Announced
+            | MemberStatus::Connected
+            | MemberStatus::Complete
+            | MemberStatus::Creator => {
                 let msg = ChatMessage::new(ChatEvent::GrpMemDel {
                     member_id: m.member_id.clone(),
                     messages,

@@ -69,3 +69,75 @@ fn connecting_incognito_joins_with_a_random_name() {
     let f = t.e.state.friends.values().next().unwrap();
     assert_eq!(f.incognito.as_deref(), Some(name.as_str()));
 }
+
+/// A friend met through an incognito invitation.
+fn incognito_friend(t: &mut T) -> i64 {
+    t.req(Request::CreateIncognitoInvite);
+    let conn = t.e.state.inviting.unwrap();
+    t.agent(AgentEvent::Invitation {
+        conn,
+        full: "simplex:/invitation#/?v=2-7&name=x".into(),
+        short: None,
+    });
+    t.agent(AgentEvent::Conf {
+        conn,
+        conn_info: x_info("bob"),
+    });
+    t.agent(AgentEvent::Con { conn });
+    t.e.state.friend_of(&conn).unwrap()
+}
+
+#[test]
+fn a_friend_met_incognito_never_sees_the_user_in_a_group() {
+    let mut t = T::started();
+    let bob = incognito_friend(&mut t);
+    let (g, _) = t.group(
+        "team",
+        &["carol"],
+        crate::chat::group::GroupMemberRole::Owner,
+    );
+    let out = t.req(Request::AddMember {
+        group: g,
+        friend: bob,
+    });
+    assert!(
+        out.iter()
+            .any(|e| matches!(e, crate::types::Event::Failed { .. })),
+        "CEContactIncognitoCantInvite"
+    );
+    let mut joined = t.e.group(g).unwrap();
+    joined.invited_by_friend = Some(bob);
+    joined.status = crate::engine::records::MemberStatus::Invited;
+    t.e.save_group(joined).unwrap();
+    let out = t.req(Request::JoinGroup(g));
+    assert!(
+        out.iter()
+            .any(|e| matches!(e, crate::types::Event::Failed { .. }))
+    );
+    let out = t.req(Request::ConnectIncognito(
+        super::groups::links::SHORT.into(),
+    ));
+    let why = out.iter().find_map(|e| match e {
+        crate::types::Event::Failed { detail, .. } => Some(detail.clone()),
+        _ => None,
+    });
+    assert_eq!(why.as_deref(), Some("a group is not joined incognito here"));
+}
+
+#[test]
+fn a_friend_met_incognito_gets_the_default_preferences_not_the_users() {
+    let mut t = T::started();
+    t.req(Request::SetPrefs {
+        friend: None,
+        prefs: crate::types::model::ChatPrefs {
+            voice: Some(crate::types::model::Allow::No),
+            ..Default::default()
+        },
+    });
+    let bob = incognito_friend(&mut t);
+    let f = t.e.state.friends[&bob].clone();
+    assert!(
+        t.e.enabled(&f, crate::types::model::ChatFeature::Voice)
+            .for_user
+    );
+}

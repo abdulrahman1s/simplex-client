@@ -59,6 +59,17 @@ impl<A: AgentPort> Engine<A> {
             self.save_address(a)?;
         }
         self.forget_request(request, false)?;
+        // Each friend made through the address gets the auto-reply once connected, however
+        // accepted (Subscriber.hs `JOINED` `sendAutoReply`).
+        if let Some(text) = self
+            .state
+            .address
+            .record
+            .as_ref()
+            .and_then(|a| a.auto_reply.clone())
+        {
+            self.put(&super::settings::reply_key(id), &text)?;
+        }
         Ok(id)
     }
 

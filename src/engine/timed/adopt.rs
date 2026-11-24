@@ -10,6 +10,7 @@ use crate::engine::records::FriendRecord;
 /// Their profile's timer replaces the user's own for them, so both sides count the same; the
 /// user's "allow" stays. Nothing is sent back: only the user's own change sends `x.info`.
 fn adopt_timer(user: Option<&Preferences>, f: &mut FriendRecord, p: &Profile) {
+    let user = user.filter(|_| f.incognito.is_none());
     let theirs = p.preferences.as_ref();
     let rcv_ttl = theirs.and_then(|p| p.timed_messages.as_ref()?.ttl);
     let mine = f.my_prefs.as_ref().and_then(|p| p.timed_messages.clone());

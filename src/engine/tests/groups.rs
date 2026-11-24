@@ -15,7 +15,7 @@ mod invitation_repeat;
 mod leave;
 mod limits;
 mod link_acpt;
-mod links;
+pub(crate) mod links;
 mod links_cap;
 mod links_host;
 mod links_join;

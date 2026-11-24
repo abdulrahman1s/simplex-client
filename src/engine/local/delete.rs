@@ -25,7 +25,7 @@ impl<A: AgentPort> Engine<A> {
     }
 
     /// One unread message fewer.
-    fn uncount(&mut self, chat: ChatRef) -> Result<()> {
+    pub(super) fn uncount(&mut self, chat: ChatRef) -> Result<()> {
         match chat {
             ChatRef::Direct(id) => {
                 let mut f = self.friend(id)?;
