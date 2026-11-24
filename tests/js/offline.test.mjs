@@ -34,6 +34,7 @@ test("a client over TCP with no relay reachable takes requests and goes offline 
     relays: [await deadRelay()],
     timeout: 1500,
   });
+  assert.equal(client.profile()?.name, "Node", "profile() answers as soon as start resolves");
   const ready = await next(client, "ready");
   assert.equal(ready.name, "Node");
 

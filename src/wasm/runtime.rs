@@ -76,6 +76,10 @@ impl Core {
             relays: o.relays.clone(),
         };
         engine.start(&config)?;
+        // `Ready` only reaches JS on the first flush, after `start` has resolved; `profile()`
+        // must already answer then.
+        let mut sugar = Sugar::default();
+        sugar.profile = Some(engine.state.user.to_wire());
         let jobs = engine.job_results();
         Ok(Core {
             engine,
@@ -84,7 +88,7 @@ impl Core {
             jobs,
             smp_clock,
             waiters: Waiters::default(),
-            sugar: Sugar::default(),
+            sugar,
             log,
             timeout_ms: o.timeout_ms,
             engine_due: 0,
