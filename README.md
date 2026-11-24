@@ -239,7 +239,7 @@ with `node examples/node/bot.mjs` or `bun examples/node/bot.mjs`.
 
 Files go over XFTP, natively and in wasm, in the browser through the same tunnel. In wasm
 they are held in memory, so files over 64 MiB are refused (`client.setFileLimit(bytes)`
-changes that).
+changes that, up to the 1 GiB every client keeps to).
 
 ```js
 const photo = await fs.promises.readFile("cat.jpg"); // or new Uint8Array(await file.arrayBuffer())
@@ -255,6 +255,53 @@ client.on("fileProgress", ({ percent, sending }) => {
   console.log(`${sending ? "sending" : "receiving"}: ${percent}%`);
 });
 ```
+
+## Limits
+
+The client keeps the same limits as the official SimpleX Chat 7.1.4 client, so nothing it
+sends is something other clients drop. `simplex_client::limits` has every one of them, each
+with its upstream source. The main ones:
+
+| Limit | Value | Upstream |
+|---|---|---|
+| Reactions | 👍 👎 😀 😂 😢 ❤️ 🚀 ✅ (`REACTIONS`) | Protocol.hs `mrEmojiChar` |
+| Reactions per person per message | 3 (`MAX_REACTIONS`) | Internal.hs `maxMsgReactions` |
+| File size | 1 GiB (`MAX_FILE_SIZE`) | Description.hs `maxFileSize` |
+| Message as JSON | 15 602 bytes (`MAX_ENCODED_MSG_LENGTH`) | Protocol.hs `maxEncodedMsgLength` |
+| Mentions per message | 3 (`MAX_SENT_MENTIONS`) | Internal.hs `maxSndMentions` |
+| Display and group names | 50 characters, no leading punctuation, none of `` .,;/\#@'"`~ `` (`is_valid_name`) | Commands.hs `mkValidName` |
+| Bio | 160 bytes as JSON (`MAX_BIO_BYTES`) | apps `MAX_BIO_LENGTH_BYTES` |
+| Profile and group picture | a 12 500-character `data:` URI (`MAX_PICTURE_URI`) | Commands.hs `maxProfileImageSize` |
+| Edit your message | for 1 day (`EDIT_WINDOW_MS`) | Messages.hs `deletable'` |
+| Delete your message for everyone | for 30 hours (`DELETE_WINDOW_MS`) | Commands.hs `APIDeleteChatItem` |
+| Send in a group | `author` or above (`ROLE_TO_SEND`) | Commands.hs `assertUserGroupRole` |
+| Add members, make a group link | `admin` or above | Commands.hs `APIAddMember`, `APICreateGroupLink` |
+| Change the group picture | `owner` | Commands.hs `runUpdateGroupProfile` |
+
+The chat's preferences apply as well: reactions, files or full deletion turned off by a
+friend or a group are refused. Received messages are held to the same rules, so a reaction
+outside the set or a fourth one from the same person is ignored.
+
+A request that breaks a limit fails with its own code before anything is sent:
+
+| Rust `ErrorCode` | Code | JS `code` | When |
+|---|---|---|---|
+| `ReactionNotAllowed` | `SX-CHT-018` | `reaction_not_allowed` | not one of the reactions, given twice, or a fourth one |
+| `FileTooLarge` | `SX-CHT-019` | `file_too_large` | a file over 1 GiB, or over the JS memory limit |
+| `TextTooLong` | `SX-CHT-020` | `text_too_long` | a message, caption or bio too long |
+| `TooManyMentions` | `SX-CHT-021` | `too_many_mentions` | more than 3 mentions |
+| `InvalidName` | `SX-CHT-022` | `invalid_name` | a name the official client would change |
+| `NotAllowed` | `SX-CHT-023` | `not_allowed` | a role, preference or time window does not allow it |
+| `PictureTooLarge` | `SX-CHT-024` | `picture_too_large` | a picture over the profile limit |
+
+In Rust, `Client::request` and the methods on it return `Error::Failed { code, .. }` at once
+for what needs no lookup (the reaction set, text size, mention count, names, bio); the rest
+arrives as `Event::Failed`. In JS every call rejects with `{ code, detail }`: the limit codes
+above, `request_failed`, `no_connection`, `bad_link`, `call_failed` and `stream_failed` from
+the engine, and `closed`, `timeout`, `bad_argument`, `bad_option`, `wrong_key`, `file_gone`,
+`file_failed` and `file_cancelled` from the client itself. Calls that only queue a request
+(`send`, `react`, `edit`, `delete`, …) resolve once the engine has taken it and reject only
+for a limit; other refusals arrive as a `raw` event.
 
 ## Browser tunnel (Cloudflare Worker)
 
