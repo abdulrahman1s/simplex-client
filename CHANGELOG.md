@@ -93,6 +93,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- A forward's time with a year past 9999, or a date out of range, no longer overflows (a
+  panic in debug builds, a wrapped time in release): the JSON `x.grp.msg.forward` is refused,
+  as Aeson refuses it, and a binary forward takes the time it arrived.
 - A received file description that is a redirect is refused, on native and in memory, as
   simplex-chat 7.1.4 does ("redirect not allowed"): its inner description could send the
   download to servers the user never approved. The file shows as failed. This client never
