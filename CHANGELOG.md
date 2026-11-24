@@ -100,3 +100,5 @@ All notable changes to this project are documented here. The format follows
 - The tunnel pool redials at once after a `1000 lifetime` close only when the session was up
   and the tunnel lived an hour; earlier ones wait out the back-off, so a hostile tunnel cannot
   force a reconnect loop.
+- A forwarded command's answer (PRES) under the command's own nonce is refused as the proxy's
+  error before it is opened; it could only be the proxy reflecting the client's own PFWD body.

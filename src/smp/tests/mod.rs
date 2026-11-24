@@ -13,6 +13,7 @@ mod pool_lifetime;
 mod pool_rig;
 mod proxy_codec;
 mod proxy_pkey;
+mod proxy_reflect;
 mod proxy_relay;
 mod proxy_session;
 mod responses;
