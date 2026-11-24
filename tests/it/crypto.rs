@@ -47,6 +47,18 @@ fn ed25519_matches_rfc8032_vector_1_and_reference_signature() {
 }
 
 #[test]
+fn ed25519_refuses_a_small_order_key_whose_one_signature_fits_every_message() {
+    let mut identity = [0u8; 32];
+    identity[0] = 1;
+    let key = PublicKey::from_raw(Alg::Ed25519, &identity).unwrap();
+    let mut raw = [0u8; 64];
+    raw[0] = 1;
+    let sig = Signature::from_raw(Alg::Ed25519, &raw).unwrap();
+    assert!(!key.verify(&sig, b"msg1"));
+    assert!(!key.verify(&sig, b"anything else"));
+}
+
+#[test]
 fn ed448_signature_equals_reference_and_openssl_and_rejects_tamper() {
     let sk = PrivateKey::from_raw(Alg::Ed448, &unhex(ED448_SEED)).unwrap();
     let pk = sk.public().unwrap();
