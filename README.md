@@ -20,6 +20,47 @@ small, plain API.
 - A `wasm32-unknown-unknown` build of the whole client, reaching relays through a WebSocket tunnel
 - Low-level modules stay public if you need to go below `Client`
 
+## Why this library
+
+The official way to embed SimpleX Chat is its Haskell core: link `libsimplex` with its GHC
+runtime, or run the `simplex-chat` CLI as a separate process and drive it over its WebSocket
+API, which is what the official TypeScript client does. This crate speaks the same protocols
+natively instead.
+
+| | Official core | simplex-client |
+|---|---|---|
+| Native, x86_64 Linux | `libsimplex` + GHC runtime: **238 MB** · `simplex-chat` CLI: **87 MB** | a whole echo bot, SQLite included: **8.4 MB** (stripped release) |
+| Browser | no | **4.4 MB** wasm, **1.3 MB** gzipped |
+| Node.js | a CLI process beside yours, over a local WebSocket | in-process wasm, direct TCP |
+| Language | Haskell, with a C FFI or a JSON-over-WebSocket API | Rust crate or a JS class |
+| Runtime | GHC runtime and its threads | plain threads natively, one event loop in wasm; no async runtime |
+| Memory safety | — | `#![forbid(unsafe_code)]` |
+
+What that buys you:
+
+- **One dependency, one process.** No second binary to ship, start, supervise and talk to,
+  and no JSON protocol between your code and the client.
+- **It runs where the official core can't:** browsers and edge runtimes, through
+  wasm32. On Node it opens relay connections itself.
+- **Small enough to bundle.** A bot, a desktop app or a web page carries the client in a few
+  megabytes, and a sandboxed helper needs no Haskell runtime.
+- **A small API.** Start a `Client`, read its events, call `send`, `reply` and `accept`.
+  The protocol layers below stay public when you need them.
+- **Byte-compatible.** It is ported from simplex-chat v7.1.4 and simplexmq `fdbcb24d`,
+  checked against golden bytes from the reference and live against the official CLI and
+  servers.
+
+What the official core still has that this crate lacks:
+
+- **Maturity and audits.** The official core is the reference implementation and has had
+  security audits; this crate has not.
+- **Private message routing.** Messages go to the relay directly.
+- **Files in the browser.** The wasm build has no XFTP file transfers yet.
+- **Coverage of newer features.** Features added after 7.1.4 are not tracked.
+
+Sizes were measured on 2026-11-24: the official 7.1.4 CLI release asset, and `libsimplex`
+7.0.3 with its shared libraries as packaged on Linux.
+
 ## Quick start
 
 The crate is not published on crates.io. Depend on it through git:
