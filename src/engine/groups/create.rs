@@ -3,6 +3,7 @@
 use crate::types::model::ChatNotice;
 
 use crate::chat::group::GroupMemberRole;
+use crate::chat::group_prefs::{FeatureEnabled, GroupFeature, GroupPreferences};
 use crate::chat::group_profile::GroupProfile;
 use crate::chat::ids::MemberId;
 use crate::engine::agent_port::AgentPort;
@@ -10,8 +11,8 @@ use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
 use crate::engine::records::{GroupRecord, MemberStatus, keys};
 
-/// The profile the old glue sent (`{displayName, fullName: ""}`): no preferences, so the group
-/// has `defaultGroupPrefs`, history and direct messages off.
+/// The profile `/g` makes (Commands.hs `groupProfile`): only direct messages and history are
+/// set, both on; the rest is `defaultGroupPrefs`.
 fn new_profile(name: &str) -> GroupProfile {
     GroupProfile {
         display_name: name.to_owned(),
@@ -20,7 +21,11 @@ fn new_profile(name: &str) -> GroupProfile {
         description: None,
         image: None,
         public_group: None,
-        group_preferences: None,
+        group_preferences: Some(GroupPreferences {
+            direct_messages: Some(GroupFeature::new(FeatureEnabled::On)),
+            history: Some(GroupFeature::new(FeatureEnabled::On)),
+            ..GroupPreferences::default()
+        }),
         member_admission: None,
         chat_layout: None,
     }

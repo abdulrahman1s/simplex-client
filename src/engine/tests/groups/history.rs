@@ -293,3 +293,18 @@ fn a_joiner_engine_shows_the_history_it_is_sent_with_its_authors() {
         ]
     );
 }
+
+#[test]
+fn a_group_made_here_sends_its_history_to_a_member_it_adds() {
+    let mut t = T::started();
+    t.req(Request::NewGroup("team".into()));
+    let g = *t.e.state.groups.keys().next().unwrap();
+    t.req(send(g, "first", vec![]));
+    let conn = dave_accepted(&mut t, g);
+    t.agent(AgentEvent::Con { conn });
+    let got: Vec<String> = history(&t, conn)
+        .iter()
+        .map(|(_, e)| text(e).to_owned())
+        .collect();
+    assert_eq!(got, ["first"]);
+}
