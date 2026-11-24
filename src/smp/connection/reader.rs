@@ -4,12 +4,12 @@ use std::sync::atomic::Ordering;
 
 use crate::smp::block::RcvBlocks;
 use crate::smp::error::SmpError;
-use crate::smp::events::SmpEventKind;
 use crate::smp::responses::Response;
 use crate::smp::transmission::{Incoming, parse_payload};
 use crate::smp::transport::Reader;
 
 use super::shared::{Shared, lock};
+use crate::smp::flow::route;
 
 /// Reads blocks until the connection fails; returns why.
 pub fn run(
@@ -44,48 +44,14 @@ fn dispatch(sh: &Shared, version: u16, t: Incoming) -> bool {
     } else {
         lock(&sh.pending).take(&t.corr_id)
     };
-    let Some(entry) = waiting else {
-        return match decoded {
-            Ok(r) => push(sh, t.entity_id, r),
-            Err(_) => true, // an unreadable push has no one to be told to
-        };
-    };
-    // A MSG that answers SUB, ACK or GET is also an event, so the owner has one path for messages.
-    let kept = match &decoded {
-        Ok(r @ Response::Msg { .. }) => push(sh, t.entity_id.clone(), r.clone()),
-        _ => true,
-    };
-    let result = match decoded {
-        Ok(Response::Err(e)) => Err(SmpError::Server(e)),
-        Ok(_) if entry.entity_id != t.entity_id => {
-            Err(SmpError::Unexpected("response for another queue"))
-        }
-        Ok(r) => Ok(r),
-        Err(e) => Err(e.into()),
-    };
-    sh.answer(&entry.reply, result);
+    let routed = route(
+        decoded,
+        t.entity_id,
+        waiting.as_ref().map(|e| e.entity_id.as_slice()),
+    );
+    let kept = routed.event.is_none_or(|e| sh.emit(e));
+    if let (Some(entry), Some(answer)) = (waiting, routed.answer) {
+        sh.answer(&entry.reply, answer);
+    }
     kept
-}
-
-fn push(sh: &Shared, entity_id: Vec<u8>, r: Response) -> bool {
-    sh.emit(match r {
-        Response::Msg { msg_id, body } => SmpEventKind::Msg {
-            entity_id,
-            msg_id,
-            body,
-        },
-        Response::End => SmpEventKind::End { entity_id },
-        Response::Deld => SmpEventKind::Deld { entity_id },
-        other @ (Response::Ids(_)
-        | Response::Lnk { .. }
-        | Response::Ok
-        | Response::Sok(_)
-        | Response::Nid { .. }
-        | Response::Info(_)
-        | Response::Err(_)
-        | Response::Pong) => SmpEventKind::Unexpected {
-            entity_id,
-            response: other,
-        },
-    })
 }

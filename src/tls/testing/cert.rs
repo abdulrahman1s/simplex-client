@@ -19,7 +19,7 @@ fn signature_algorithm(alg: Alg) -> Vec<u8> {
 }
 
 /// A certificate for `subject`, signed by `issuer` (the same pair for a self-signed one).
-pub(in crate::tls) fn make_cert(subject: &PublicKey, issuer: &KeyPair, serial: u8) -> Vec<u8> {
+pub(crate) fn make_cert(subject: &PublicKey, issuer: &KeyPair, serial: u8) -> Vec<u8> {
     let alg = signature_algorithm(issuer.public.alg());
     let empty = der(0x30, &[]);
     let tbs = der(

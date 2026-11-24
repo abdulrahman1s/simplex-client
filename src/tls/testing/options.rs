@@ -1,7 +1,12 @@
 //! What the mock TLS server should do wrong, and what it saw.
-use crate::crypto::Alg;
+use super::conn::ServerConn;
+use crate::crypto::{Alg, KeyPair};
+use crate::tls::error::TlsError;
 
-pub(in crate::tls) struct MockOpts {
+/// Runs after the handshake in place of the canned application phase.
+pub(crate) type AppHook = Box<dyn FnOnce(&mut ServerConn) -> Result<(), TlsError> + Send>;
+
+pub(crate) struct MockOpts {
     pub key: Alg,
     pub alpn: Option<&'static str>,
     pub bad_finished: bool,
@@ -19,6 +24,9 @@ pub(in crate::tls) struct MockOpts {
     pub corrupt_app_record: bool,
     pub close_notify_after_data: bool,
     pub echo: bool,
+    /// A leaf key and the chain to present instead of a self-signed certificate of `key`.
+    pub identity: Option<(KeyPair, Vec<Vec<u8>>)>,
+    pub app: Option<AppHook>,
 }
 
 impl Default for MockOpts {
@@ -41,12 +49,14 @@ impl Default for MockOpts {
             corrupt_app_record: false,
             close_notify_after_data: false,
             echo: false,
+            identity: None,
+            app: None,
         }
     }
 }
 
 #[derive(Default)]
-pub(in crate::tls) struct MockResult {
+pub(crate) struct MockResult {
     pub client_finished: Vec<u8>,
     pub client_cert_empty: bool,
     pub received: Vec<u8>,

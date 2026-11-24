@@ -20,7 +20,7 @@ impl Lane {
     }
 }
 
-pub(in crate::tls) struct Pipe {
+pub(crate) struct Pipe {
     rx: Arc<Lane>,
     tx: Arc<Lane>,
     chunk: usize,
@@ -28,7 +28,7 @@ pub(in crate::tls) struct Pipe {
 
 impl Pipe {
     /// Two connected ends; `chunk` caps the bytes one read returns (0 for no cap).
-    pub(in crate::tls) fn pair(chunk: usize) -> (Pipe, Pipe) {
+    pub(crate) fn pair(chunk: usize) -> (Pipe, Pipe) {
         let (a, b) = (Arc::new(Lane::default()), Arc::new(Lane::default()));
         let chunk = if chunk == 0 { usize::MAX } else { chunk };
         (
@@ -43,6 +43,26 @@ impl Pipe {
                 chunk,
             },
         )
+    }
+}
+
+impl Pipe {
+    /// Like `read`, but gives up with `TimedOut` after `wait`, so a test that expects bytes cannot hang.
+    pub(crate) fn read_within(&mut self, buf: &mut [u8], wait: Duration) -> io::Result<usize> {
+        let g = self.rx.state.lock().unwrap_or_else(PoisonError::into_inner);
+        let (mut g, _) = self
+            .rx
+            .ready
+            .wait_timeout_while(g, wait, |s| s.0.is_empty() && !s.1)
+            .unwrap_or_else(PoisonError::into_inner);
+        if g.0.is_empty() && !g.1 {
+            return Err(io::ErrorKind::TimedOut.into());
+        }
+        let n = buf.len().min(self.chunk).min(g.0.len());
+        for slot in &mut buf[..n] {
+            *slot = g.0.pop_front().unwrap_or_default();
+        }
+        Ok(n)
     }
 }
 

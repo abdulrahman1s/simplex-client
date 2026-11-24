@@ -1,14 +1,10 @@
 //! Signature checks on certificates and CertificateVerify: Ed25519 and Ed448 only.
 use super::der::{certificate_public_key, parse_certificate};
-#[cfg(feature = "native")]
 use super::error::TlsError;
-#[cfg(feature = "native")]
 use crate::crypto::Alg;
 use crate::crypto::{PublicKey, Signature};
 
-#[cfg(feature = "native")]
 pub(super) const SIG_ED25519: u16 = 0x0807;
-#[cfg(feature = "native")]
 pub(super) const SIG_ED448: u16 = 0x0808;
 
 fn verify_with(key: &PublicKey, sig: &[u8], msg: &[u8]) -> bool {
@@ -16,7 +12,6 @@ fn verify_with(key: &PublicKey, sig: &[u8], msg: &[u8]) -> bool {
 }
 
 /// The server's CertificateVerify, made with the leaf key under the scheme it announced.
-#[cfg(feature = "native")]
 pub(super) fn check_certificate_verify(
     leaf: &[u8],
     scheme: u16,

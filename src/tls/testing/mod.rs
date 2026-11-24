@@ -3,12 +3,14 @@
 mod app;
 mod cert;
 mod client_hello;
+mod conn;
 mod flight;
 mod options;
 mod pipe;
 mod server;
 
-pub(super) use cert::make_cert;
-pub(super) use options::{MockOpts, MockResult};
-pub(super) use pipe::Pipe;
-pub(super) use server::spawn_server;
+pub(crate) use cert::make_cert;
+pub(crate) use conn::ServerConn;
+pub(crate) use options::{AppHook, MockOpts, MockResult};
+pub(crate) use pipe::Pipe;
+pub(crate) use server::spawn_server;

@@ -1,32 +1,23 @@
 //! Commands waiting for their answer, by corrId. Entries leave on the answer, on timeout, or when the session ends; the cap bounds the rest.
 use std::collections::HashMap;
 
-use crossbeam_channel::Sender;
-
 use crate::smp::error::SmpError;
-use crate::smp::responses::Response;
 
-/// Where a command's answer goes: its own channel (`send`), or the event channel under the caller's tag (`send_tagged`).
-#[derive(Debug, Clone)]
-pub enum Reply {
-    Channel(Sender<Result<Response, SmpError>>),
-    Tagged(u64),
-}
-
-pub struct Entry {
-    pub reply: Reply,
+/// `R` says where the answer goes: a channel or tag for the threaded connection, a tag or nothing in a session.
+pub struct Entry<R> {
+    pub reply: R,
     pub entity_id: Vec<u8>,
     pub sent_at: u64,
     pub deadline: u64,
     pub is_ping: bool,
 }
 
-pub struct Pending {
-    map: HashMap<Vec<u8>, Entry>,
+pub struct Pending<R> {
+    map: HashMap<Vec<u8>, Entry<R>>,
     cap: usize,
 }
 
-impl Pending {
+impl<R> Pending<R> {
     #[must_use]
     pub fn new(cap: usize) -> Self {
         Self {
@@ -35,7 +26,7 @@ impl Pending {
         }
     }
 
-    pub fn insert(&mut self, corr_id: Vec<u8>, entry: Entry) -> Result<(), SmpError> {
+    pub fn insert(&mut self, corr_id: Vec<u8>, entry: Entry<R>) -> Result<(), SmpError> {
         if self.map.len() >= self.cap {
             return Err(SmpError::TooManyPending);
         }
@@ -46,19 +37,19 @@ impl Pending {
         Ok(())
     }
 
-    pub fn take(&mut self, corr_id: &[u8]) -> Option<Entry> {
+    pub fn take(&mut self, corr_id: &[u8]) -> Option<Entry<R>> {
         self.map.remove(corr_id)
     }
 
     /// Removes and returns every entry whose deadline has passed, oldest deadline first.
-    pub fn expire(&mut self, now: u64) -> Vec<Entry> {
+    pub fn expire(&mut self, now: u64) -> Vec<Entry<R>> {
         let due: Vec<Vec<u8>> = self
             .map
             .iter()
             .filter(|(_, e)| e.deadline <= now)
             .map(|(k, _)| k.clone())
             .collect();
-        let mut out: Vec<Entry> = due.iter().filter_map(|k| self.map.remove(k)).collect();
+        let mut out: Vec<Entry<R>> = due.iter().filter_map(|k| self.map.remove(k)).collect();
         out.sort_by_key(|e| e.deadline);
         out
     }
@@ -74,7 +65,7 @@ impl Pending {
     }
 
     /// Removes every waiter, as when the session ends; the caller answers them outside the lock.
-    pub fn take_all(&mut self) -> Vec<Entry> {
+    pub fn take_all(&mut self) -> Vec<Entry<R>> {
         self.map.drain().map(|(_, e)| e).collect()
     }
 }
@@ -83,9 +74,9 @@ impl Pending {
 mod tests {
     use super::*;
 
-    fn entry(deadline: u64) -> Entry {
+    fn entry(deadline: u64) -> Entry<()> {
         Entry {
-            reply: Reply::Channel(crossbeam_channel::bounded(1).0),
+            reply: (),
             entity_id: vec![],
             sent_at: 0,
             deadline,

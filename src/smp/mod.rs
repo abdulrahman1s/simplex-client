@@ -11,17 +11,20 @@ mod config;
 mod connection;
 mod error;
 mod events;
+mod flow;
 mod handshake;
 mod hello;
 mod message;
 mod queue_data;
 mod responses;
 mod server_error;
+mod session;
 mod signed_key;
 #[cfg(feature = "native")]
 mod tls_connector;
 mod transmission;
 mod transport;
+mod tunnel;
 mod version;
 
 #[cfg(test)]
@@ -35,10 +38,11 @@ pub use clock::{Clock, SystemClock};
 pub use commands::{Command, NewQueue};
 pub use config::ConnConfig;
 #[cfg(feature = "native")]
-pub use connection::{Answer, Request, SmpConnection};
+pub use connection::SmpConnection;
 pub use error::{HandshakeError, SmpError};
 pub use events::{SessionInfo, SmpEvent, SmpEventKind};
-pub use handshake::{HandshakeConfig, TlsFacts, client_handshake, negotiate};
+pub use flow::{Answer, Backoff, Request};
+pub use handshake::{HandshakeConfig, TlsFacts, answer_server_hello, client_handshake, negotiate};
 pub use hello::{ServerHello, encode_client_hello};
 pub use message::{RcvMsg, decrypt_message, parse_rcv_body, rcv_dh_secret};
 pub use queue_data::{
@@ -47,8 +51,10 @@ pub use queue_data::{
 };
 pub use responses::{QueueIds, Response, ServerNtfCreds};
 pub use server_error::{CommandError, ErrorType};
+pub use session::SmpSession;
 #[cfg(feature = "native")]
 pub use tls_connector::TlsConnector;
 pub use transmission::{Incoming, authorized, encode_transmission, pack, parse_payload};
 pub use transport::{Closer, Connector, Established, Reader, Wire, Writer};
+pub use tunnel::{TunnelError, parse_tunnel_reply, tunnel_hello};
 pub use version::{BLOCK_SIZE, MAX_VERSION, MIN_VERSION};

@@ -15,7 +15,7 @@ use super::error::{HandshakeError, SmpError};
 use super::hello::{ServerHello, encode_client_hello};
 use super::signed_key::verify_signed_key;
 use super::transport::{Established, Reader, Writer};
-use super::version::{MAX_VERSION, MIN_VERSION};
+use super::version::{BLOCK_SIZE, MAX_VERSION, MIN_VERSION};
 
 /// Everything the handshake takes from the TLS layer.
 pub struct TlsFacts<'a> {
@@ -49,6 +49,7 @@ pub fn negotiate(server: &VersionRange, ours: &VersionRange) -> Result<u16, Hand
         .ok_or(HandshakeError::Version)
 }
 
+/// The blocking driver: reads the server hello block, writes ours, within `cfg.timeout`.
 pub fn client_handshake(
     reader: &mut dyn Reader,
     writer: &mut dyn Writer,
@@ -57,8 +58,24 @@ pub fn client_handshake(
     cfg: &HandshakeConfig,
 ) -> Result<Established, SmpError> {
     reader.set_read_timeout(Some(cfg.timeout))?;
-    let hello = ServerHello::decode(&RcvBlocks::plain().read(reader)?)
-        .map_err(|_| HandshakeError::Parse)?;
+    let mut block = vec![0u8; BLOCK_SIZE];
+    reader.read_exact(&mut block)?;
+    let (hello, session) = answer_server_hello(&block, tls, key_hash_of_server, cfg)?;
+    writer.write_all(&hello)?;
+    reader.set_read_timeout(None)?;
+    Ok(session)
+}
+
+/// Checks the server hello `block` against the TLS channel and the pinned identity, and returns
+/// the client hello block to send with the session it settles. Pure, for any driver.
+pub fn answer_server_hello(
+    block: &[u8],
+    tls: &TlsFacts<'_>,
+    key_hash_of_server: &[u8],
+    cfg: &HandshakeConfig,
+) -> Result<(Vec<u8>, Established), SmpError> {
+    let hello =
+        ServerHello::decode(&RcvBlocks::plain().open(block)?).map_err(|_| HandshakeError::Parse)?;
     if !bool::from(hello.session_id.as_slice().ct_eq(tls.tls_unique)) {
         return Err(HandshakeError::Session.into());
     }
@@ -82,20 +99,19 @@ pub fn client_handshake(
         key_hash_of_server,
         ours.as_ref().map(|k| &k.public),
     )?;
-    SndBlocks::plain().write(writer, &hello_out)?;
-
+    let hello_block = SndBlocks::plain().seal(&hello_out)?;
     let secret = ours
         .as_ref()
         .map(|k| dh(&server_key, &k.private))
         .transpose()?;
     let (snd, rcv) = block_ciphers(&hello.session_id, secret.as_ref())?;
-    reader.set_read_timeout(None)?;
-    Ok(Established {
+    let session = Established {
         version,
         session_id: hello.session_id,
         server_key,
         server_info: hello.server_info,
         snd,
         rcv,
-    })
+    };
+    Ok((hello_block, session))
 }

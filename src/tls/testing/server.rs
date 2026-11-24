@@ -5,6 +5,7 @@ use std::thread::{self, JoinHandle};
 use super::app::app_phase;
 use super::cert::make_cert;
 use super::client_hello::client_key_share;
+use super::conn::ServerConn;
 use super::flight::server_flight;
 use super::options::{MockOpts, MockResult};
 use super::pipe::Pipe;
@@ -22,10 +23,10 @@ const HELLO_RETRY_REQUEST_RANDOM: [u8; 32] = [
     0xc2, 0xa2, 0x11, 0x16, 0x7a, 0xbb, 0x8c, 0x5e, 0x07, 0x9e, 0x09, 0xe2, 0xc8, 0xa8, 0x33, 0x9c,
 ];
 
-pub(in crate::tls) fn spawn_server(mut sock: Pipe, o: MockOpts) -> JoinHandle<MockResult> {
+pub(crate) fn spawn_server(mut sock: Pipe, mut o: MockOpts) -> JoinHandle<MockResult> {
     thread::spawn(move || {
         let mut res = MockResult::default();
-        if let Err(e) = serve(&mut sock, &o, &mut res) {
+        if let Err(e) = serve(&mut sock, &mut o, &mut res) {
             res.error = Some(e.to_string());
         }
         sock.shutdown(std::net::Shutdown::Both).ok();
@@ -33,7 +34,7 @@ pub(in crate::tls) fn spawn_server(mut sock: Pipe, o: MockOpts) -> JoinHandle<Mo
     })
 }
 
-fn serve(sock: &mut Pipe, o: &MockOpts, res: &mut MockResult) -> Result<(), TlsError> {
+fn serve(sock: &mut Pipe, o: &mut MockOpts, res: &mut MockResult) -> Result<(), TlsError> {
     let mut inbound = Inbound::default();
     let hello = inbound.next_record(sock)?.body;
     let client_pub = PublicKey::from_raw(Alg::X25519, &client_key_share(&hello)?)?;
@@ -78,8 +79,14 @@ fn serve(sock: &mut Pipe, o: &MockOpts, res: &mut MockResult) -> Result<(), TlsE
         return Ok(());
     }
 
-    let leaf = KeyPair::generate(o.key)?;
-    let chain = vec![make_cert(&leaf.public, &leaf, 1)];
+    let (leaf, chain) = match o.identity.take() {
+        Some(identity) => identity,
+        None => {
+            let leaf = KeyPair::generate(o.key)?;
+            let chain = vec![make_cert(&leaf.public, &leaf, 1)];
+            (leaf, chain)
+        }
+    };
     let msgs = server_flight(o, &leaf, &chain, &server_hs, &mut transcript)?;
     send_flight(sock, &mut tx, &msgs, o)?;
 
@@ -95,6 +102,11 @@ fn serve(sock: &mut Pipe, o: &MockOpts, res: &mut MockResult) -> Result<(), TlsE
         o,
         res,
     )?;
+    if let Some(app) = o.app.take() {
+        let unique = &res.client_finished;
+        let mut conn = ServerConn::new(sock.try_clone()?, inbound, &server_ap, &client_ap, unique);
+        return app(&mut conn);
+    }
     app_phase(sock, inbound, o, res, server_ap, client_ap)
 }
 

@@ -12,10 +12,11 @@ use crate::smp::error::SmpError;
 use crate::smp::transmission::{encode_transmission, pack};
 use crate::smp::transport::Writer;
 
-use super::liveness::{Liveness, Verdict};
-use super::pending::{Entry, Reply};
-use super::queue::{Ctl, Outgoing, Request};
+use super::queue::{Ctl, Outgoing, Reply};
 use super::shared::{Shared, lock};
+use crate::smp::flow::Entry;
+use crate::smp::flow::Request;
+use crate::smp::flow::{Liveness, Verdict};
 
 /// Commands taken from the queue for one round of batching.
 const DRAIN: usize = 64;

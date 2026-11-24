@@ -14,7 +14,8 @@ use crate::smp::events::{SessionInfo, SmpEvent, SmpEventKind};
 use crate::smp::responses::Response;
 use crate::smp::transport::Closer;
 
-use super::pending::{Pending, Reply};
+use super::queue::Reply;
+use crate::smp::flow::Pending;
 
 pub fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
@@ -24,7 +25,7 @@ pub struct Shared {
     pub server: Arc<SmpServer>,
     pub cfg: ConnConfig,
     pub clock: Arc<dyn Clock>,
-    pub pending: Mutex<Pending>,
+    pub pending: Mutex<Pending<Reply>>,
     pub session: Mutex<Option<SessionInfo>>,
     pub up: AtomicBool,
     pub closed: AtomicBool,
