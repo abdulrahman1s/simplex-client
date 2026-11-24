@@ -11,6 +11,9 @@ pub enum StoreError {
     Sql(String),
     /// The caller passed something the store cannot keep (a bad namespace, a missing row).
     Invalid(&'static str),
+    /// Saved changes that do not follow the snapshot, or the changes, opened before them: one
+    /// is missing or out of order.
+    ChangesDoNotFollow,
 }
 
 impl fmt::Display for StoreError {
@@ -22,6 +25,9 @@ impl fmt::Display for StoreError {
             StoreError::Corrupt(e) => write!(f, "the chat store is damaged: {e}"),
             StoreError::Sql(e) => write!(f, "chat store query failed: {e}"),
             StoreError::Invalid(e) => write!(f, "invalid chat store request: {e}"),
+            StoreError::ChangesDoNotFollow => {
+                f.write_str("the saved changes do not follow the snapshot: one is missing")
+            }
         }
     }
 }

@@ -192,8 +192,11 @@ client.on("message", async (message) => {
 console.log("My address:", await client.createAddress());
 ```
 
-`client.save()` returns the sealed store; pass it back as `snapshot` to pick up where you left
-off. JS events are named in camelCase: `ready`, `message`, `messageUpdate`, `request`,
+`client.save()` returns the whole sealed store; pass it back as `snapshot` to pick up where you
+left off. `client.saveChanges()` returns only what changed since the last save, so its cost
+follows the change, not the size of the store; keep each one in order and pass them back as
+`changes` with the snapshot they follow. A missing or reordered one makes `Client.start` reject
+with `changes_do_not_follow`. JS events are named in camelCase: `ready`, `message`, `messageUpdate`, `request`,
 `friendAdd`, `friendRemove`, `groupAdd`, `groupRemove`, `groupInvite`, `memberAdd`, `offline`,
 `online`, `change` (save now) and `raw` (every engine event). `client.friends` and
 `client.groups` are `Map`s of `Friend` and `Group`, and `await client.createGroup(name)` gives
@@ -218,16 +221,27 @@ which needs Rust with the `wasm32-unknown-unknown` target and `wasm-bindgen-cli`
 runs binaryen's `wasm-opt` too when it is installed.
 
 ```js
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { Client } from "simplex-client";
 
 const SNAPSHOT = "bot.snapshot";
+const CHANGES = "bot.changes"; // one file per saveChanges(), numbered in order
+const changes = () =>
+  readdirSync(CHANGES).sort((a, b) => a - b).map((f) => readFileSync(`${CHANGES}/${f}`));
 
+const saved = existsSync(SNAPSHOT);
+mkdirSync(CHANGES, { recursive: true });
 const bot = await Client.start({
   name: "Echo Bot",
   key: "passphrase",
-  snapshot: existsSync(SNAPSHOT) ? readFileSync(SNAPSHOT) : undefined,
+  snapshot: saved ? readFileSync(SNAPSHOT) : undefined,
+  changes: saved ? changes() : [],
 });
+// A whole save starts a new chain; changes kept before it are skipped from now on.
+writeFileSync(SNAPSHOT, bot.save());
+rmSync(CHANGES, { recursive: true });
+mkdirSync(CHANGES);
+let next = 0;
 
 bot.on("request", (request) => request.accept());
 bot.on("friendAdd", (friend) => friend.send("Hi! I echo what you write."));
@@ -236,13 +250,14 @@ bot.on("message", async (message) => {
   await message.reply(message.text);
 });
 
-bot.on("change", () => writeFileSync(SNAPSHOT, bot.save()));
+bot.on("change", () => writeFileSync(`${CHANGES}/${next++}`, bot.saveChanges()));
 console.log("My address:", await bot.createAddress());
 ```
 
 `transport: "tcp"` picks direct TCP explicitly; a `tunnel` URL uses the WebSocket tunnel
 instead. `scripts/build-js.sh` builds both packages (`pkg/web` and `pkg/node`), and
-[`examples/node/bot.mjs`](examples/node/bot.mjs) is the bot above with a safer save; run it
+[`examples/node/bot.mjs`](examples/node/bot.mjs) is the bot above with a safer save (each file
+written whole, a whole save every 1,000 changes, a new chain after a failed write); run it
 with `node examples/node/bot.mjs` or `bun examples/node/bot.mjs`.
 
 ### Files
@@ -371,7 +386,10 @@ The protocol, limits and settings are in [worker/README.md](worker/README.md).
   To move one to Argon2id, start a new store.
 - **Tampering at rest.** A snapshot carries a MAC over all of its bytes, so a changed,
   dropped or rolled-back row or a rewound id counter is refused when it opens. Swapping in a
-  whole older snapshot is not caught. The SQLite store checks its id counters against a sealed
+  whole older snapshot is not caught. Each `saveChanges()` carries a MAC too, chained to the
+  snapshot and the change before it, so a changed, missing, repeated or reordered one is
+  refused; leaving off the newest ones is not caught, as an older snapshot is not. Changes of
+  an older snapshot are skipped, not refused. The SQLite store checks its id counters against a sealed
   copy and overwrites deleted rows (`secure_delete`).
 - **Limitation:** in SQLite, putting back an older sealed row (one row, or the counters' sealed copy with its counters) is not detected, because nothing MACs the whole file.
 

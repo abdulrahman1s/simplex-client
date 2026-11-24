@@ -49,7 +49,7 @@ pub(super) struct Core {
 impl Core {
     pub(super) fn open(o: &Options, shared: &Rc<Shared>) -> Result<Core, StoreError> {
         let store = match &o.snapshot {
-            Some(bytes) => Store::open_snapshot(bytes, &o.key)?,
+            Some(bytes) => Store::open_snapshot_with_changes(bytes, &o.changes, &o.key)?,
             None => Store::open_memory(&o.key)?,
         };
         let log = if o.log {

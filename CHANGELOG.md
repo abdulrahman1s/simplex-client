@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `client.saveChanges()` (JS) and `Store::export_changes` save only the rows written since the
+  last save, and `Client.start({snapshot, changes})` and `Store::open_snapshot_with_changes`
+  open a snapshot with the changes kept after it. A change costs what it wrote: with 30,000
+  messages in wasm, `save()` takes 95 ms for 22.5 MB, and `saveChanges()` after one message
+  under 1 ms for 1 KB. Each delta is MAC'd and chained to its snapshot and the delta before
+  it; a missing, repeated or reordered one is `StoreError::ChangesDoNotFollow` (JS
+  `changes_do_not_follow`), and deltas of an older snapshot are skipped. **Breaking:**
+  `StoreError` has this new variant, so an exhaustive `match` on it needs an arm. The README and the
+  Node bot example keep a log of changes instead of saving the whole store on every change.
+
 ### Changed
 
 - Through the tunnel, the TLS ClientHello goes out right behind the tunnel hello instead of
@@ -26,6 +38,8 @@ All notable changes to this project are documented here. The format follows
   tokio, sqlx and rustls leave the native build: 156 crates in the lock file instead of 275,
   and the stripped echo bot shrinks from 8.9 MB to 7.8 MB. Store files and their settings are
   unchanged (WAL, `synchronous = NORMAL`, `secure_delete`, `foreign_keys`, a 5 s busy timeout).
+- A whole snapshot of a memory store is encoded from its rows in place instead of from a copy
+  of them: at 50,000 rows (30 MB) natively it takes 36 ms instead of 66 ms.
 
 ## [0.1.0] - 2026-11-24
 

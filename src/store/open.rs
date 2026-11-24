@@ -49,6 +49,7 @@ impl Store {
             rows,
             sealer: kdf.sealer(key)?,
             rev: 0,
+            chain: None,
         };
         match check {
             Some(sealed) => store.check(&sealed, tagged)?,

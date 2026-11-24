@@ -55,6 +55,8 @@ pub(super) struct Options {
     pub(super) relays: Vec<String>,
     /// Bytes from `client.save()`; none starts an empty store.
     pub(super) snapshot: Option<Vec<u8>>,
+    /// Bytes from each `client.saveChanges()` after it, oldest first.
+    pub(super) changes: Vec<Vec<u8>>,
     pub(super) timeout_ms: i64,
     /// Write the engine's log to the console.
     pub(super) log: bool,
@@ -74,6 +76,25 @@ fn text(o: &JsValue, key: &str) -> Result<Option<String>, JsValue> {
                 .ok_or_else(|| error("bad_option", format!("{key} is not a string")))
         })
         .transpose()
+}
+
+/// `changes`: an array of `Uint8Array`s, or nothing.
+fn changes(o: &JsValue) -> Result<Vec<Vec<u8>>, JsValue> {
+    let Some(list) = get(o, "changes") else {
+        return Ok(Vec::new());
+    };
+    let bad = || error("bad_option", "changes is an array of Uint8Arrays");
+    if !js_sys::Array::is_array(&list) {
+        return Err(bad());
+    }
+    js_sys::Array::from(&list)
+        .iter()
+        .map(|c| {
+            c.dyn_into::<js_sys::Uint8Array>()
+                .map(|a| a.to_vec())
+                .map_err(|_| bad())
+        })
+        .collect()
 }
 
 impl Options {
@@ -97,6 +118,10 @@ impl Options {
             ),
             None => None,
         };
+        let changes = changes(o)?;
+        if snapshot.is_none() && !changes.is_empty() {
+            return Err(error("bad_option", "changes need the snapshot they follow"));
+        }
         let timeout_ms = get(o, "timeout").and_then(|v| v.as_f64());
         let proxy_mode = match text(o, "privateRouting")? {
             Some(m) => m
@@ -123,6 +148,7 @@ impl Options {
             token: text(o, "tunnelToken")?,
             relays,
             snapshot,
+            changes,
             #[allow(clippy::cast_possible_truncation, reason = "milliseconds")]
             timeout_ms: timeout_ms.map_or(TIMEOUT_MS, |t| t as i64),
             log: get(o, "log").and_then(|v| v.as_bool()).unwrap_or(false),

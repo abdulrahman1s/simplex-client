@@ -15,6 +15,7 @@ impl Memory {
         self.t.last_item = id;
         let key = (chat.to_vec(), id);
         let old = swap(&mut self.t.items, key.clone(), Some(Vec::new()));
+        self.changed.items.note(key.clone(), old.is_some(), true);
         self.note(|| Undo::Item(key, old));
         Ok(id)
     }

@@ -8,12 +8,15 @@ use super::memory::{Memory, Tables};
 use super::open::Tagged;
 use super::rows::Rows;
 use super::seal::Sealer;
+use super::snapshot::Link;
 
 pub struct Store {
     pub(super) rows: Box<dyn Rows>,
     pub(super) sealer: Sealer,
     /// Counts committed writes, so an owner can tell the store changed.
     pub(super) rev: u64,
+    /// The last save a delta would follow; none until a tagged snapshot was saved or opened.
+    pub(super) chain: Option<Link>,
 }
 
 impl Store {

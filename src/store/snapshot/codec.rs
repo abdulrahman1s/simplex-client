@@ -19,12 +19,12 @@ pub(in crate::store) struct Decoded<'a> {
     pub tag: Option<(&'a [u8], &'a [u8])>,
 }
 
-fn blob(out: &mut Vec<u8>, b: &[u8]) {
+pub(super) fn blob(out: &mut Vec<u8>, b: &[u8]) {
     out.extend_from_slice(&(b.len() as u32).to_le_bytes());
     out.extend_from_slice(b);
 }
 
-fn count(out: &mut Vec<u8>, n: usize) {
+pub(super) fn count(out: &mut Vec<u8>, n: usize) {
     out.extend_from_slice(&(n as u32).to_le_bytes());
 }
 
@@ -63,41 +63,41 @@ pub(in crate::store) fn encode(t: &Tables) -> Vec<u8> {
 }
 
 /// Reads front to back; running out of bytes anywhere is `Corrupt`, never a panic.
-struct Reader<'a>(&'a [u8]);
+pub(super) struct Reader<'a>(pub(super) &'a [u8]);
 
-fn short() -> StoreError {
+pub(super) fn short() -> StoreError {
     StoreError::Corrupt("the snapshot is cut short".into())
 }
 
 impl<'a> Reader<'a> {
-    fn take(&mut self, n: usize) -> Result<&'a [u8], StoreError> {
+    pub(super) fn take(&mut self, n: usize) -> Result<&'a [u8], StoreError> {
         let (head, rest) = self.0.split_at_checked(n).ok_or_else(short)?;
         self.0 = rest;
         Ok(head)
     }
 
-    fn u32(&mut self) -> Result<u32, StoreError> {
+    pub(super) fn u32(&mut self) -> Result<u32, StoreError> {
         let b = self.take(4)?;
         Ok(u32::from_le_bytes(b.try_into().map_err(|_| short())?))
     }
 
-    fn i64(&mut self) -> Result<i64, StoreError> {
+    pub(super) fn i64(&mut self) -> Result<i64, StoreError> {
         let b = self.take(8)?;
         Ok(i64::from_le_bytes(b.try_into().map_err(|_| short())?))
     }
 
-    fn blob(&mut self) -> Result<Vec<u8>, StoreError> {
+    pub(super) fn blob(&mut self) -> Result<Vec<u8>, StoreError> {
         let n = self.u32()? as usize;
         Ok(self.take(n)?.to_vec())
     }
 
-    fn text(&mut self) -> Result<String, StoreError> {
+    pub(super) fn text(&mut self) -> Result<String, StoreError> {
         String::from_utf8(self.blob()?)
             .map_err(|_| StoreError::Corrupt("a snapshot name is not UTF-8".into()))
     }
 
     /// `n` rows of `row`; no space is reserved up front, so a false count cannot exhaust memory.
-    fn rows<T>(
+    pub(super) fn rows<T>(
         &mut self,
         mut row: impl FnMut(&mut Self) -> Result<T, StoreError>,
     ) -> Result<Vec<T>, StoreError> {
