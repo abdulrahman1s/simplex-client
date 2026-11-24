@@ -19,7 +19,11 @@ impl<A: AgentPort> Engine<A> {
             .reachable()
             .ok_or_else(|| fail(Code::RequestFailed, "member not connected"))?;
         let body = encode_chat_message(msg, false)?;
-        Ok((conn, self.agent.send(&mut self.store, &conn, body)?))
+        Ok((
+            conn,
+            self.agent
+                .send(&mut self.store, &conn, self.state.pq_of(&conn), body)?,
+        ))
     }
 
     /// To every current member but `except` (`getGroupRecipients`).
@@ -57,7 +61,12 @@ impl<A: AgentPort> Engine<A> {
             let done = match send_action(&g, m, to, &msg.event) {
                 Some(SendAction::Send(conn)) => self
                     .agent
-                    .send(&mut self.store, &conn, body.clone())
+                    .send(
+                        &mut self.store,
+                        &conn,
+                        self.state.pq_of(&conn),
+                        body.clone(),
+                    )
                     .map(|id| sent.push((member, conn, id)))
                     .map_err(Into::into),
                 Some(SendAction::Pending) => self.queue_pending(group, member, &body, shared),

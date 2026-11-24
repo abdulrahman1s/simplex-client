@@ -1,8 +1,9 @@
-//! A friend (Types.hs `Contact`): their profile as last received and Zaun's local settings.
+//! A friend (Types.hs `Contact`): their profile as last received and the local settings.
 
 use serde::{Deserialize, Serialize};
 
 use crate::chat::preferences::{FeatureAllowed, Preferences};
+use crate::chat::version::VersionRange;
 use crate::engine::agent_port::ConnId;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -35,6 +36,18 @@ pub struct FriendRecord {
     /// The security code they were verified with (Haskell `connectionCode`); cleared when it changes.
     #[serde(default)]
     pub verified: Option<String>,
+    /// The `pqEncryption` messages to them go with: on for a connection made with PQ, which a
+    /// record from before this field was always is; a member contact's turns on with their first
+    /// message (Internal.hs `updatePeerChatVRange`).
+    #[serde(default = "pq_on")]
+    pub pq: bool,
+    /// Their chat version range, from the last message that carried one (`peerChatVRange`).
+    #[serde(default)]
+    pub chat_v: Option<VersionRange>,
+}
+
+const fn pq_on() -> bool {
+    true
 }
 
 /// The chat features whose preferences Zaun enforces or shows (Types/Preferences.hs `ChatFeature`).
@@ -111,6 +124,8 @@ impl FriendRecord {
             invited_with: Vec::new(),
             prefs: None,
             verified: None,
+            pq: true,
+            chat_v: None,
         }
     }
 

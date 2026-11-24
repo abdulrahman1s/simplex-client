@@ -80,7 +80,7 @@ impl<A: AgentPort> Engine<A> {
     pub(super) fn send_call_event(&mut self, friend: i64, event: ChatEvent) -> Result<()> {
         let f = self.friend(friend)?;
         let body = encode_chat_message(&ChatMessage::new(event)?, PQ)?;
-        self.agent.send(&mut self.store, &f.conn, body)?;
+        self.agent.send(&mut self.store, &f.conn, f.pq, body)?;
         Ok(())
     }
 

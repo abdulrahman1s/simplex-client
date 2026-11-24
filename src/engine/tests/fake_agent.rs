@@ -63,6 +63,8 @@ pub struct FakeAgent {
     pub ratchet_ad: Vec<u8>,
     /// The PQ flag of each `join` and `accept_request`, in order.
     pub pq_seen: Vec<(&'static str, bool)>,
+    /// The PQ flag of each `send`, in order.
+    pub pq_sent: Vec<(ConnId, bool)>,
     conns: i64,
     msgs: AgentMsgId,
 }
@@ -183,9 +185,11 @@ impl AgentPort for FakeAgent {
         &mut self,
         _: &mut Store,
         conn: &ConnId,
+        pq: bool,
         body: Vec<u8>,
     ) -> Result<AgentMsgId, AgentFailure> {
         self.calls.push(Call::Send { conn: *conn, body });
+        self.pq_sent.push((*conn, pq));
         self.fail_next.take().map_or(Ok(()), Err)?;
         self.msgs += 1;
         Ok(self.msgs)

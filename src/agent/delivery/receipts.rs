@@ -32,7 +32,13 @@ impl AgentClient {
             msg_hash: u.hash,
             rcpt_info,
         };
-        self.enqueue_message(store, conn, AMessage::ARcvd(vec![r]), SendKind::Receipt)?;
+        self.enqueue_message(
+            store,
+            conn,
+            AMessage::ARcvd(vec![r]),
+            SendKind::Receipt,
+            None,
+        )?;
         Ok(())
     }
 
@@ -83,7 +89,7 @@ impl AgentClient {
             server: rq.server.clone(),
             sender_id: rq.snd_id.clone(),
         };
-        self.enqueue_message(store, id, AMessage::AQcont(addr), SendKind::Qcont)?;
+        self.enqueue_message(store, id, AMessage::AQcont(addr), SendKind::Qcont, None)?;
         Ok(())
     }
 

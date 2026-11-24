@@ -1,5 +1,6 @@
 //! A connection agreed at agent v7 moves to v8 once both sides speak it, from the version every message carries; a peer that speaks only v7 keeps it there (Agent.hs `updateConnVersion`, Ratchet.hs `rcDecrypt`).
 use super::rotation_support::restart;
+use super::support::pq_of;
 use super::support::{Rig, connect, next_msg, rig, v7_agent};
 use crate::agent::client::ConnId;
 use crate::agent::testing::Node;
@@ -18,7 +19,9 @@ fn e2e_version(n: &Node, c: ConnId) -> Version {
 
 /// `a` sends `body` and `b` reads and acks it.
 fn say(a: &mut Node, b: &mut Node, ca: ConnId, cb: ConnId, body: &[u8]) {
-    a.agent.send(&mut a.store, ca, body.to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), body.to_vec())
+        .unwrap();
     let (id, got) = next_msg(&mut [&mut *a, &mut *b], 1, cb);
     assert_eq!(got, body);
     b.agent.ack(&mut b.store, cb, id, None).unwrap();

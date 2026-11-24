@@ -83,7 +83,7 @@ impl Peer {
     /// The peer's agent message to us, ratchet-encrypted as any other.
     pub fn say(&self, b: &mut Node, msg: AMessage) {
         b.agent
-            .enqueue_message(&mut b.store, self.cb, msg, SendKind::Switch)
+            .enqueue_message(&mut b.store, self.cb, msg, SendKind::Switch, None)
             .unwrap();
     }
 

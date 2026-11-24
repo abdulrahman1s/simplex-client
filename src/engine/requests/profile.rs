@@ -63,7 +63,12 @@ impl<A: AgentPort> Engine<A> {
             .collect();
         for conn in conns {
             // One friend's relay failing is no reason to keep the profile from the rest.
-            if let Err(e) = self.agent.send(&mut self.store, &conn, body.to_vec()) {
+            if let Err(e) = self.agent.send(
+                &mut self.store,
+                &conn,
+                self.state.pq_of(&conn),
+                body.to_vec(),
+            ) {
                 self.log
                     .line(format_args!("profile not sent: {}", e.detail()));
             }

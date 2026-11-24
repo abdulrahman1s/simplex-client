@@ -1,4 +1,5 @@
 //! Ratchet re-sync between two agents on the in-memory server: a broken ratchet, both key orders, restarts midway.
+use super::support::pq_of;
 use std::time::Duration;
 
 use super::support::{Rig, WAIT, connect, next_msg, rig, wait_for};
@@ -43,11 +44,15 @@ pub fn settle(a: &mut Node, b: &mut Node, ca: ConnId, cb: ConnId) {
 
 /// A message each way, acked.
 pub fn talk(a: &mut Node, b: &mut Node, ca: ConnId, cb: ConnId) {
-    a.agent.send(&mut a.store, ca, b"ping".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"ping".to_vec())
+        .unwrap();
     let (id, body) = next_msg(&mut [&mut *a, &mut *b], 1, cb);
     assert_eq!(body, b"ping");
     b.agent.ack(&mut b.store, cb, id, None).unwrap();
-    b.agent.send(&mut b.store, cb, b"pong".to_vec()).unwrap();
+    b.agent
+        .send(&mut b.store, cb, pq_of(&b.agent, cb), b"pong".to_vec())
+        .unwrap();
     let (id, body) = next_msg(&mut [&mut *a, &mut *b], 0, ca);
     assert_eq!(body, b"pong");
     a.agent.ack(&mut a.store, ca, id, None).unwrap();
@@ -69,7 +74,9 @@ fn a_broken_ratchet_is_resynced_by_the_peer_and_messages_flow_both_ways() {
     let before = ad(&a, ca);
     let mut b = break_ratchet(&r, b, "b", cb);
     let acks = r.smp.count("ACK");
-    a.agent.send(&mut a.store, ca, b"lost".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"lost".to_vec())
+        .unwrap();
     sync_event(&mut [&mut a, &mut b], 1, cb, SyncState::Required);
     // The failed message is acked, so the server does not deliver it again.
     pump(&mut [&mut a, &mut b], WAIT, |_| {
@@ -82,7 +89,8 @@ fn a_broken_ratchet_is_resynced_by_the_peer_and_messages_flow_both_ways() {
         "the failure is reported"
     );
     assert!(matches!(
-        b.agent.send(&mut b.store, cb, b"no".to_vec()),
+        b.agent
+            .send(&mut b.store, cb, pq_of(&b.agent, cb), b"no".to_vec()),
         Err(AgentError::Prohibited(_))
     ));
     let sends = r.smp.count("SEND");
@@ -161,7 +169,8 @@ fn sending_waits_for_the_resync_to_finish() {
     let (ca, cb) = connect(&mut a, &mut b, false, false);
     a.agent.synchronize_ratchet(&mut a.store, ca, true).unwrap();
     assert!(matches!(
-        a.agent.send(&mut a.store, ca, b"early".to_vec()),
+        a.agent
+            .send(&mut a.store, ca, pq_of(&a.agent, ca), b"early".to_vec()),
         Err(AgentError::Prohibited(_))
     ));
     assert!(matches!(
@@ -198,7 +207,9 @@ fn the_side_left_in_required_repairs_the_connection_without_force() {
     let (ca, cb) = connect(&mut a, &mut b, false, false);
     talk(&mut a, &mut b, ca, cb);
     let mut b = break_ratchet(&r, b, "b", cb);
-    a.agent.send(&mut a.store, ca, b"lost".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"lost".to_vec())
+        .unwrap();
     sync_event(&mut [&mut a, &mut b], 1, cb, SyncState::Required);
     // What the engine does on that event: a plain re-sync, which `Required` allows.
     b.agent
@@ -218,8 +229,12 @@ fn both_sides_repairing_at_once_still_agree_on_one_ratchet() {
     talk(&mut a, &mut b, ca, cb);
     let mut a = break_ratchet(&r, a, "a", ca);
     let mut b = break_ratchet(&r, b, "b", cb);
-    a.agent.send(&mut a.store, ca, b"lost".to_vec()).unwrap();
-    b.agent.send(&mut b.store, cb, b"lost".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"lost".to_vec())
+        .unwrap();
+    b.agent
+        .send(&mut b.store, cb, pq_of(&b.agent, cb), b"lost".to_vec())
+        .unwrap();
     sync_event(&mut [&mut a, &mut b], 0, ca, SyncState::Required);
     sync_event(&mut [&mut a, &mut b], 1, cb, SyncState::Required);
     // Each engine starts its own before it sees the other's key.

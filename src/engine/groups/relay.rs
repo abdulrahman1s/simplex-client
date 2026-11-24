@@ -130,7 +130,10 @@ impl<A: AgentPort> Engine<A> {
             .collect();
         for conn in conns {
             for b in &batches {
-                if let Err(e) = self.agent.send(&mut self.store, &conn, b.clone()) {
+                if let Err(e) =
+                    self.agent
+                        .send(&mut self.store, &conn, self.state.pq_of(&conn), b.clone())
+                {
                     self.log
                         .line(format_args!("a forward was not sent: {}", e.detail()));
                 }

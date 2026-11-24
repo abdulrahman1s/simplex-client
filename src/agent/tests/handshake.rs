@@ -1,4 +1,5 @@
 //! The invitation handshake against the in-memory server: full and short links, PQ off and on.
+use super::support::pq_of;
 use super::support::{WAIT, connect, next_msg, rig};
 use crate::agent::client::AgentEvent;
 use crate::agent::testing::pump;
@@ -34,12 +35,14 @@ fn post_quantum_connections_exchange_messages_both_ways() {
             .pq_support()
             .0
     );
-    a.agent.send(&mut a.store, ca, b"to bob".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"to bob".to_vec())
+        .unwrap();
     let (id, body) = next_msg(&mut [&mut a, &mut b], 1, cb);
     assert_eq!(body, b"to bob");
     b.agent.ack(&mut b.store, cb, id, None).unwrap();
     b.agent
-        .send(&mut b.store, cb, b"to alice".to_vec())
+        .send(&mut b.store, cb, pq_of(&b.agent, cb), b"to alice".to_vec())
         .unwrap();
     assert_eq!(next_msg(&mut [&mut a, &mut b], 0, ca).1, b"to alice");
 }
@@ -80,5 +83,9 @@ fn allow_before_the_confirmation_is_prohibited() {
             .then_some(())
     });
     assert!(a.agent.allow(&mut a.store, ca, vec![]).is_err());
-    assert!(a.agent.send(&mut a.store, ca, vec![]).is_err());
+    assert!(
+        a.agent
+            .send(&mut a.store, ca, pq_of(&a.agent, ca), vec![])
+            .is_err()
+    );
 }

@@ -7,6 +7,7 @@ mod delivery;
 mod handshake;
 mod message;
 mod net;
+mod peer_range;
 mod sync;
 mod x_msg;
 

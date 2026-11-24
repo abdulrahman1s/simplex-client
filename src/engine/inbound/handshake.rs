@@ -96,6 +96,7 @@ impl<A: AgentPort> Engine<A> {
         let mut f = self.friend(id)?;
         apply_profile(&mut f, &profile);
         self.save_friend(f)?;
+        self.refresh_friend_range_from(id, info)?;
         self.state.chats_dirty = true;
         Ok(())
     }

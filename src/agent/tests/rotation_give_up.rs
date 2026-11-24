@@ -3,6 +3,7 @@ use super::rotation_peer::Peer;
 use super::rotation_support::{
     assert_v7, move_offline, one_step, step_of, switch_of, wait_settled, waiting_quse,
 };
+use super::support::pq_of;
 use super::support::{WAIT, connect, rig, v7_agent, wait_for};
 use crate::agent::client::{AgentEvent, ConnId};
 use crate::agent::error::AgentError;
@@ -28,7 +29,10 @@ fn held_with_a_kept_message(a: &mut Node, b: &mut Node, p: &Peer, ca: ConnId) {
     pump(&mut [&mut *a, &mut *b], WAIT, |n| {
         (step_of(n[0], ca) == Some(Step::Securing)).then_some(())
     });
-    let kept = a.agent.send(&mut a.store, ca, b"kept".to_vec()).unwrap();
+    let kept = a
+        .agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"kept".to_vec())
+        .unwrap();
     wait_for(&mut [&mut *a, &mut *b], 0, |e| {
         (*e == AgentEvent::Sent {
             conn: ca,
@@ -54,7 +58,9 @@ fn a_refused_skey_gives_the_switch_up_drops_what_it_kept_and_sending_goes_on_on_
     assert_eq!(next_err(&mut a, &mut b), auth);
     assert_eq!(switch_of(&a, ca), None);
     assert!(pending_ids(&mut a.store, ca).unwrap().is_empty());
-    a.agent.send(&mut a.store, ca, b"after".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"after".to_vec())
+        .unwrap();
     wait_settled(&mut a, &mut b, ca);
     p.read_old(&r, &mut b);
     assert_eq!(p.bodies(), [&b"kept"[..], b"after"]);
@@ -75,7 +81,10 @@ fn a_refused_qtest_gives_the_v7_switch_up_and_sending_goes_on_on_the_old_queue()
     });
     // QUSE without KEY: the new queue takes nothing from us.
     p.say(&mut b, AMessage::Quse(vec![(p.new_addr(), true)]));
-    let two = a.agent.send(&mut a.store, ca, b"two".to_vec()).unwrap();
+    let two = a
+        .agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"two".to_vec())
+        .unwrap();
     let auth = AgentError::Smp(SmpError::Server(ErrorType::Auth));
     assert_eq!(next_err(&mut a, &mut b), auth);
     wait_for(&mut [&mut a, &mut b], 0, |e| {
@@ -87,7 +96,9 @@ fn a_refused_qtest_gives_the_v7_switch_up_and_sending_goes_on_on_the_old_queue()
     });
     wait_settled(&mut a, &mut b, ca);
     assert!(pending_ids(&mut a.store, ca).unwrap().is_empty());
-    a.agent.send(&mut a.store, ca, b"after".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"after".to_vec())
+        .unwrap();
     wait_settled(&mut a, &mut b, ca);
     p.gaps = Some(Vec::new());
     p.read_old(&r, &mut b);

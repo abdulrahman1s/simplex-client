@@ -1,4 +1,5 @@
 //! Contact addresses against the in-memory server: making one, requests through it, accepting, rejecting, deleting.
+use super::support::pq_of;
 use super::support::{Rig, WAIT, next_msg, rig, wait_for};
 use crate::agent::client::{AgentEvent, ConnId};
 use crate::agent::links::ConnectionLink;
@@ -121,7 +122,9 @@ fn a_request_through_the_short_link_is_accepted_and_the_two_exchange_messages() 
     assert_eq!(info, b"bob's x.contact");
     assert_eq!((r.smp.count("LGET"), r.smp.count("LKEY")), (1, 0));
     let ca = connected(&r, &mut a, &mut b, &inv, cb);
-    a.agent.send(&mut a.store, ca, b"hello".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"hello".to_vec())
+        .unwrap();
     let (id, body) = next_msg(&mut [&mut a, &mut b], 1, cb);
     assert_eq!(body, b"hello");
     b.agent.ack(&mut b.store, cb, id, None).unwrap();

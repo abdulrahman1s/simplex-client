@@ -33,7 +33,7 @@ impl AgentClient {
         let v = self.envelope_agent_version();
         let body = seal(
             &sq,
-            &agent_envelope(&mut rec, &mut ratchet, qkey, v)?,
+            &agent_envelope(&mut rec, &mut ratchet, qkey, v, None)?,
             false,
         )?;
         rec.switch = Some(Switch::Moving(Moving {
@@ -59,7 +59,13 @@ impl AgentClient {
         let qtest = AMessage::Qtest(vec![addr(&m.new)]);
         let body = seal(
             &m.new,
-            &agent_envelope(&mut rec, &mut ratchet, qtest, self.envelope_agent_version())?,
+            &agent_envelope(
+                &mut rec,
+                &mut ratchet,
+                qtest,
+                self.envelope_agent_version(),
+                None,
+            )?,
             false,
         )?;
         let keep_after = m.keep_after.or(Some(AgentMsgId(rec.last_id)));

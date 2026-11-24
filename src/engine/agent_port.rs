@@ -137,10 +137,12 @@ pub trait AgentPort {
         conn: &ConnId,
         conn_info: Vec<u8>,
     ) -> Result<(), AgentFailure>;
+    /// `pq`: the connection's `pqEncryption`; on turns PQ support on for good (`sendMessage`).
     fn send(
         &mut self,
         store: &mut Store,
         conn: &ConnId,
+        pq: bool,
         body: Vec<u8>,
     ) -> Result<AgentMsgId, AgentFailure>;
     /// `receipt`: `Some` asks for an `A_RCVD` (chat passes an empty one, `ackMessage … (Just "")`).

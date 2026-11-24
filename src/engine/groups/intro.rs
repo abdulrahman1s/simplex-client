@@ -84,7 +84,8 @@ impl<A: AgentPort> Engine<A> {
                 .line(format_args!("{dropped} introductions too large to send"));
         }
         for body in bodies {
-            self.agent.send(&mut self.store, &conn, body)?;
+            self.agent
+                .send(&mut self.store, &conn, self.state.pq_of(&conn), body)?;
         }
         Ok(())
     }

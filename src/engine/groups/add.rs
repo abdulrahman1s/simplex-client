@@ -129,6 +129,7 @@ impl<A: AgentPort> Engine<A> {
         let agent_id = self.agent.send(
             &mut self.store,
             &f.conn,
+            f.pq,
             encode_chat_message(&msg, FRIEND_PQ)?,
         )?;
         let notice = ChatNotice::GroupInvitation {

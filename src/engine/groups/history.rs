@@ -57,7 +57,8 @@ impl<A: AgentPort> Engine<A> {
             ));
         }
         for body in batches {
-            self.agent.send(&mut self.store, &conn, body)?;
+            self.agent
+                .send(&mut self.store, &conn, self.state.pq_of(&conn), body)?;
         }
         Ok(())
     }
