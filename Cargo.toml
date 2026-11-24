@@ -54,7 +54,7 @@ tokio = { version = "1.45", default-features = false, features = ["rt"], optiona
 x25519-dalek = { version = "3.0.0", features = ["static_secrets"] }
 x448 = "=0.14.0-pre.12"
 zeroize = "1"
-zstd = { version = "0.13.5", default-features = false, optional = true }
+zstd = { version = "0.14.4", default-features = false, optional = true }
 lz-str = "0.2"
 wasm-bindgen = { version = "=0.2.130", optional = true }
 js-sys = { version = "0.3", optional = true }
