@@ -131,7 +131,7 @@ fn fixing_a_connection_asks_the_agent_with_force_and_says_so() {
     let mut t = T::started();
     let (bob, conn) = t.friend("bob");
     let out = t.req(Request::SyncRatchet {
-        chat: crate::types::model::ChatRef::Direct(bob),
+        chat: ChatRef::Direct(bob),
         member: None,
         force: true,
     });
@@ -150,7 +150,7 @@ fn fixing_a_connection_asks_the_agent_with_force_and_says_so() {
         })
     )));
     let none = t.req(Request::SyncRatchet {
-        chat: crate::types::model::ChatRef::Group(9),
+        chat: ChatRef::Group(9),
         member: None,
         force: false,
     });
