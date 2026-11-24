@@ -6,7 +6,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::kind::FileKind;
 use crate::types::model::bytes;
-use crate::types::model::{CallRequest, ChatPrefs, ChatProfile, ChatRef, Picture, StreamRequest};
+use crate::types::model::{
+    CallRequest, ChatPrefs, ChatProfile, ChatRef, GroupPrefs, MemberRole, Picture, StreamRequest,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "t", content = "c", rename_all = "snake_case")]
@@ -99,6 +101,44 @@ pub enum Request {
         group: i64,
         member: i64,
         on: bool,
+    },
+    /// An admin changes a member's role (`APIMembersRole`); an invited member who has not
+    /// joined yet is sent the invitation again with it.
+    SetMemberRole {
+        group: i64,
+        member: i64,
+        role: MemberRole,
+    },
+    /// A moderator blocks a member's messages for everyone (`APIBlockMembersForAll`).
+    BlockMemberForAll {
+        group: i64,
+        member: i64,
+        on: bool,
+    },
+    /// An admin removes a member, and with `messages` marks what they wrote deleted for all
+    /// (`APIRemoveMembers`).
+    RemoveMember {
+        group: i64,
+        member: i64,
+        messages: bool,
+    },
+    /// The group is deleted here; an owner deletes it for every member too (`APIDeleteChat`).
+    DeleteGroup(i64),
+    /// An owner changes the group's name and description (`APIUpdateGroupProfile`).
+    SetGroupProfile {
+        group: i64,
+        name: String,
+        description: Option<String>,
+    },
+    /// An owner changes the group's preferences (`APIUpdateGroupProfile`).
+    SetGroupPrefs {
+        group: i64,
+        prefs: GroupPrefs,
+    },
+    /// A moderator deletes a member's message for everyone (`APIDeleteMemberChatItem`).
+    Moderate {
+        group: i64,
+        item: i64,
     },
     ShowCode(i64),
     Verify {

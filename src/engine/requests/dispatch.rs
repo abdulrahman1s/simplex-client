@@ -76,6 +76,27 @@ impl<A: AgentPort> Engine<A> {
             Request::SetMuted { chat, on } => self.set_muted(chat, on),
             Request::SetTimer { chat, ttl } => self.set_timer(chat, ttl),
             Request::SetPrefs { friend, prefs } => self.set_prefs(friend, &prefs),
+            Request::SetMemberRole {
+                group,
+                member,
+                role,
+            } => self.set_member_role(group, member, role),
+            Request::BlockMemberForAll { group, member, on } => {
+                self.block_member_for_all(group, member, on)
+            }
+            Request::RemoveMember {
+                group,
+                member,
+                messages,
+            } => self.remove_member(group, member, messages),
+            Request::DeleteGroup(group) => self.delete_group(group),
+            Request::SetGroupProfile {
+                group,
+                name,
+                description,
+            } => self.set_group_profile(group, &name, description.as_deref()),
+            Request::SetGroupPrefs { group, prefs } => self.set_group_prefs(group, &prefs),
+            Request::Moderate { group, item } => self.moderate(group, item),
             Request::SetBlocked { friend, on } => self.set_blocked(friend, on),
             Request::SetMemberBlocked { group, member, on } => {
                 self.set_member_blocked(group, member, on)

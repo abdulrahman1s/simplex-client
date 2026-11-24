@@ -38,6 +38,7 @@ mod link_join;
 mod link_request;
 mod list;
 mod lookup;
+mod manage;
 mod member_info;
 mod members;
 mod mention;

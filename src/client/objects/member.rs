@@ -1,8 +1,9 @@
 //! Someone in a group, as the group's list or a message names them.
 
 use super::{Friend, Group};
-use crate::client::Client;
-use crate::types::model::GroupMember;
+use crate::client::{Client, Error, Result};
+use crate::types::model::{GroupMember, MemberRole};
+use crate::types::{ErrorCode, Request, RequestKind};
 
 #[derive(Clone, Debug)]
 pub struct Member {
@@ -59,5 +60,44 @@ impl Member {
     #[must_use]
     pub const fn info(&self) -> Option<&GroupMember> {
         self.info.as_ref()
+    }
+
+    /// An admin changes the member's role; the group is told.
+    pub fn set_role(&self, role: MemberRole) -> Result<()> {
+        let member = self.listed_id()?;
+        let group = self.group;
+        self.client.request(Request::SetMemberRole {
+            group,
+            member,
+            role,
+        })
+    }
+
+    /// A moderator blocks or unblocks the member's messages for everyone.
+    pub fn block_for_all(&self, on: bool) -> Result<()> {
+        let member = self.listed_id()?;
+        let group = self.group;
+        self.client
+            .request(Request::BlockMemberForAll { group, member, on })
+    }
+
+    /// An admin removes the member; with `messages` what they wrote shows deleted for all.
+    pub fn remove(&self, messages: bool) -> Result<()> {
+        let member = self.listed_id()?;
+        let group = self.group;
+        self.client.request(Request::RemoveMember {
+            group,
+            member,
+            messages,
+        })
+    }
+
+    /// Only a member from the group's list has a number to act on.
+    fn listed_id(&self) -> Result<i64> {
+        self.id().ok_or_else(|| Error::Failed {
+            request: RequestKind::GroupAdmin,
+            code: ErrorCode::RequestFailed,
+            detail: "a member not from the group's list".into(),
+        })
     }
 }

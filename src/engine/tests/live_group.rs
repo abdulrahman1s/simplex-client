@@ -13,14 +13,14 @@ use super::live_cli::{Native, engine_msg, var};
 use crate::agent::tests::cli::{Cli, connected, kind};
 use crate::engine::{Clock, SystemClock};
 
-struct World {
-    n: Native,
-    bob: Cli,
-    carol: Cli,
+pub(super) struct World {
+    pub(super) n: Native,
+    pub(super) bob: Cli,
+    pub(super) carol: Cli,
 }
 
 impl World {
-    fn start(dir: &Dir) -> World {
+    pub(super) fn start(dir: &Dir) -> World {
         World {
             n: Native::start(dir),
             bob: Cli::open(var("SIMPLEX_TEST_CLI").parse().unwrap()),
@@ -29,7 +29,7 @@ impl World {
     }
 
     /// Runs all three until `f` finds what it waits for.
-    fn until<T>(&mut self, what: &str, mut f: impl FnMut(&mut World) -> Option<T>) -> T {
+    pub(super) fn until<T>(&mut self, what: &str, mut f: impl FnMut(&mut World) -> Option<T>) -> T {
         let clock = SystemClock;
         let start = clock.wall_ms();
         loop {
@@ -49,7 +49,7 @@ impl World {
         }
     }
 
-    fn cli(&mut self, who: Who) -> &mut Cli {
+    pub(super) fn cli(&mut self, who: Who) -> &mut Cli {
         match who {
             Who::Bob => &mut self.bob,
             Who::Carol => &mut self.carol,
@@ -58,13 +58,13 @@ impl World {
 }
 
 #[derive(Clone, Copy)]
-enum Who {
+pub(super) enum Who {
     Bob,
     Carol,
 }
 
 impl Who {
-    const fn name(self) -> &'static str {
+    pub(super) const fn name(self) -> &'static str {
         match self {
             Self::Bob => "bob",
             Self::Carol => "carol",
@@ -80,7 +80,7 @@ fn short(events: &[Value]) -> Vec<String> {
 }
 
 /// The engine and a CLI become friends: (the CLI's contact id for alice, the engine's friend id).
-fn befriend(w: &mut World, who: Who) -> (i64, i64) {
+pub(super) fn befriend(w: &mut World, who: Who) -> (i64, i64) {
     w.n.events.clear();
     w.n.req(Request::CreateInvite);
     let link = w.until("the invitation", |w| {
@@ -104,7 +104,7 @@ fn befriend(w: &mut World, who: Who) -> (i64, i64) {
 }
 
 /// Bob and carol become contacts of each other: bob's contact id for carol.
-fn cli_friends(w: &mut World) -> i64 {
+pub(super) fn cli_friends(w: &mut World) -> i64 {
     let r = w.bob.cmd("/_connect 1");
     assert_eq!(kind(&r), "invitation", "{r}");
     let link = r
@@ -119,12 +119,12 @@ fn cli_friends(w: &mut World) -> i64 {
     })
 }
 
-fn group_id(e: &Value) -> Option<i64> {
+pub(super) fn group_id(e: &Value) -> Option<i64> {
     e.pointer("/groupInfo/groupId")?.as_i64()
 }
 
 /// A CLI accepts the invitation it got: its group id there.
-fn cli_joins(w: &mut World, who: Who) -> i64 {
+pub(super) fn cli_joins(w: &mut World, who: Who) -> i64 {
     let gid = w.until("the CLI's invitation", |w| {
         w.cli(who)
             .take(|e| (kind(e) == "receivedGroupInvitation").then(|| group_id(e))?)
@@ -138,7 +138,7 @@ fn cli_joins(w: &mut World, who: Who) -> i64 {
     gid
 }
 
-fn cli_group_send(w: &mut World, who: Who, gid: i64, text: &str) {
+pub(super) fn cli_group_send(w: &mut World, who: Who, gid: i64, text: &str) {
     let items = json!([{ "msgContent": { "type": "text", "text": text } }]);
     let r = w.cli(who).cmd(&format!("/_send #{gid} json {items}"));
     assert_eq!(kind(&r), "newChatItems", "{r}");
@@ -166,14 +166,14 @@ fn cli_got(e: &Value, gid: i64, from: &str, text: &str) -> bool {
             })
 }
 
-fn wait_cli_got(w: &mut World, who: Who, gid: i64, from: &str, text: &str) {
+pub(super) fn wait_cli_got(w: &mut World, who: Who, gid: i64, from: &str, text: &str) {
     w.until(&format!("{} reads {text:?}", who.name()), |w| {
         w.cli(who)
             .take(|e| cli_got(e, gid, from, text).then_some(()))
     });
 }
 
-fn wait_engine_got(w: &mut World, group: i64, from: &str, text: &str) {
+pub(super) fn wait_engine_got(w: &mut World, group: i64, from: &str, text: &str) {
     w.until(&format!("alice reads {text:?}"), |w| {
         engine_msg(&mut w.n, |m| {
             m.chat == ChatRef::Group(group)
@@ -183,7 +183,7 @@ fn wait_engine_got(w: &mut World, group: i64, from: &str, text: &str) {
     });
 }
 
-fn engine_send(w: &mut World, group: i64, text: &str) {
+pub(super) fn engine_send(w: &mut World, group: i64, text: &str) {
     w.n.req(Request::Send {
         chat: ChatRef::Group(group),
         text: text.into(),
@@ -193,7 +193,7 @@ fn engine_send(w: &mut World, group: i64, text: &str) {
 }
 
 /// The engine's group named `name` once the page shows its membership as `m`.
-fn engine_group(w: &mut World, name: &str, m: Membership) -> i64 {
+pub(super) fn engine_group(w: &mut World, name: &str, m: Membership) -> i64 {
     w.until(&format!("the engine's group {name} as {m:?}"), |w| {
         w.n.req(Request::Refresh);
         w.n.events.iter().rev().find_map(|e| match e {

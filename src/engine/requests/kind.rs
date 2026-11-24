@@ -24,6 +24,13 @@ pub fn kind_of(r: &Request) -> RequestKind {
         Request::SetMuted { .. } => K::Mute,
         Request::SetTimer { .. } => K::Timer,
         Request::SetPrefs { .. } => K::Prefs,
+        Request::SetMemberRole { .. }
+        | Request::BlockMemberForAll { .. }
+        | Request::RemoveMember { .. }
+        | Request::DeleteGroup(_)
+        | Request::SetGroupProfile { .. }
+        | Request::SetGroupPrefs { .. }
+        | Request::Moderate { .. } => K::GroupAdmin,
         Request::SetBlocked { .. } | Request::SetMemberBlocked { .. } => K::Block,
         Request::ShowCode(_) | Request::Verify { .. } => K::Code,
         Request::Members(_) => K::Members,

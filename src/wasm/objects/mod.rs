@@ -1,5 +1,6 @@
 //! The objects JS handlers and promises get; each acts through the client it came from.
 
+mod admin;
 mod friend;
 mod group;
 mod invite;

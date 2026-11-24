@@ -17,6 +17,8 @@ small, plain API.
 - Chat messages, contacts, groups, replies, edits, deletes and reactions
 - Disappearing messages, for a friend or a group
 - Chat preferences (full delete, reactions, voice, files, calls), your own and per friend
+- Group admin: roles, blocking for everyone, removing members, moderation, the group's name,
+  description and preferences, and deleting a group
 - XFTP file upload and download, with file crypto and descriptions, natively and in the
   browser, Node.js and Bun
 - Calls (signalling and frame crypto)
@@ -320,6 +322,24 @@ console.log(friend.features.voice); // { for_user: false, for_contact: true }
 `"always"` keeps a feature on for your friend's messages even when they said no to it for
 yours. A friend's reaction, voice message, call or full delete that you don't allow is
 refused, as the official apps refuse it.
+
+### Group admin
+
+Admins and owners manage a group the way the official apps do, with the same role checks
+(`assertUserGroupRole`): changing a role needs admin and at least both roles, blocking for
+everyone needs moderator, removing needs admin, and the group's profile and preferences need
+the owner.
+
+```js
+const [member] = (await group.members()).filter((m) => m.name === "bob");
+await member.setRole("moderator");  // "observer" | "author" | "member" | "moderator" | "admin" | "owner"
+await member.blockForAll(true);     // hides their messages for every member
+await member.remove(true);          // true: what they wrote shows deleted for everyone
+await message.moderate();           // a member's message, deleted for everyone
+await group.setProfile("crew", "Welcome!");
+await group.setPrefs({ voice: { on: false }, files: { on: true, role: "moderator" } });
+await group.delete();               // an owner deletes it for every member too
+```
 
 ## Limits
 

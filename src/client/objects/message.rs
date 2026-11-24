@@ -1,8 +1,9 @@
 //! A message: answer it, react to it, change or delete it.
 
 use super::{Author, Chat, Member};
-use crate::client::{Client, Result};
+use crate::client::{Client, Error, Result};
 use crate::types::model::{ChatMessage, ChatRef, MessageAuthor};
+use crate::types::{ErrorCode, Request, RequestKind};
 
 #[derive(Clone, Debug)]
 pub struct Message {
@@ -96,6 +97,21 @@ impl Message {
 
     pub fn delete(&self) -> Result<()> {
         self.client.delete(&self.info)
+    }
+
+    /// A moderator deletes a member's message in a group for everyone.
+    pub fn moderate(&self) -> Result<()> {
+        let ChatRef::Group(group) = self.info.chat else {
+            return Err(Error::Failed {
+                request: RequestKind::GroupAdmin,
+                code: ErrorCode::RequestFailed,
+                detail: "only a group's message is moderated".into(),
+            });
+        };
+        self.client.request(Request::Moderate {
+            group,
+            item: self.info.id,
+        })
     }
 
     /// Downloads the file this message offers into the client's folder.

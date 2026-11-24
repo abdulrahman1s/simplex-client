@@ -36,6 +36,11 @@ impl Member {
             info: Some(info),
         }
     }
+
+    /// The client, the group, and the member's number when it came from the list.
+    pub(in crate::wasm) fn parts(&self) -> (&Rc<Shared>, i64, Option<i64>) {
+        (&self.shared, self.group, self.info.as_ref().map(|m| m.id))
+    }
 }
 
 #[wasm_bindgen]

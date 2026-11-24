@@ -2,7 +2,8 @@
 
 use super::{Friend, Member, Message};
 use crate::client::{Client, Result};
-use crate::types::model::{ChatGroup, ChatRef};
+use crate::types::Request;
+use crate::types::model::{ChatGroup, ChatRef, GroupPrefs};
 
 #[derive(Clone, Debug)]
 pub struct Group {
@@ -80,5 +81,27 @@ impl Group {
     /// The group's disappearing messages: `ttl` seconds, or `None` for off. Owners only.
     pub fn set_timer(&self, ttl: Option<i64>) -> Result<()> {
         self.client.set_timer(self.chat(), ttl)
+    }
+
+    /// Deletes the group here; an owner deletes it for every member too.
+    pub fn delete(&self) -> Result<()> {
+        self.client.request(Request::DeleteGroup(self.id()))
+    }
+
+    /// An owner renames the group or changes its description.
+    pub fn set_profile(&self, name: &str, description: Option<&str>) -> Result<()> {
+        self.client.request(Request::SetGroupProfile {
+            group: self.id(),
+            name: name.to_owned(),
+            description: description.map(str::to_owned),
+        })
+    }
+
+    /// An owner turns group features on or off; one left out stays.
+    pub fn set_prefs(&self, prefs: GroupPrefs) -> Result<()> {
+        self.client.request(Request::SetGroupPrefs {
+            group: self.id(),
+            prefs,
+        })
     }
 }

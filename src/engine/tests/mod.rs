@@ -20,6 +20,7 @@ mod live_address;
 mod live_call;
 mod live_cli;
 mod live_group;
+mod live_manage;
 mod live_offline;
 mod live_prefs;
 mod live_repair;

@@ -24,6 +24,8 @@ pub enum RequestKind {
     Mute,
     Timer,
     Prefs,
+    /// An admin's or owner's change to a group, or deleting one.
+    GroupAdmin,
     Block,
     Code,
     Members,

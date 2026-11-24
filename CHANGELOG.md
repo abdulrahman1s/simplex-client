@@ -42,6 +42,21 @@ All notable changes to this project are documented here. The format follows
   **Breaking:** `Request` and `RequestKind` have new variants, `Friend` and `ChatProfile` new
   fields, and `UserRecord` is no longer `Eq`.
 
+- Group admin, as SimpleX Chat 7.1.4 has it: `Request::SetMemberRole`, `BlockMemberForAll`,
+  `RemoveMember` (with or without the member's messages), `DeleteGroup`, `SetGroupProfile`
+  (name and description), `SetGroupPrefs` and `Moderate`, with the senders' role checks from
+  Commands.hs (`APIMembersRole`, `APIBlockMembersForAll`, `APIRemoveMembers`, `APIDeleteChat`,
+  `APIUpdateGroupProfile`, `APIDeleteMemberChatItem`). Rust: `member.set_role`,
+  `block_for_all`, `remove`, `group.delete`, `set_profile`, `set_prefs`, `message.moderate`;
+  JS the same in camelCase. A role change goes to every current member and the member too; a
+  block to the others; a removal to all before the member's connection goes once delivered; an
+  invited member's new role goes in their invitation again. Deleting a group removes
+  everything kept about it. `GroupMember.role`, `blocked_for_all`, `ChatGroup.role` and
+  `description` show the result, and a role change made by anyone now leaves a
+  `ChatNotice::MemberRole`. A live test runs all of it against two official CLIs.
+  **Breaking:** `Request`, `RequestKind` and `ChatNotice` have new variants, `GroupMember` and
+  `ChatGroup` new fields.
+
 ### Fixed
 
 - The profile sent to friends said disappearing messages were allowed, so an official app

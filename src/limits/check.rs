@@ -55,7 +55,7 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
             text_fits(text)
         }
         Request::Edit { text, .. } | Request::SendFile { text, .. } => text_fits(text),
-        Request::NewGroup(name) => {
+        Request::NewGroup(name) | Request::SetGroupProfile { name, .. } => {
             if !is_valid_name(name.trim()) {
                 return refuse(
                     ErrorCode::InvalidName,
@@ -83,6 +83,12 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::SetMuted { .. }
         | Request::SetTimer { .. }
         | Request::SetPrefs { .. }
+        | Request::SetMemberRole { .. }
+        | Request::BlockMemberForAll { .. }
+        | Request::RemoveMember { .. }
+        | Request::DeleteGroup(_)
+        | Request::SetGroupPrefs { .. }
+        | Request::Moderate { .. }
         | Request::SetBlocked { .. }
         | Request::SetMemberBlocked { .. }
         | Request::ShowCode(_)

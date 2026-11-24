@@ -19,6 +19,8 @@ mod links;
 mod links_cap;
 mod links_host;
 mod links_join;
+mod manage;
+mod manage_group;
 mod members;
 mod members_intro;
 mod members_join;

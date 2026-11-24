@@ -34,6 +34,12 @@ pub enum ChatNotice {
         who: String,
     },
     MemberLeft(String),
+    /// An admin changed a member's role, or the user's (`RGEMemberRole`, `RGEUserRole`).
+    MemberRole {
+        by: Option<String>,
+        who: String,
+        role: super::MemberRole,
+    },
     /// A moderator blocked or unblocked a member for everyone (`RGEMemberBlocked`).
     MemberBlocked {
         by: Option<String>,

@@ -57,6 +57,7 @@ fn failed_slot(kind: RequestKind) -> Option<usize> {
         | K::Mute
         | K::Timer
         | K::Prefs
+        | K::GroupAdmin
         | K::Block
         | K::File
         | K::GroupLink
