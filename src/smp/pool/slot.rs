@@ -43,17 +43,17 @@ impl Slot {
     ) {
         let Some(link) = &mut self.link else { return };
         let done = match input {
-            PipeInput::Open if !link.opened => {
+            PipeInput::Open if !link.carrier.opened => {
                 link.on_open(&self.server, token).map_err(Why::Failed)
             }
             PipeInput::Open => Ok(()),
             PipeInput::Text(text) => match parse_tunnel_reply(&text) {
-                Ok(()) => link.send_client_hello().map_err(Why::Failed),
+                Ok(()) => link.carrier.send_client_hello().map_err(Why::Failed),
                 Err(e) => Err(refused(&e, notes)),
             },
-            PipeInput::Binary(_) if !link.is_through() => Err(Why::Failed(SmpError::Unexpected(
-                "bytes before the tunnel opened",
-            ))),
+            PipeInput::Binary(_) if !link.carrier.is_through() => Err(Why::Failed(
+                SmpError::Unexpected("bytes before the tunnel opened"),
+            )),
             PipeInput::Binary(bytes) => {
                 let events = link.session.feed(&bytes, now);
                 self.after_session(events, now, out);

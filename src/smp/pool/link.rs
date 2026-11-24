@@ -3,20 +3,13 @@ use crate::smp::address::{DEFAULT_PORT, SmpServer};
 use crate::smp::config::ConnConfig;
 use crate::smp::error::SmpError;
 use crate::smp::session::SmpSession;
-use crate::smp::tunnel::{MAX_FRAME, tunnel_hello};
 
+use super::carrier::Carrier;
 use super::pipe::{Pipe, PipeId};
 
 pub(super) struct Link {
-    pub(super) id: PipeId,
-    pub(super) pipe: Box<dyn Pipe>,
+    pub(super) carrier: Carrier,
     pub(super) session: SmpSession,
-    /// The TLS ClientHello, held until the tunnel answers `{"ok":true}`.
-    pub(super) hello: Option<Vec<u8>>,
-    /// The pipe is open and, through a tunnel, the tunnel hello went out.
-    pub(super) opened: bool,
-    /// Through the tunnel, not direct TCP.
-    pub(super) tunnel: bool,
 }
 
 /// Where a pipe goes: the relay's first host that is not an onion one, and its port.
@@ -41,57 +34,28 @@ impl Link {
     ) -> Result<Self, SmpError> {
         let (session, hello) = SmpSession::start(server, cfg, now)?;
         Ok(Self {
-            id,
-            pipe,
+            carrier: Carrier::new(id, pipe, tunnel, hello),
             session,
-            hello: Some(hello),
-            opened: false,
-            tunnel,
         })
     }
 
-    /// Bytes flow once the tunnel said yes and our ClientHello went out.
-    pub(super) fn is_through(&self) -> bool {
-        self.opened && self.hello.is_none()
-    }
-
-    /// The pipe opened: through a tunnel the hello names the relay, straight to the relay
-    /// TLS begins at once.
     pub(super) fn on_open(
         &mut self,
         server: &SmpServer,
         token: Option<&str>,
     ) -> Result<(), SmpError> {
-        self.opened = true;
-        if !self.tunnel {
-            return self.send_client_hello();
-        }
         let (host, port) = target(server)?;
-        self.pipe.send_text(&tunnel_hello(host, port, token))
-    }
-
-    /// Sends our ClientHello after the tunnel's `{"ok":true}`.
-    pub(super) fn send_client_hello(&mut self) -> Result<(), SmpError> {
-        match self.hello.take() {
-            Some(hello) => self.send(&hello),
-            None => Ok(()),
-        }
+        self.carrier.on_open(host, port, token)
     }
 
     /// Everything the session has for the socket, in frames the tunnel accepts.
     pub(super) fn flush(&mut self) -> Result<(), SmpError> {
-        if !self.is_through() {
+        if !self.carrier.is_through() {
             return Ok(());
         }
         while let Some(bytes) = self.session.take_outgoing() {
-            self.send(&bytes)?;
+            self.carrier.send(&bytes)?;
         }
         Ok(())
-    }
-
-    fn send(&mut self, bytes: &[u8]) -> Result<(), SmpError> {
-        bytes
-            .chunks(MAX_FRAME)
-            .try_for_each(|frame| self.pipe.send_binary(frame))
     }
 }

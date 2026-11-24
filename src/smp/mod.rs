@@ -46,7 +46,7 @@ pub use flow::{Answer, Backoff, Request};
 pub use handshake::{HandshakeConfig, TlsFacts, answer_server_hello, client_handshake, negotiate};
 pub use hello::{ServerHello, encode_client_hello};
 pub use message::{RcvMsg, decrypt_message, parse_rcv_body, rcv_dh_secret};
-pub use pool::{Dialer, MAX_PIPES, Pipe, PipeId, PipeInput, SharedPool, TunnelPool};
+pub use pool::{Carrier, Dialer, MAX_PIPES, Pipe, PipeId, PipeInput, SharedPool, TunnelPool};
 pub use queue_data::{
     ContactLink, MessagingLink, NewNtfCreds, QueueLinkData, QueueMode, QueueReqData,
     SubscriptionMode,
