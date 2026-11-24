@@ -6,6 +6,7 @@ mod connection;
 mod deadline;
 mod fake;
 mod handshake;
+mod hostile;
 mod keepalive;
 mod live;
 mod pool;
