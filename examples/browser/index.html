@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SimpleX in a tab</title>
+  <style>
+    [hidden] { display: none !important; }
+    :root { color-scheme: light dark; font: 15px/1.4 system-ui, sans-serif; }
+    body { max-width: 760px; margin: 0 auto; padding: 16px; }
+    form, .row { display: flex; gap: 8px; margin: 8px 0; flex-wrap: wrap; }
+    input { flex: 1; min-width: 0; padding: 6px 8px; }
+    button { padding: 6px 12px; }
+    .muted { opacity: 0.7; }
+    #address { word-break: break-all; font-family: ui-monospace, monospace; font-size: 13px; }
+    #layout { display: grid; grid-template-columns: 200px 1fr; gap: 16px; }
+    #friends button { display: block; width: 100%; text-align: left; margin: 2px 0; }
+    #friends button.on { font-weight: bold; }
+    #messages { height: 50vh; overflow-y: auto; border: 1px solid #8884; padding: 8px; }
+    .mine { text-align: right; }
+    @media (max-width: 600px) { #layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>SimpleX in a tab</h1>
+
+  <form id="start">
+    <input id="tunnel" placeholder="wss://simplex-tunnel.example.workers.dev/v1" required>
+    <input id="name" placeholder="Your name" required>
+    <input id="key" type="password" placeholder="Passphrase" required>
+    <button>Start</button>
+  </form>
+  <p id="status" class="muted">Not started.</p>
+
+  <section id="app" hidden>
+    <p>Your address: <span id="address" class="muted">making it…</span>
+      <button id="copy" type="button">Copy</button></p>
+    <form id="connect">
+      <input id="link" placeholder="Paste an invitation or address to connect">
+      <button>Connect</button>
+    </form>
+    <div id="requests"></div>
+    <div id="layout">
+      <div id="friends"></div>
+      <div>
+        <div id="messages"></div>
+        <form id="send">
+          <input id="text" placeholder="Message" autocomplete="off">
+          <button>Send</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

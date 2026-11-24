@@ -1,0 +1,36 @@
+{
+  "name": "simplex-client",
+  "version": "0.1.0",
+  "description": "A SimpleX Chat protocol client compiled to WebAssembly, for browsers and Node.js",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abdulrahman1s/simplex-client.git"
+  },
+  "keywords": ["simplex", "chat", "messaging", "e2ee", "wasm"],
+  "exports": {
+    ".": {
+      "node": {
+        "types": "./pkg/node/simplex_client.d.ts",
+        "default": "./pkg/node/simplex_client.js"
+      },
+      "browser": {
+        "types": "./pkg/web/simplex_client.d.ts",
+        "default": "./pkg/web/simplex_client.js"
+      },
+      "default": {
+        "types": "./pkg/web/simplex_client.d.ts",
+        "default": "./pkg/web/simplex_client.js"
+      }
+    }
+  },
+  "types": "./pkg/web/simplex_client.d.ts",
+  "files": ["pkg/web", "pkg/node", "README.md", "LICENSE"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "scripts/build-js.sh",
+    "prepare": "scripts/build-js.sh",
+    "test": "node --test tests/js/*.test.mjs"
+  }
+}

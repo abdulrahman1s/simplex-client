@@ -1,12 +1,13 @@
 //! `AgentPort` over the native agent client: ids, errors and events mapped, nothing else (ADR-0042).
 
+#[cfg(feature = "native")]
 use crossbeam_channel::{Receiver, unbounded};
 
 use super::agent_map::{conn_id, event, failure, native_conn, native_msg};
 use super::agent_port::{AgentEvent, AgentFailure, AgentMsgId, AgentPort, ConnId};
 use super::log::Log;
 use super::presets;
-use super::relays::{RelayTester, SmpTester};
+use super::relays::RelayTester;
 use crate::agent::AgentError;
 use crate::agent::client::{AgentClient, AgentConfig};
 use crate::agent::links::ConnectionLink;
@@ -22,8 +23,24 @@ pub struct NativeAgent {
 
 impl NativeAgent {
     /// `relays` are the config's relays; the `smp://` ones are used, or the presets when none is.
+    #[cfg(feature = "native")]
     #[must_use]
     pub fn new(relays: &[String], log: Log) -> (Self, Receiver<SmpEvent>) {
+        let (tx, rx) = unbounded();
+        (
+            Self::with_client(relays, log, |cfg| AgentClient::new(cfg, tx)),
+            rx,
+        )
+    }
+
+    /// Like `new`, with the agent client `make` builds from the config: how it reaches relays,
+    /// and where its SMP events go, are up to the caller.
+    #[must_use]
+    pub fn with_client(
+        relays: &[String],
+        log: Log,
+        make: impl FnOnce(AgentConfig) -> AgentClient,
+    ) -> Self {
         let named = relays.iter().filter(|r| r.starts_with("smp://"));
         let any_named = named.clone().next().is_some();
         let mut servers: Vec<SmpServer> = named.filter_map(|r| r.parse().ok()).collect();
@@ -35,15 +52,11 @@ impl NativeAgent {
         let configured = servers.clone();
         let mut cfg = AgentConfig::new(servers);
         cfg.presets = presets::all();
-        let (tx, rx) = unbounded();
-        (
-            Self {
-                client: AgentClient::new(cfg, tx),
-                log,
-                configured,
-            },
-            rx,
-        )
+        Self {
+            client: make(cfg),
+            log,
+            configured,
+        }
     }
 }
 
@@ -206,8 +219,11 @@ impl AgentPort for NativeAgent {
             .map_err(failed)
     }
 
-    fn relay_tester(&self) -> Box<dyn RelayTester> {
-        Box::new(SmpTester)
+    fn relay_tester(&self) -> Option<Box<dyn RelayTester>> {
+        #[cfg(feature = "native")]
+        return Some(Box::new(super::relays::SmpTester));
+        #[cfg(not(feature = "native"))]
+        None
     }
 
     fn set_disabled_relays(&mut self, disabled: &[String]) {
@@ -232,6 +248,7 @@ impl AgentPort for NativeAgent {
 }
 
 #[cfg(test)]
+#[cfg(feature = "native")]
 mod tests {
     use super::*;
 

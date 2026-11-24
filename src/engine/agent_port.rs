@@ -202,8 +202,9 @@ pub trait AgentPort {
     fn synchronize_ratchet(&mut self, store: &mut Store, conn: &ConnId)
     -> Result<(), AgentFailure>;
 
-    /// What tests relays for the checks: the network, for the real agent.
-    fn relay_tester(&self) -> Box<dyn super::relays::RelayTester>;
+    /// What tests relays for the checks: the network, for the real agent. `None` where relays
+    /// can't be tested (no threads); no check runs then, so nothing is judged offline by one.
+    fn relay_tester(&self) -> Option<Box<dyn super::relays::RelayTester>>;
 
     /// Keeps new queues off the relays in `disabled` (addresses as the config gave them) while
     /// any other relay is configured; queues already on them stay. An empty list enables all.

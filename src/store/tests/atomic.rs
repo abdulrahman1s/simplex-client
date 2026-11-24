@@ -1,9 +1,8 @@
-use super::Dir;
+//! Batches: all of them or none.
+use super::{Bed, both};
 use crate::store::{Op, StoreError};
 
-#[test]
-fn apply_rolls_back_every_op_when_one_fails() {
-    let d = Dir::new();
+fn apply_rolls_back_every_op_when_one_fails(d: Bed) {
     let mut s = d.store("k");
     s.put("ns", b"old", b"1").unwrap();
     let ops = vec![
@@ -37,9 +36,7 @@ fn apply_rolls_back_every_op_when_one_fails() {
     assert_eq!(s.get_file(1).unwrap(), None);
 }
 
-#[test]
-fn apply_commits_all_ops_and_returns_inserted_item_ids() {
-    let d = Dir::new();
+fn apply_commits_all_ops_and_returns_inserted_item_ids(d: Bed) {
     let mut s = d.store("k");
     let ids = s
         .apply(vec![
@@ -63,12 +60,16 @@ fn apply_commits_all_ops_and_returns_inserted_item_ids() {
     assert_eq!(s.page(b"c", None, 10).unwrap().len(), 2);
 }
 
-#[test]
-fn updating_a_missing_item_fails() {
-    let d = Dir::new();
+fn updating_a_missing_item_fails(d: Bed) {
     let mut s = d.store("k");
     assert!(matches!(
         s.update_item(b"c", 99, b"x"),
         Err(StoreError::Invalid(_))
     ));
 }
+
+both!(
+    apply_rolls_back_every_op_when_one_fails,
+    apply_commits_all_ops_and_returns_inserted_item_ids,
+    updating_a_missing_item_fails,
+);

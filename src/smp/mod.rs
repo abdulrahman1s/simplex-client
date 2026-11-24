@@ -15,6 +15,7 @@ mod flow;
 mod handshake;
 mod hello;
 mod message;
+mod pool;
 mod queue_data;
 mod responses;
 mod server_error;
@@ -51,10 +52,11 @@ pub use queue_data::{
 };
 pub use responses::{QueueIds, Response, ServerNtfCreds};
 pub use server_error::{CommandError, ErrorType};
+pub use pool::{Dialer, MAX_PIPES, Pipe, PipeId, PipeInput, SharedPool, TunnelPool};
 pub use session::SmpSession;
 #[cfg(feature = "native")]
 pub use tls_connector::TlsConnector;
 pub use transmission::{Incoming, authorized, encode_transmission, pack, parse_payload};
 pub use transport::{Closer, Connector, Established, Reader, Wire, Writer};
-pub use tunnel::{TunnelError, parse_tunnel_reply, tunnel_hello};
+pub use tunnel::{MAX_FRAME, TunnelError, parse_tunnel_reply, tunnel_hello};
 pub use version::{BLOCK_SIZE, MAX_VERSION, MIN_VERSION};

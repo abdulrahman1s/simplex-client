@@ -2,11 +2,16 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+#[cfg(feature = "native")]
 use crossbeam_channel::Sender;
 
-use crate::smp::{Clock, Connector, Request, SmpEvent, SmpServer, SystemClock, TlsConnector};
+use crate::smp::{Clock, Request, SmpServer};
+#[cfg(feature = "native")]
+use crate::smp::{Connector, SmpEvent, SystemClock, TlsConnector};
 
-use super::clock::{SystemWallClock, WallClock};
+#[cfg(feature = "native")]
+use super::clock::SystemWallClock;
+use super::clock::WallClock;
 use super::config::{AgentConfig, ms};
 use super::conn::Conn;
 use super::event::AgentEvent;
@@ -33,6 +38,7 @@ pub struct AgentClient {
 
 impl AgentClient {
     /// Connects over TCP and TLS. SMP events arrive on the receiver of `smp_events`; pass each to `on_smp`.
+    #[cfg(feature = "native")]
     #[must_use]
     pub fn new(cfg: AgentConfig, smp_events: Sender<SmpEvent>) -> Self {
         Self::with_parts(
@@ -45,6 +51,7 @@ impl AgentClient {
     }
 
     /// With a given transport and clocks, for tests.
+    #[cfg(feature = "native")]
     #[must_use]
     pub fn with_parts(
         cfg: AgentConfig,
@@ -54,6 +61,23 @@ impl AgentClient {
         clock: Arc<dyn WallClock>,
     ) -> Self {
         let servers = Servers::new(cfg.smp.clone(), connector, smp_clock, smp_events);
+        Self::with_servers(cfg, servers, clock)
+    }
+
+    /// Reaches relays through `pool`, whose owner feeds it the tunnel's bytes; SMP events
+    /// arrive on the channel the pool was given.
+    #[cfg(not(feature = "native"))]
+    #[must_use]
+    pub fn with_pool(
+        cfg: AgentConfig,
+        pool: crate::smp::SharedPool,
+        smp_clock: Arc<dyn Clock>,
+        clock: Arc<dyn WallClock>,
+    ) -> Self {
+        Self::with_servers(cfg, Servers::new(pool, smp_clock), clock)
+    }
+
+    fn with_servers(cfg: AgentConfig, servers: Servers, clock: Arc<dyn WallClock>) -> Self {
         Self {
             cfg,
             clock,

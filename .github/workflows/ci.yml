@@ -56,6 +56,24 @@ jobs:
       - run: cargo clippy --target wasm32-unknown-unknown --no-default-features --features wasm --all-targets -- -D warnings
       - run: cargo test --target wasm32-unknown-unknown --no-default-features --features wasm
 
+  js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.130
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: scripts/build-js.sh
+      # Offline only: no relay is reached in CI.
+      - run: node --test tests/js/*.test.mjs
+
   msrv:
     runs-on: ubuntu-latest
     env:

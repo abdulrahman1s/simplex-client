@@ -34,6 +34,7 @@ impl From<std::io::Error> for StoreError {
     }
 }
 
+#[cfg(feature = "native")]
 impl From<ormlite::SqlxError> for StoreError {
     fn from(e: ormlite::SqlxError) -> Self {
         use ormlite::SqlxError as E;

@@ -9,14 +9,12 @@ pub mod chat;
 pub mod client;
 pub mod crypto;
 pub mod encoding;
-#[cfg(feature = "native")]
 pub mod engine;
 pub mod h2;
 #[cfg(feature = "native")]
 pub mod net;
 pub mod ratchet;
 pub mod smp;
-#[cfg(feature = "native")]
 pub mod store;
 pub mod tls;
 pub mod types;

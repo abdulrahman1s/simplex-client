@@ -44,7 +44,7 @@ impl<A: AgentPort> Engine<A> {
         rel.last_check = None;
         rel.after.clear();
         if rel.tester.is_none() {
-            rel.tester = Some(self.agent.relay_tester());
+            rel.tester = self.agent.relay_tester();
         }
     }
 }

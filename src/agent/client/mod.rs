@@ -14,8 +14,13 @@ mod event;
 mod ids;
 mod ops;
 mod save;
+#[cfg(feature = "native")]
 mod servers;
 mod temporary;
+#[cfg(not(feature = "native"))]
+mod tunnel_servers;
+#[cfg(not(feature = "native"))]
+use tunnel_servers as servers;
 
 pub use agent_client::AgentClient;
 pub use clock::{SystemWallClock, WallClock};

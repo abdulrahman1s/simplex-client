@@ -2,6 +2,7 @@
 
 mod check;
 mod configure;
+#[cfg(feature = "native")]
 mod real;
 mod retry;
 mod tester;
@@ -11,6 +12,7 @@ use std::collections::{BTreeSet, HashSet};
 use std::time::Duration;
 
 use check::Check;
+#[cfg(feature = "native")]
 pub use real::SmpTester;
 pub(crate) use retry::Retry;
 pub use tester::{RelayDone, RelayTester};

@@ -17,7 +17,7 @@ small, plain API.
 - Calls (signalling and frame crypto)
 - SQLite store sealed with a passphrase
 - A threaded engine and a high-level `Client`; no async runtime
-- A `wasm32-unknown-unknown` build of the pure protocol core
+- A `wasm32-unknown-unknown` build of the whole client, reaching relays through a WebSocket tunnel
 - Low-level modules stay public if you need to go below `Client`
 
 ## Quick start
@@ -66,15 +66,15 @@ The exact variants are listed in the crate docs (`cargo doc --open`).
 
 ## WebAssembly
 
-The `wasm` feature builds the pure protocol core for `wasm32-unknown-unknown`: encoding,
-crypto, the double ratchet, the chat message codec, SMP and agent link and envelope codecs,
-XFTP file crypto and descriptions, and small wasm-bindgen bindings (`src/wasm.rs`).
-
-**The browser cannot open SMP connections yet.** There is no raw TCP there, and the
-connection manager is threaded. Wasm gives you the codecs and crypto, not a working client.
+The `wasm` feature builds the whole client for `wasm32-unknown-unknown`: the engine, the
+agent and an in-memory store, driven by one `setTimeout` loop, plus the codec bindings
+(`src/wasm/`). A browser has no raw TCP, so relays are reached through a WebSocket tunnel, a
+Cloudflare Worker that only pipes bytes. TLS runs inside wasm, pinned by the relay's
+fingerprint, so the tunnel sees ciphertext only. Files (XFTP) stay native-only.
 
 ```sh
-cargo build --target wasm32-unknown-unknown --no-default-features --features wasm
+cargo build --lib --release --target wasm32-unknown-unknown --no-default-features --features wasm
+wasm-bindgen --target web --out-dir pkg target/wasm32-unknown-unknown/release/simplex_client.wasm
 ```
 
 `getrandom` 0.3 needs its JS backend on wasm. This repository sets it in `.cargo/config.toml`;
@@ -84,20 +84,49 @@ projects that depend on the crate must set it too:
 RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo build --target wasm32-unknown-unknown ...
 ```
 
-Sketch, after running `wasm-bindgen` on the output (see `src/wasm.rs` for the exported
-functions):
+```js
+import init, { Client } from "./pkg/simplex_client.js";
+await init();
+const client = await Client.start({ name: "Alice", key: "passphrase", tunnel: "wss://<worker>/v1" });
+client.on("message", (msg) => { if (!msg.mine) client.reply(msg, msg.text); });
+client.on("request", (req) => client.accept(req.id));
+console.log(await client.createAddress());
+const snapshot = client.save(); // sealed store bytes; pass back as `snapshot` to start again
+```
+
+[`examples/browser`](examples/browser) is a minimal chat page with the full JS API.
+
+### Node.js
+
+The same build runs on Node.js 22+. There no tunnel is needed: the client dials relays over
+direct TCP (`node:net`), and TLS still runs inside wasm. Install from git (building needs
+Rust with the `wasm32-unknown-unknown` target and `wasm-bindgen-cli` 0.2.130):
+
+```sh
+npm install github:abdulrahman1s/simplex-client
+```
 
 ```js
-import init, * as simplex from "./pkg/simplex_client.js";
-await init();
-console.log(Object.keys(simplex)); // the exported codecs and crypto helpers
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { Client } from "simplex-client";
+
+const saved = existsSync("bot.snapshot") ? new Uint8Array(readFileSync("bot.snapshot")) : undefined;
+const bot = await Client.start({ name: "Echo Bot", key: "passphrase", snapshot: saved });
+bot.on("request", (req) => bot.accept(req.id));
+bot.on("message", (msg) => { if (!msg.mine && msg.text) bot.reply(msg, msg.text); });
+bot.on("change", () => writeFileSync("bot.snapshot", bot.save()));
+console.log("my address:", await bot.createAddress());
 ```
+
+`transport: "tcp"` picks direct TCP explicitly; a `tunnel` URL uses the WebSocket tunnel
+instead. `scripts/build-js.sh` builds both packages (`pkg/web` and `pkg/node`), and
+[`examples/node/bot.mjs`](examples/node/bot.mjs) is the bot above with a safer save.
 
 ## Browser tunnel (Cloudflare Worker)
 
 Browsers cannot open raw TCP. [`worker/`](worker/README.md) is a small Cloudflare Worker that
 only pipes WebSocket frames to a relay's TCP port and back. It is the transport the browser
-build needs; the client side of it is not in the crate yet.
+build uses (`tunnel: "wss://…/v1"`).
 
 - **The Worker sees only TLS ciphertext.** The client runs TLS 1.3 in wasm and pins the relay
   by the fingerprint in its `smp://` address. SMP queue encryption and the end-to-end double
@@ -145,7 +174,7 @@ The protocol, limits and settings are in [worker/README.md](worker/README.md).
 | Feature | Default | What it enables |
 |---|---|---|
 | `native` | yes | Threads, TCP and TLS, the SQLite store, the engine and `Client` |
-| `wasm` | no | The pure protocol core and wasm-bindgen bindings; use with `--no-default-features` |
+| `wasm` | no | The client in a browser or node, through a WebSocket tunnel; use with `--no-default-features` |
 
 ## Protocol versions tracked
 

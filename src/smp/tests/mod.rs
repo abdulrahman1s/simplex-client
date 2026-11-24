@@ -8,6 +8,8 @@ mod handshake;
 mod keepalive;
 mod live;
 mod responses;
+mod pool;
+mod pool_rig;
 mod session;
 mod session_keepalive;
 mod session_rig;

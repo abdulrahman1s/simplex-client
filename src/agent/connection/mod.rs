@@ -18,7 +18,9 @@ mod sub;
 
 pub(crate) use confirm::Confirmation;
 #[cfg(test)]
+#[cfg(feature = "native")]
 pub(crate) use params::{from_wire, link_params};
 pub(crate) use queues::ack_request;
 #[cfg(test)]
+#[cfg(feature = "native")]
 pub(crate) use reply::encrypt_conn_info;

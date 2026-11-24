@@ -1,15 +1,18 @@
-//! The engine's sealed SQLite store behind a synchronous API (ADR-0042, ADR-0017).
+//! The engine's sealed store behind a synchronous API: SQLite on disk, or memory with snapshots (ADR-0042, ADR-0017).
 
-mod db;
 mod error;
 mod files;
 mod handle;
 mod items;
 mod kv;
-mod migrate;
+mod memory;
 mod op;
+mod rows;
 mod seal;
 mod seq;
+mod snapshot;
+#[cfg(feature = "native")]
+mod sql;
 #[cfg(test)]
 mod tests;
 

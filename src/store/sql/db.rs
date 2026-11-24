@@ -8,15 +8,17 @@ use ormlite::sqlite::{
 };
 use ormlite::{ConnectOptions, Connection, Executor};
 
-use super::StoreError;
+use super::migrate;
+use crate::store::StoreError;
 
-pub(super) struct Db {
+pub(in crate::store) struct Db {
     rt: tokio::runtime::Runtime,
     conn: Option<SqliteConnection>,
 }
 
 impl Db {
-    pub(super) fn open(path: &Path) -> Result<Db, StoreError> {
+    /// Opens or creates the file and brings its tables up to date.
+    pub(in crate::store) fn open(path: &Path) -> Result<Db, StoreError> {
         // Created private before SQLite makes it, so the -wal and -shm files inherit 0600.
         std::fs::OpenOptions::new()
             .create(true)
@@ -31,10 +33,12 @@ impl Db {
             .journal_mode(SqliteJournalMode::Wal)
             .synchronous(SqliteSynchronous::Normal);
         let conn = rt.block_on(options.connect())?;
-        Ok(Db {
+        let mut db = Db {
             rt,
             conn: Some(conn),
-        })
+        };
+        db.run(migrate::run)?;
+        Ok(db)
     }
 
     pub(super) fn run<R>(
@@ -46,29 +50,6 @@ impl Db {
             .as_mut()
             .ok_or(StoreError::Invalid("store is closed"))?;
         self.rt.block_on(f(conn))
-    }
-
-    /// `f` inside `BEGIN IMMEDIATE … COMMIT`; any error rolls everything back.
-    pub(super) fn atomic<R>(
-        &mut self,
-        f: impl AsyncFnOnce(&mut SqliteConnection) -> Result<R, StoreError>,
-    ) -> Result<R, StoreError> {
-        self.run(async |c| {
-            exec(c, "BEGIN IMMEDIATE").await?;
-            match f(c).await {
-                Ok(v) => match exec(c, "COMMIT").await {
-                    Ok(()) => Ok(v),
-                    Err(e) => {
-                        let _ = exec(c, "ROLLBACK").await; // the commit error is the one to report
-                        Err(e)
-                    }
-                },
-                Err(e) => {
-                    let _ = exec(c, "ROLLBACK").await; // the failing op's error is the one to report
-                    Err(e)
-                }
-            }
-        })
     }
 }
 

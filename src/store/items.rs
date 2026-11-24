@@ -1,9 +1,8 @@
 //! Chat items. `chat` is `HMAC(chat ref)`; each value is sealed against its chat and row id.
 
-use ormlite::sqlite::SqliteConnection;
-
 use super::StoreError;
 use super::handle::Store;
+use super::rows::Rows;
 use super::seal::Sealer;
 
 fn chat_key(s: &Sealer, chat_ref: &[u8]) -> [u8; 32] {
@@ -14,8 +13,8 @@ fn aad(chat: &[u8], id: i64) -> [Vec<u8>; 3] {
     [b"items".to_vec(), chat.to_vec(), id.to_le_bytes().to_vec()]
 }
 
-async fn seal_row(
-    c: &mut SqliteConnection,
+fn seal_row(
+    rows: &mut dyn Rows,
     s: &Sealer,
     chat: &[u8],
     id: i64,
@@ -23,73 +22,55 @@ async fn seal_row(
 ) -> Result<(), StoreError> {
     let a = aad(chat, id);
     let sealed = s.seal(&[&a[0], &a[1], &a[2]], v)?;
-    let done = ormlite::query("UPDATE items SET v = ?1 WHERE id = ?2 AND chat = ?3")
-        .bind(sealed)
-        .bind(id)
-        .bind(chat)
-        .execute(c)
-        .await?;
-    if done.rows_affected() == 0 {
+    if !rows.item_set(chat, id, sealed)? {
         return Err(StoreError::Invalid("no such item"));
     }
     Ok(())
 }
 
-pub(super) async fn insert(
-    c: &mut SqliteConnection,
+pub(super) fn insert(
+    rows: &mut dyn Rows,
     s: &Sealer,
     chat_ref: &[u8],
     v: &[u8],
 ) -> Result<i64, StoreError> {
     let chat = chat_key(s, chat_ref);
     // The id is part of the AAD, so it must exist before the value is sealed.
-    let id = ormlite::query("INSERT INTO items (chat, v) VALUES (?1, x'')")
-        .bind(chat.as_slice())
-        .execute(&mut *c)
-        .await?
-        .last_insert_rowid();
-    seal_row(c, s, &chat, id, v).await?;
+    let id = rows.item_new(&chat)?;
+    seal_row(rows, s, &chat, id, v)?;
     Ok(id)
 }
 
-pub(super) async fn update(
-    c: &mut SqliteConnection,
+pub(super) fn update(
+    rows: &mut dyn Rows,
     s: &Sealer,
     chat_ref: &[u8],
     id: i64,
     v: &[u8],
 ) -> Result<(), StoreError> {
-    seal_row(c, s, &chat_key(s, chat_ref), id, v).await
+    seal_row(rows, s, &chat_key(s, chat_ref), id, v)
 }
 
-pub(super) async fn delete(
-    c: &mut SqliteConnection,
+pub(super) fn delete(
+    rows: &mut dyn Rows,
     s: &Sealer,
     chat_ref: &[u8],
     id: i64,
 ) -> Result<(), StoreError> {
-    ormlite::query("DELETE FROM items WHERE id = ?1 AND chat = ?2")
-        .bind(id)
-        .bind(chat_key(s, chat_ref).as_slice())
-        .execute(c)
-        .await?;
-    Ok(())
+    rows.item_delete(&chat_key(s, chat_ref), id)
 }
 
 impl Store {
     pub fn insert_item(&mut self, chat_ref: &[u8], v: &[u8]) -> Result<i64, StoreError> {
-        let s = &self.sealer;
-        self.db.atomic(async |c| insert(c, s, chat_ref, v).await)
+        self.atomic(|rows, s| insert(rows, s, chat_ref, v))
     }
 
     pub fn update_item(&mut self, chat_ref: &[u8], id: i64, v: &[u8]) -> Result<(), StoreError> {
-        let s = &self.sealer;
-        self.db.run(async |c| update(c, s, chat_ref, id, v).await)
+        self.atomic(|rows, s| update(rows, s, chat_ref, id, v))
     }
 
     pub fn delete_item(&mut self, chat_ref: &[u8], id: i64) -> Result<(), StoreError> {
-        let s = &self.sealer;
-        self.db.run(async |c| delete(c, s, chat_ref, id).await)
+        self.atomic(|rows, s| delete(rows, s, chat_ref, id))
     }
 
     /// The newest `count` items with id below `before` (all when `None`), oldest first.
@@ -100,16 +81,9 @@ impl Store {
         count: u32,
     ) -> Result<Vec<(i64, Vec<u8>)>, StoreError> {
         let chat = chat_key(&self.sealer, chat_ref);
-        let mut rows: Vec<(i64, Vec<u8>)> = self.db.run(async |c| {
-            Ok(ormlite::query_as(
-                "SELECT id, v FROM items WHERE chat = ?1 AND id < ?2 ORDER BY id DESC LIMIT ?3",
-            )
-            .bind(chat.as_slice())
-            .bind(before.unwrap_or(i64::MAX))
-            .bind(i64::from(count))
-            .fetch_all(c)
-            .await?)
-        })?;
+        let mut rows = self
+            .rows
+            .item_page(&chat, before.unwrap_or(i64::MAX), count)?;
         rows.reverse();
         rows.into_iter()
             .map(|(id, sealed)| {

@@ -17,6 +17,12 @@ pub enum TunnelError {
     ConnectFailed,
     #[error("the tunnel closed an idle connection")]
     Idle,
+    #[error("too many new tunnels from this address; wait a minute")]
+    RateLimited,
+    #[error("too many tunnels open from this address")]
+    TooManyTunnels,
+    #[error("the tunnel used up its byte quota")]
+    Quota,
     #[error("the tunnel failed with {0}")]
     Other(String),
     #[error("the tunnel reply is not valid")]
@@ -46,7 +52,11 @@ pub fn tunnel_hello(host: &str, port: u16, token: Option<&str>) -> String {
     serde_json::to_string(&hello).unwrap_or_default()
 }
 
-/// The Worker's answer to the hello: `{"ok":true}`, or `{"ok":false,"error":"<code>"}`.
+/// The most bytes one binary frame may carry; longer writes go out in several frames.
+pub const MAX_FRAME: usize = 64 * 1024;
+
+/// The Worker's answer to the hello: `{"ok":true}`, or `{"ok":false,"error":"<code>"}`. The
+/// same error frame may also come later, while bytes flow (`not_tls`, `idle`, `quota`).
 pub fn parse_tunnel_reply(text: &str) -> Result<(), TunnelError> {
     let reply: Reply = serde_json::from_str(text).map_err(|_| TunnelError::Malformed)?;
     if reply.ok {
@@ -60,6 +70,9 @@ pub fn parse_tunnel_reply(text: &str) -> Result<(), TunnelError> {
         Some("not_tls") => TunnelError::NotTls,
         Some("connect_failed") => TunnelError::ConnectFailed,
         Some("idle") => TunnelError::Idle,
+        Some("rate_limited") => TunnelError::RateLimited,
+        Some("too_many_tunnels") => TunnelError::TooManyTunnels,
+        Some("quota") => TunnelError::Quota,
         Some(other) => TunnelError::Other(other.to_owned()),
         None => TunnelError::Malformed,
     })
@@ -101,6 +114,9 @@ mod tests {
             ("not_tls", TunnelError::NotTls),
             ("connect_failed", TunnelError::ConnectFailed),
             ("idle", TunnelError::Idle),
+            ("rate_limited", TunnelError::RateLimited),
+            ("too_many_tunnels", TunnelError::TooManyTunnels),
+            ("quota", TunnelError::Quota),
         ];
         for (code, want) in codes {
             let reply = format!(r#"{{"ok":false,"error":"{code}"}}"#);

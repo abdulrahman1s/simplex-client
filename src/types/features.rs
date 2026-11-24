@@ -30,6 +30,10 @@ pub fn features_with(relays: &[String]) -> ChatFeatures {
 /// not agreed to the public file servers, so files need a file server of their own too.
 #[must_use]
 pub fn has_file_servers(relays: &[String]) -> bool {
+    // XFTP runs on threads, so a build without them has no files.
+    if cfg!(not(feature = "native")) {
+        return false;
+    }
     let own_relays = relays.iter().any(|r| r.starts_with("smp://"));
     let own_files = relays.iter().any(|r| r.starts_with("xftp://"));
     !own_relays || own_files

@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-use crossbeam_channel::Sender;
 use crate::types::model::ChatRef;
+use crossbeam_channel::Sender;
 
 use crate::engine::jobs::JobDone;
 use crate::xftp::XftpServer;
@@ -52,6 +52,10 @@ pub const fn chat_of(owner: i64) -> ChatRef {
     }
 }
 
+#[cfg_attr(
+    not(feature = "native"),
+    allow(dead_code, reason = "read by the XFTP transfers, which need threads")
+)]
 pub struct UploadReq {
     pub key: FileKey,
     /// A group's file is made for each of this many members, one description each; `None`
@@ -66,6 +70,10 @@ pub struct UploadReq {
     pub cancel: Arc<AtomicBool>,
 }
 
+#[cfg_attr(
+    not(feature = "native"),
+    allow(dead_code, reason = "read by the XFTP transfers, which need threads")
+)]
 pub struct DownloadReq {
     pub key: FileKey,
     pub job: u64,
