@@ -93,6 +93,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- A repeated `x.grp.inv` with the same link updates the group only while the user has not
+  joined yet, and only from the friend who invited. 7.1.4 rewrites the user's member id, role
+  and the group profile even after joining.
 - At most 50 joins through a group's link wait for their connection; past that the oldest is
   dropped with its connection. 7.1.4 accepts group link requests without limit, each with a
   member, a connection and server queues.

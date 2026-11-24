@@ -71,6 +71,17 @@ impl<A: AgentPort> Engine<A> {
                 .is_some_and(|i| i.conn_request == inv.conn_request)
         });
         if let Some(g) = known.cloned() {
+            // Stricter than 7.1.4's `createGroupInvitation`, which rewrites the user's member id, role and the profile even after joining.
+            let same_friend = match via {
+                Via::Friend(f) => g.invited_by_friend == Some(f),
+                Via::Member { .. } => g.invited_by_friend.is_none(),
+            };
+            if g.status != MemberStatus::Invited || !same_friend {
+                return Err(fail(
+                    Code::RequestFailed,
+                    "x.grp.inv: a repeated invitation once joined, or from someone else",
+                ));
+            }
             let mut g = g;
             g.my_member_id = inv.invited_member.member_id.clone();
             g.my_role = inv.invited_member.member_role.clone();
