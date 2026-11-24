@@ -41,24 +41,23 @@ pub enum Op {
 impl Store {
     /// Applies `ops` atomically. Returns the ids of the `InsertItem` ops, in order.
     pub fn apply(&mut self, ops: Vec<Op>) -> Result<Vec<i64>, StoreError> {
-        let s = &self.sealer;
-        self.db.atomic(async |c| {
+        self.atomic(|rows, s| {
             let mut ids = Vec::new();
             for op in &ops {
                 match op {
-                    Op::Put { ns, key, value } => kv::put(c, s, ns, key, value).await?,
-                    Op::Delete { ns, key } => kv::delete(c, s, ns, key).await?,
+                    Op::Put { ns, key, value } => kv::put(rows, s, ns, key, value)?,
+                    Op::Delete { ns, key } => kv::delete(rows, s, ns, key)?,
                     Op::InsertItem { chat_ref, value } => {
-                        ids.push(items::insert(c, s, chat_ref, value).await?)
+                        ids.push(items::insert(rows, s, chat_ref, value)?);
                     }
                     Op::UpdateItem {
                         chat_ref,
                         id,
                         value,
-                    } => items::update(c, s, chat_ref, *id, value).await?,
-                    Op::DeleteItem { chat_ref, id } => items::delete(c, s, chat_ref, *id).await?,
-                    Op::PutFile { id, value } => files::put(c, s, *id, value).await?,
-                    Op::DeleteFile { id } => files::delete(c, *id).await?,
+                    } => items::update(rows, s, chat_ref, *id, value)?,
+                    Op::DeleteItem { chat_ref, id } => items::delete(rows, s, chat_ref, *id)?,
+                    Op::PutFile { id, value } => files::put(rows, s, *id, value)?,
+                    Op::DeleteFile { id } => rows.file_delete(*id)?,
                 }
             }
             Ok(ids)

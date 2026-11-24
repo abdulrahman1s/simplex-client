@@ -1,8 +1,6 @@
-use super::Dir;
+use super::{Bed, both};
 
-#[test]
-fn page_returns_the_newest_items_oldest_first_and_honours_the_before_cursor() {
-    let d = Dir::new();
+fn page_returns_the_newest_items_oldest_first_and_honours_the_before_cursor(d: Bed) {
     let mut s = d.store("k");
     let ids: Vec<i64> = (0..10)
         .map(|i| s.insert_item(b"c", format!("m{i}").as_bytes()).unwrap())
@@ -19,9 +17,7 @@ fn page_returns_the_newest_items_oldest_first_and_honours_the_before_cursor() {
     assert_eq!(s.page(b"c", Some(ids[0]), 5).unwrap(), vec![]);
 }
 
-#[test]
-fn update_and_delete_item_change_only_that_row() {
-    let d = Dir::new();
+fn update_and_delete_item_change_only_that_row(d: Bed) {
     let mut s = d.store("k");
     let a = s.insert_item(b"c", b"a").unwrap();
     let b = s.insert_item(b"c", b"b").unwrap();
@@ -30,9 +26,7 @@ fn update_and_delete_item_change_only_that_row() {
     assert_eq!(s.page(b"c", None, 10).unwrap(), vec![(a, b"a2".to_vec())]);
 }
 
-#[test]
-fn ids_are_never_reused_after_delete() {
-    let d = Dir::new();
+fn ids_are_never_reused_after_delete(d: Bed) {
     let mut s = d.store("k");
     let (a, b) = (s.next_id("groups").unwrap(), s.next_id("groups").unwrap());
     assert_eq!((a, b), (1, 2));
@@ -42,3 +36,9 @@ fn ids_are_never_reused_after_delete() {
     s.delete_item(b"c", i1).unwrap();
     assert!(s.insert_item(b"c", b"y").unwrap() > i1);
 }
+
+both!(
+    page_returns_the_newest_items_oldest_first_and_honours_the_before_cursor,
+    update_and_delete_item_change_only_that_row,
+    ids_are_never_reused_after_delete,
+);

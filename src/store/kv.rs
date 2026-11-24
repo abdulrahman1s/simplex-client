@@ -3,10 +3,9 @@
 //! The namespace is the only clear part, so a prefix scan lists one namespace and filters on
 //! the real keys found inside the sealed values.
 
-use ormlite::sqlite::SqliteConnection;
-
 use super::StoreError;
 use super::handle::Store;
+use super::rows::Rows;
 use super::seal::Sealer;
 
 fn row_key(s: &Sealer, ns: &str, key: &[u8]) -> Result<Vec<u8>, StoreError> {
@@ -33,8 +32,8 @@ fn unpack(plain: &[u8]) -> Result<(&[u8], &[u8]), StoreError> {
         .ok_or_else(bad)
 }
 
-pub(super) async fn put(
-    c: &mut SqliteConnection,
+pub(super) fn put(
+    rows: &mut dyn Rows,
     s: &Sealer,
     ns: &str,
     key: &[u8],
@@ -42,40 +41,22 @@ pub(super) async fn put(
 ) -> Result<(), StoreError> {
     let k = row_key(s, ns, key)?;
     let sealed = s.seal(&[b"kv", &k], &pack(key, value))?;
-    ormlite::query(
-        "INSERT INTO kv (k, v) VALUES (?1, ?2) ON CONFLICT (k) DO UPDATE SET v = excluded.v",
-    )
-    .bind(k)
-    .bind(sealed)
-    .execute(c)
-    .await?;
-    Ok(())
+    rows.kv_put(k, sealed)
 }
 
-pub(super) async fn delete(
-    c: &mut SqliteConnection,
+pub(super) fn delete(
+    rows: &mut dyn Rows,
     s: &Sealer,
     ns: &str,
     key: &[u8],
 ) -> Result<(), StoreError> {
-    let k = row_key(s, ns, key)?;
-    ormlite::query("DELETE FROM kv WHERE k = ?1")
-        .bind(k)
-        .execute(c)
-        .await?;
-    Ok(())
+    rows.kv_delete(&row_key(s, ns, key)?)
 }
 
 impl Store {
     pub fn get(&mut self, ns: &str, key: &[u8]) -> Result<Option<Vec<u8>>, StoreError> {
         let k = row_key(&self.sealer, ns, key)?;
-        let row: Option<(Vec<u8>,)> = self.db.run(async |c| {
-            Ok(ormlite::query_as("SELECT v FROM kv WHERE k = ?1")
-                .bind(&k)
-                .fetch_optional(c)
-                .await?)
-        })?;
-        let Some((sealed,)) = row else {
+        let Some(sealed) = self.rows.kv_get(&k)? else {
             return Ok(None);
         };
         let plain = self.sealer.open(&[b"kv", &k], &sealed)?;
@@ -83,13 +64,11 @@ impl Store {
     }
 
     pub fn put(&mut self, ns: &str, key: &[u8], value: &[u8]) -> Result<(), StoreError> {
-        let s = &self.sealer;
-        self.db.run(async |c| put(c, s, ns, key, value).await)
+        self.atomic(|rows, s| put(rows, s, ns, key, value))
     }
 
     pub fn delete(&mut self, ns: &str, key: &[u8]) -> Result<(), StoreError> {
-        let s = &self.sealer;
-        self.db.run(async |c| delete(c, s, ns, key).await)
+        self.atomic(|rows, s| delete(rows, s, ns, key))
     }
 
     /// Every key of `ns` that starts with `prefix`, in no particular order.
@@ -101,17 +80,8 @@ impl Store {
         row_key(&self.sealer, ns, b"")?;
         let (lo, mut hi) = ([ns.as_bytes(), &[0]].concat(), ns.as_bytes().to_vec());
         hi.push(1);
-        let rows: Vec<(Vec<u8>, Vec<u8>)> = self.db.run(async |c| {
-            Ok(
-                ormlite::query_as("SELECT k, v FROM kv WHERE k >= ?1 AND k < ?2")
-                    .bind(&lo)
-                    .bind(&hi)
-                    .fetch_all(c)
-                    .await?,
-            )
-        })?;
         let mut keys = Vec::new();
-        for (k, sealed) in rows {
+        for (k, sealed) in self.rows.kv_range(&lo, &hi)? {
             let plain = self.sealer.open(&[b"kv", &k], &sealed)?;
             let key = unpack(&plain)?.0;
             if key.starts_with(prefix) {

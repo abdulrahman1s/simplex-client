@@ -2,10 +2,10 @@
 
 use ormlite::sqlite::SqliteConnection;
 
-use super::StoreError;
 use super::db::exec;
+use crate::store::StoreError;
 
-const MIGRATIONS: &[&str] = &[include_str!("migrations/0001_init.sql")];
+const MIGRATIONS: &[&str] = &[include_str!("../migrations/0001_init.sql")];
 
 pub(super) async fn run(c: &mut SqliteConnection) -> Result<(), StoreError> {
     let (version,): (i64,) = ormlite::query_as("PRAGMA user_version")
