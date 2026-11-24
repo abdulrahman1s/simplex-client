@@ -5,7 +5,6 @@ use crate::chat::{ChatEvent, ChatMessage, encode_chat_message};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
-use crate::engine::profile::sent_profile;
 use crate::engine::records::MemberCategory;
 
 impl<A: AgentPort> Engine<A> {
@@ -53,8 +52,9 @@ impl<A: AgentPort> Engine<A> {
         let Some(conn) = m.conn.filter(|_| m.via_link) else {
             return Ok(true);
         };
+        let g = self.group(group)?;
         let msg = ChatMessage::new(ChatEvent::GrpLinkMem {
-            profile: sent_profile(&self.state.user),
+            profile: self.handshake_profile(&g),
             member_key: None,
         })?;
         let body = encode_chat_message(&msg, false)?;

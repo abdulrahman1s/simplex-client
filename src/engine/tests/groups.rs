@@ -23,6 +23,7 @@ mod messages;
 mod messages_change;
 mod pending;
 mod picture;
+mod redaction;
 mod seed;
 
 use crate::types::model::{ChatRef, Membership, MessageAuthor, MessageBody};

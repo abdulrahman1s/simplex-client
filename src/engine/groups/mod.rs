@@ -48,6 +48,7 @@ pub(crate) mod policy;
 mod profile_update;
 mod rank;
 mod reactions;
+mod redact;
 mod relations;
 pub(crate) mod relay;
 mod role;

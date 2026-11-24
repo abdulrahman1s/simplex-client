@@ -7,6 +7,8 @@ use crate::engine::agent_port::AgentPort;
 use crate::engine::error::Result;
 use crate::engine::machine::Engine;
 
+use super::redact::member_profile;
+
 impl<A: AgentPort> Engine<A> {
     /// `tell`: the profile came in a message (`x.info`), not in the handshake, which shows nothing.
     pub(crate) fn update_member_profile(
@@ -17,6 +19,7 @@ impl<A: AgentPort> Engine<A> {
         tell: bool,
     ) -> Result<()> {
         let mut m = self.member(group, member)?;
+        let profile = &member_profile(&self.group(group)?, &m, profile);
         if m.profile == *profile {
             return Ok(());
         }

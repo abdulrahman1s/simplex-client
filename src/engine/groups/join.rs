@@ -21,7 +21,7 @@ impl<A: AgentPort> Engine<A> {
         let info = group_conn_info(ChatEvent::GrpAcpt {
             member_id: g.my_member_id.clone(),
             member_key: None,
-            profile: Some(self.handshake_profile()),
+            profile: Some(self.handshake_profile(&g)),
         })?;
         // Both statuses change only once the join is under way, so a failure leaves them Invited.
         let conn = self.agent.join(&mut self.store, &link, info, false)?;

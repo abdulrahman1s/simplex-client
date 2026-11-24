@@ -1,4 +1,4 @@
-//! The conn-info of group connections and the member data they carry: `x.grp.acpt`, `x.grp.mem.info`, `MemberInfo` (Internal.hs `encodeXGrpAcpt`, `memberInfo`, `redactedMemberProfile`, `membershipHandshakeProfile`).
+//! The conn-info of group connections and the member data they carry: `x.grp.acpt`, `x.grp.mem.info`, `MemberInfo` (Internal.hs `encodeXGrpAcpt`, `memberInfo`, `membershipHandshakeProfile`).
 
 use crate::chat::compress::compress_to_limit;
 use crate::chat::group::MemberInfo;
@@ -12,27 +12,17 @@ use crate::engine::machine::Engine;
 use crate::engine::profile::sent_profile;
 use crate::engine::records::{GroupRecord, MemberRecord};
 
-/// `redactedMemberProfile` with direct messages off (the default): no preferences, no contact
-/// link, no domain claim.
-#[must_use]
-pub(crate) fn redacted(p: &Profile) -> Profile {
-    Profile {
-        preferences: None,
-        contact_link: None,
-        contact_domain: None,
-        ..p.clone()
-    }
-}
+use super::redact::redacted;
 
 /// `memberInfo`: what the host tells others about a member, with the range its connection speaks
 /// (a connection's `peerChatVRange` starts at the initial range). 7.1.4 drops an intro without one.
 #[must_use]
-pub(crate) fn member_info(m: &MemberRecord) -> MemberInfo {
+pub(crate) fn member_info(g: &GroupRecord, m: &MemberRecord) -> MemberInfo {
     MemberInfo {
         member_id: m.member_id.clone(),
         member_role: m.role.clone(),
         v: m.conn.map(|_| m.chat_v.unwrap_or(CHAT_INITIAL_VRANGE)),
-        profile: redacted(&m.profile),
+        profile: redacted(g, &m.role, &m.profile),
         member_key: m.key.clone(),
     }
 }
@@ -64,16 +54,16 @@ pub(crate) fn peer_range(msg: &ChatMessage) -> VersionRange {
 }
 
 impl<A: AgentPort> Engine<A> {
-    /// `membershipHandshakeProfile`: the user's profile as group members see it.
-    pub(crate) fn handshake_profile(&self) -> Profile {
-        redacted(&sent_profile(&self.state.user))
+    /// `membershipHandshakeProfile`, `userProfileInGroup`: the user's profile as `g`'s members see it.
+    pub(crate) fn handshake_profile(&self, g: &GroupRecord) -> Profile {
+        redacted(g, &g.my_role, &sent_profile(&self.state.user))
     }
 
     /// `x.grp.mem.info` with the user's member id and profile, the answer on every member connection.
     pub(crate) fn my_mem_info(&self, g: &GroupRecord) -> Result<Vec<u8>> {
         group_conn_info(ChatEvent::GrpMemInfo {
             member_id: g.my_member_id.clone(),
-            profile: self.handshake_profile(),
+            profile: self.handshake_profile(g),
         })
     }
 }

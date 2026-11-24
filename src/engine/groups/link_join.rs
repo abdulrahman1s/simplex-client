@@ -145,6 +145,7 @@ impl<A: AgentPort> Engine<A> {
         host.via_link = true;
         g.host = Some(host.id);
         self.save_member(host.clone())?;
+        let profile = self.handshake_profile(&g);
         self.save_group(g)?;
         self.save_conn(ConnRecord {
             conn: *conn,
@@ -155,7 +156,7 @@ impl<A: AgentPort> Engine<A> {
         })?;
         self.forget_friend_record(friend)?;
         let msg = ChatMessage::without_id(ChatEvent::Info {
-            profile: sent_profile(&self.state.user),
+            profile,
             member_key: None,
         });
         let ours = compress_to_limit(&msg.to_json()?, MAX_CONN_INFO_LENGTH)?;

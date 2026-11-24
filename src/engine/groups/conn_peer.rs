@@ -30,9 +30,10 @@ impl<A: AgentPort> Engine<A> {
             ));
             return Ok(());
         }
-        let info = self.my_mem_info(&self.group(group)?)?;
+        let g = self.group(group)?;
+        let info = self.my_mem_info(&g)?;
         self.agent.allow(&mut self.store, conn, info)?;
-        apply_handshake(&mut m, &msg, Some(profile));
+        apply_handshake(&g, &mut m, &msg, Some(profile));
         self.save_member(m)?;
         self.state.chats_dirty = true;
         Ok(())
