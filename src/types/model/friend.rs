@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{Picture, Playing, Presence};
+use super::{ChatRef, Picture, Playing, Presence};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Friend {
@@ -28,4 +28,12 @@ pub struct Friend {
 pub struct FriendRequest {
     pub id: i64,
     pub name: String,
+}
+
+impl Friend {
+    /// The conversation with this friend.
+    #[must_use]
+    pub const fn chat(&self) -> ChatRef {
+        ChatRef::Direct(self.id)
+    }
 }

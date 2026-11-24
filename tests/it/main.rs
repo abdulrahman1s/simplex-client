@@ -1,4 +1,4 @@
-//! Integration tests of the native engine's encoding and crypto modules.
+//! Integration tests of the native engine's encoding and crypto modules, and the client.
 #![allow(clippy::unwrap_used, reason = "tests")]
 
 mod agent_golden;
@@ -13,6 +13,8 @@ mod chat_golden_msg;
 mod chat_nook;
 mod chat_roundtrip;
 mod chat_support;
+#[cfg(feature = "native")]
+mod client_live;
 mod crypto;
 mod encoding;
 mod h2_connection;

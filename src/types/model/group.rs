@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{Picture, Playing, Presence};
+use super::{ChatRef, Picture, Playing, Presence};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -39,4 +39,12 @@ pub struct GroupMember {
     pub playing: Option<Playing>,
     pub blocked: bool,
     pub picture: Option<Picture>,
+}
+
+impl ChatGroup {
+    /// The group's conversation.
+    #[must_use]
+    pub const fn chat(&self) -> ChatRef {
+        ChatRef::Group(self.id)
+    }
 }

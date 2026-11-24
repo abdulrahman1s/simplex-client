@@ -57,6 +57,8 @@ pub struct FakeAgent {
     pub fail_next: Option<AgentFailure>,
     /// Events `subscribe_all` queues.
     pub on_subscribe: Vec<AgentEvent>,
+    /// Events `create_invitation` queues, one per call.
+    pub on_invitation: Vec<AgentEvent>,
     /// What `ratchet_ad` answers.
     pub ratchet_ad: Vec<u8>,
     /// The PQ flag of each `join` and `accept_request`, in order.
@@ -97,7 +99,11 @@ impl AgentPort for FakeAgent {
         _: Vec<u8>,
     ) -> Result<ConnId, AgentFailure> {
         self.calls.push(Call::CreateInvitation);
-        self.conn()
+        let conn = self.conn()?;
+        if !self.on_invitation.is_empty() {
+            self.queued.push(self.on_invitation.remove(0));
+        }
+        Ok(conn)
     }
 
     fn create_address(

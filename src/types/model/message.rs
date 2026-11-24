@@ -59,3 +59,26 @@ pub struct ChatMessage {
     pub edited: bool,
     pub mentions: Vec<Mention>,
 }
+
+impl ChatMessage {
+    /// What the sender wrote: the text, or a file's caption; empty for notices, calls and the rest.
+    #[must_use]
+    pub fn text(&self) -> &str {
+        match &self.body {
+            MessageBody::Text(t) => t,
+            MessageBody::Image(m) | MessageBody::Video(m) | MessageBody::File(m) => &m.caption,
+            MessageBody::Notice(_)
+            | MessageBody::Voice { .. }
+            | MessageBody::Gif(_)
+            | MessageBody::Call(_)
+            | MessageBody::Stream(_)
+            | MessageBody::Deleted => "",
+        }
+    }
+
+    /// Sent by this client's user.
+    #[must_use]
+    pub fn mine(&self) -> bool {
+        self.author == MessageAuthor::Me
+    }
+}

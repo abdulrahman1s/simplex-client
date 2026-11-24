@@ -29,7 +29,7 @@ pub mod state;
 mod time;
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 pub use agent_adapter::NativeAgent;
 pub use agent_port::{AgentEvent, AgentFailure, AgentMsgId, AgentPort, ConnId};
