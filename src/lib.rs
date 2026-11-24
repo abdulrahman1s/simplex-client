@@ -18,3 +18,8 @@ pub mod store;
 pub mod tls;
 pub mod types;
 pub mod xftp;
+
+#[cfg(feature = "native")]
+pub use client::{Client, ClientBuilder, Error, Result};
+pub use types::model::*;
+pub use types::{ErrorCode, Event, Request, RequestKind};

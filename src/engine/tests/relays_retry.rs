@@ -1,6 +1,6 @@
 //! A request that reached no relay is made once more after a check (codec: a_connection_whose_relay_times_out_…, checks_are_at_most_every_few_minutes_…).
 
-use crate::types::{Event, Request, RequestKind};
+use crate::types::{ErrorCode, Event, Request, RequestKind};
 
 use super::Call;
 use super::relays_fake::{DEAD, Fake, LIVE, started};
@@ -24,7 +24,7 @@ fn address_calls(t: &super::T) -> usize {
 
 fn failed(out: &[Event], request: RequestKind) -> bool {
     out.iter()
-        .any(|e| matches!(e, Event::Failed { request: r, code, .. } if *r == request && code == "ZN-CHT-004"))
+        .any(|e| matches!(e, Event::Failed { request: r, code, .. } if *r == request && *code == ErrorCode::NoConnection))
 }
 
 /// Both relays answered the check that runs at the start.

@@ -1,6 +1,6 @@
 //! A group's link: made, read back and deleted (codec: a_group_link_is_made_read_and_deleted, the_link_of_each_group_the_user_runs_is_read_once_and_a_missing_one_is_no_failure).
 
-use crate::types::{Event, Request, RequestKind};
+use crate::types::{ErrorCode, Event, Request, RequestKind};
 
 use crate::chat::group::GroupMemberRole;
 use crate::engine::agent_port::{AgentEvent, AgentFailure, ConnId};
@@ -136,7 +136,7 @@ fn an_agent_error_while_the_link_is_made_ends_the_attempt() {
             request: RequestKind::GroupLink,
             code,
             ..
-        }] if code == "ZN-CHT-004"
+        }] if *code == ErrorCode::NoConnection
     ));
     assert_eq!(t.e.group(g).unwrap().link_conn, None);
     t.req(Request::CreateGroupLink(g));

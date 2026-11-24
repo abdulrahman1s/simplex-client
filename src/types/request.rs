@@ -1,4 +1,4 @@
-//! What core asks the helper to do (mirrors core's `chat::engine::Request`).
+//! What you ask the client to do.
 
 use std::path::PathBuf;
 

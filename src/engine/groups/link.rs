@@ -123,7 +123,7 @@ impl<A: AgentPort> Engine<A> {
         let e = EngineError::from(err.clone());
         self.emit(Event::Failed {
             request: RequestKind::GroupLink,
-            code: e.code.as_str().to_owned(),
+            code: e.code,
             detail: e.detail,
         });
         Ok(())

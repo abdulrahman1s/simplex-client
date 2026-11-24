@@ -1,10 +1,10 @@
-//! What the helper reports (mirrors core's `chat::engine::ChatEvent`).
+//! What the client hears: replies to requests and everything that happens on its own.
 
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::types::kind::{FileKind, RequestKind};
+use crate::types::kind::{ErrorCode, FileKind, RequestKind};
 use crate::types::model::{
     CallSignal, ChatFeatures, ChatGroup, ChatMessage, ChatPreview, ChatProfile, ChatRef, Friend,
     FriendRequest, GroupMember, StreamSignal,
@@ -68,8 +68,7 @@ pub enum Event {
     Stream(StreamSignal),
     Failed {
         request: RequestKind,
-        /// The stable string of core's `ErrorCode`, e.g. "ZN-CHT-005".
-        code: String,
+        code: ErrorCode,
         /// The engine's own words, for the log.
         detail: String,
     },

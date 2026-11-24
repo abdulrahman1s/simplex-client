@@ -1,7 +1,7 @@
 //! Joining someone's address (codec: the_users_own_link_and_a_known_one_connect_nothing, an_engine_error_for_a_link_is_…).
 
 use crate::types::model::{ChatNotice, MessageBody};
-use crate::types::{Event, Request, RequestKind};
+use crate::types::{ErrorCode, Event, Request, RequestKind};
 
 use super::{Call, T, messages, x_info};
 use crate::agent::links::ConnectionLink;
@@ -11,9 +11,9 @@ use crate::engine::agent_port::{AgentEvent, AgentFailure};
 const SHORT: &str = "https://smp6.simplex.im/a#0sPWloEa5zFH0sfc_vANe4RUUebBQSGcvTKpKRH300s";
 const FULL: &str = "simplex:/contact#/?v=6-8&smp=smp%3A%2F%2FAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE%3D%40fake.test%2F-FWjHkx7I4TOSuF3q4l2S4jD2BgprZRG%23%2F%3Fv%3D1-4%26dh%3DMCowBQYDK2VuAyEAQWIOFJ7ZTMqTFfTsHuyRYNDwszkpHQfRxObZXAWAIRU%253D%26q%3Dc";
 
-fn failed(out: &[Event]) -> (RequestKind, String) {
+fn failed(out: &[Event]) -> (RequestKind, ErrorCode) {
     match out {
-        [Event::Failed { request, code, .. }] => (*request, code.clone()),
+        [Event::Failed { request, code, .. }] => (*request, *code),
         other => panic!("{other:?}"),
     }
 }
@@ -76,7 +76,7 @@ fn the_users_own_address_connects_nothing() {
     });
     for link in [SHORT, FULL] {
         let out = t.req(Request::Connect(link.into()));
-        assert_eq!(failed(&out), (RequestKind::Connect, "ZN-CHT-005".into()));
+        assert_eq!(failed(&out), (RequestKind::Connect, ErrorCode::BadLink));
     }
     assert!(joins(&t).is_empty());
 }
@@ -95,7 +95,10 @@ fn an_address_whose_relay_does_not_answer_is_no_connection() {
     let mut t = T::started();
     t.e.agent.fail_next = Some(AgentFailure::Network("timeout".into()));
     let out = t.req(Request::Connect(SHORT.into()));
-    assert_eq!(failed(&out), (RequestKind::Connect, "ZN-CHT-004".into()));
+    assert_eq!(
+        failed(&out),
+        (RequestKind::Connect, ErrorCode::NoConnection)
+    );
     assert!(t.e.state.friends.is_empty());
 }
 
@@ -106,7 +109,7 @@ fn an_address_that_was_deleted_is_reported_as_a_bad_link_and_can_be_removed() {
     let conn = *t.e.state.conns.keys().next().unwrap();
     let err = AgentFailure::Other("AUTH".into());
     let out = t.agent(AgentEvent::Err { conn, err });
-    assert_eq!(failed(&out), (RequestKind::Connect, "ZN-CHT-005".into()));
+    assert_eq!(failed(&out), (RequestKind::Connect, ErrorCode::BadLink));
     let id = *t.e.state.friends.keys().next().unwrap();
     t.req(Request::RemoveFriend(id));
     assert!(t.e.state.friends.is_empty());

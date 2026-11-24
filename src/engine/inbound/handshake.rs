@@ -159,7 +159,7 @@ impl<A: AgentPort> Engine<A> {
     pub(crate) fn fail_event(&mut self, request: RequestKind, e: EngineError) -> Result<()> {
         self.emit(Event::Failed {
             request,
-            code: e.code.as_str().to_owned(),
+            code: e.code,
             detail: e.detail,
         });
         Ok(())

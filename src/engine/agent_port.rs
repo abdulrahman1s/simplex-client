@@ -15,9 +15,9 @@ pub type AgentMsgId = i64;
 /// Why an agent call or delivery failed, as far as the engine tells them apart.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AgentFailure {
-    /// A relay did not answer (network, timeout, host): `ZN-CHT-004`.
+    /// A relay did not answer (network, timeout, host): `SX-CHT-004`.
     Network(String),
-    /// The link was refused or could not be used: `ZN-CHT-005` for a connection.
+    /// The link was refused or could not be used: `SX-CHT-005` for a connection.
     BadLink(String),
     Other(String),
 }

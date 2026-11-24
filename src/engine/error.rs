@@ -1,31 +1,10 @@
-//! What a request handler fails with: one of core's stable `ZN-CHT-*` codes and the engine's words.
+//! What a request handler fails with: one of the stable `SX-CHT-*` codes and the engine's words.
 
 use super::agent_port::AgentFailure;
 use crate::chat::ChatError;
 use crate::store::StoreError;
 
-/// The codes the engine answers with (core's `ErrorCode` strings, ERROR_HANDLING §3).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Code {
-    NoConnection,
-    BadLink,
-    RequestFailed,
-    CallFailed,
-    StreamFailed,
-}
-
-impl Code {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::NoConnection => "ZN-CHT-004",
-            Self::BadLink => "ZN-CHT-005",
-            Self::RequestFailed => "ZN-CHT-006",
-            Self::CallFailed => "ZN-CHT-012",
-            Self::StreamFailed => "ZN-CHT-017",
-        }
-    }
-}
+pub use crate::types::ErrorCode as Code;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EngineError {
