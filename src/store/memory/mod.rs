@@ -1,5 +1,6 @@
 //! The in-memory backend: sealed rows in ordered maps, for the browser and for fast tests.
 
+mod counters;
 mod journal;
 mod tables;
 
@@ -79,12 +80,7 @@ impl Rows for Memory {
     }
 
     fn item_new(&mut self, chat: &[u8]) -> Result<i64, StoreError> {
-        // Not journaled: a rolled-back id stays used, which only leaves a gap.
-        self.t.last_item += 1;
-        let key = (chat.to_vec(), self.t.last_item);
-        let old = swap(&mut self.t.items, key.clone(), Some(Vec::new()));
-        self.note(|| Undo::Item(key, old));
-        Ok(self.t.last_item)
+        self.new_item(chat)
     }
 
     fn item_set(&mut self, chat: &[u8], id: i64, v: Vec<u8>) -> Result<bool, StoreError> {
@@ -135,11 +131,7 @@ impl Rows for Memory {
     }
 
     fn seq_next(&mut self, name: &str) -> Result<i64, StoreError> {
-        let old = self.t.seq.get(name).copied();
-        let next = old.unwrap_or(0) + 1;
-        self.t.seq.insert(name.to_owned(), next);
-        self.note(|| Undo::Seq(name.to_owned(), old));
-        Ok(next)
+        self.next_in(name)
     }
 
     fn dump(&mut self) -> Result<Tables, StoreError> {

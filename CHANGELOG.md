@@ -86,3 +86,5 @@ All notable changes to this project are documented here. The format follows
   server that sends many tiny frames costs linear time, not quadratic.
 - Tunnel Worker: a lease renewal that reaches the per-IP counter after the tunnel's release no
   longer takes the slot back for up to 30 minutes.
+- A snapshot whose item or id counter is at its maximum is refused as damaged when the counter
+  would move, instead of panicking (debug) or wrapping to a negative id (release).
