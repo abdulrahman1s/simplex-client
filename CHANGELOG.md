@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- A relay can no longer replace a connection's per-queue key through a message header to force
+  a ratchet re-sync: once set, the stored key is always used, as simplexmq does.
+- A message that fails to decrypt no longer advances or saves the ratchet, so a tampered copy
+  can't destroy the key the genuine message needs.
+- Ed25519 signatures are checked with `verify_strict`.
+- Ratchet and agent secrets are wiped from memory after encoding and loading.
+- Envelopes above the supported client versions are refused, and invitation short links get
+  the same server check as addresses.
+
 ### Added
 
 - `simplex_client::limits`: every limit and rule of the official SimpleX Chat 7.1.4 client in
@@ -70,6 +81,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- `Ratchet::decrypt` no longer advances on failure; `MsgEncryptKey::encrypt_msg` takes `self`.
 - JS rejections carry a snake-case `code` everywhere (`no_connection` instead of
   `SX-CHT-004`); a file over the memory limit rejects with `file_too_large`, not `too_large`.
 - JS calls that queue a request (`send`, `react`, `edit`, `delete`, …) now reject when the
