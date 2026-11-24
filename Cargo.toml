@@ -1,0 +1,72 @@
+[package]
+name = "simplex-client"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+description = "A SimpleX Chat protocol client: SMP, double ratchet, chat messages, groups, files and calls"
+license = "AGPL-3.0-only"
+repository = "https://github.com/abdulrahman1s/simplex-client"
+authors = ["Abdulrahman <mail@abdulrahman.dev>"]
+keywords = ["simplex", "chat", "messaging", "e2ee", "wasm"]
+categories = ["network-programming", "cryptography", "wasm"]
+readme = "README.md"
+publish = false
+
+[dependencies]
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+base64 = "0.23"
+crossbeam-channel = "0.5"
+aes = "0.9.4"
+aes-gcm = "0.11.1"
+chacha20poly1305 = "0.11.0"
+ed25519-dalek = "3.0.0"
+ed448-goldilocks = "=0.14.0-pre.15"
+cipher = "0.5"
+getrandom = "0.3"
+hkdf = "0.13.0"
+hmac = "0.13"
+ormlite = { version = "0.25", default-features = false, features = ["sqlite", "runtime-tokio-rustls", "json", "uuid"] }
+# Not used directly: turns on `bundled` so SQLite is compiled in.
+libsqlite3-sys = { version = "0.37", features = ["bundled"] }
+poly1305 = "0.9"
+ruzstd = "0.9.1"
+salsa20 = "0.11.0"
+sha2 = "0.11"
+sha3 = "0.12.0"
+sntrup761 = "=0.4.0"
+subtle = "2"
+thiserror = "2.0"
+tokio = { version = "1.45", default-features = false, features = ["rt"] }
+x25519-dalek = { version = "3.0.0", features = ["static_secrets"] }
+x448 = "=0.14.0-pre.12"
+zeroize = "1"
+zstd = { version = "0.13.5", default-features = false }
+lz-str = "0.2"
+
+[lints.rust]
+unsafe_code = "deny"
+rust_2018_idioms = { level = "warn", priority = -1 }
+unused_qualifications = "warn"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+unwrap_used = "warn"
+expect_used = "warn"
+disallowed_methods = "deny"
+disallowed_types = "deny"
+
+[profile.dev]
+opt-level = 1
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.dev.build-override]
+opt-level = 3
+
+[profile.dev.package.sha2]
+opt-level = 3

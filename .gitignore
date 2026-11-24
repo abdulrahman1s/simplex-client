@@ -1,0 +1,16 @@
+/target
+/target-*/
+/pkg
+/result
+/result-*
+.direnv/
+/.handoff/
+node_modules/
+*.snap.new
+.env
+.env.*
+*.log
+.idea/
+.vscode/
+*.swp
+.DS_Store

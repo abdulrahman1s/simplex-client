@@ -1,0 +1,9 @@
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-dbg-in-tests = false
+
+# Time is read through the `Clock` seams so tests can drive it.
+disallowed-methods = [
+    { path = "std::time::SystemTime::now", reason = "read time through a Clock" },
+    { path = "std::time::Instant::now", reason = "read time through a Clock" },
+]
