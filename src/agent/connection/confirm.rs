@@ -6,13 +6,13 @@ use crate::store::Store;
 
 use super::params::from_wire;
 use crate::agent::client::{AgentClient, AgentEvent, ConnId};
-use crate::agent::delivery::Opened;
+use crate::agent::delivery::{HeaderKey, Opened};
 use crate::agent::e2e::E2eParams as WireParams;
 use crate::agent::error::{AgentError, Result};
 use crate::agent::message::AgentMessage;
 use crate::agent::msg_hash;
 use crate::agent::records::{Batch, ConnRecord, ConnStatus};
-use crate::agent::version::MIN_SUPPORTED_AGENT;
+use crate::agent::version::{MIN_SUPPORTED_AGENT, min_client_version};
 
 /// The fields of `AgentConfirmation`.
 pub(crate) struct Confirmation {
@@ -30,10 +30,9 @@ impl AgentClient {
         conf: Confirmation,
     ) -> Result<()> {
         let (rec, ratchet) = self.editable(id)?;
-        let sender = opened
-            .sender_e2e
-            .clone()
-            .ok_or(AgentError::Prohibited("no e2e key"))?;
+        let HeaderKey::First(sender) = opened.header.clone() else {
+            return Err(AgentError::Prohibited("no e2e key"));
+        };
         match rec.status {
             ConnStatus::Invited => {
                 self.joiner_confirmed(store, rec, ratchet, opened.version, sender, conf)
@@ -53,15 +52,7 @@ impl AgentClient {
             | ConnStatus::Resolving
             | ConnStatus::Securing
             | ConnStatus::Replying
-            | ConnStatus::Active => {
-                // The server sends a confirmation again when our ACK was lost.
-                let peer = rec.rcv.as_ref().and_then(|r| r.peer_e2e.as_ref());
-                if peer == Some(&sender) {
-                    Ok(())
-                } else {
-                    Err(AgentError::Prohibited("confirmation in this state"))
-                }
-            }
+            | ConnStatus::Active => Err(AgentError::Prohibited("confirmation in this state")),
         }
     }
 
@@ -89,7 +80,8 @@ impl AgentClient {
             .x3dh
             .take()
             .ok_or(AgentError::Prohibited("no X3DH keys"))?;
-        let pq = PqSupport(rec.pq && snd.kem.is_some());
+        // `initRcvRatchet_` keeps the connection's setting even when the reply brings no KEM.
+        let pq = PqSupport(rec.pq);
         let init = pq_x3dh_rcv(&x3dh, &snd)?;
         let mut ratchet = Ratchet::init_rcv(RatchetVersions::new(snd.version), x3dh.pk2, init, pq);
         let plain = ratchet.decrypt(&conf.enc_conn_info)?;
@@ -157,14 +149,8 @@ impl AgentClient {
                 "ratchet params in the inviter's confirmation",
             ));
         }
-        let decrypted = ratchet.decrypt(&conf.enc_conn_info);
+        let plain = ratchet.decrypt(&conf.enc_conn_info)?;
         let id = rec.id;
-        let Ok(plain) = decrypted else {
-            self.save(store, rec, Some(ratchet), Batch::default())?;
-            return Err(decrypted
-                .err()
-                .map_or(AgentError::Prohibited("decrypt"), Into::into));
-        };
         let AgentMessage::ConnInfo(conn_info) = AgentMessage::from_bytes(&plain)? else {
             return Err(AgentError::Prohibited("expected AgentConnInfo"));
         };
@@ -189,13 +175,37 @@ fn accept_chain(
     plain: &[u8],
 ) -> Result<()> {
     let rq = rec.rcv.as_mut().ok_or(AgentError::Prohibited("no queue"))?;
+    check_conf_versions(rq.client_version, v, agent_v)?;
     rq.peer_e2e = Some(sender);
     rq.client_version = rq.client_version.min(v);
-    if agent_v < MIN_SUPPORTED_AGENT {
-        return Err(AgentError::Version);
-    }
     rec.agent_version = rec.agent_version.min(agent_v);
     rec.chain.rcv_id = 1;
     rec.chain.rcv_hash = msg_hash(plain).to_vec();
     Ok(())
+}
+
+/// `checkConfVersions`: the header's client version, outside the box, may not fall below what
+/// the agent version requires.
+fn check_conf_versions(agreed: Version, v: Version, agent_v: Version) -> Result<()> {
+    if agent_v < MIN_SUPPORTED_AGENT || v < agreed.min(min_client_version(agent_v)) {
+        return Err(AgentError::Version);
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_confirmation_header_below_the_agent_versions_client_minimum_is_refused() {
+        let ok =
+            |agreed, v, agent| check_conf_versions(Version(agreed), Version(v), Version(agent));
+        assert_eq!(ok(4, 3, 8), Err(AgentError::Version));
+        assert_eq!(ok(4, 2, 7), Err(AgentError::Version));
+        assert_eq!(ok(4, 4, 8), Ok(()));
+        assert_eq!(ok(4, 3, 7), Ok(()));
+        assert_eq!(ok(2, 2, 8), Ok(()), "never above what was agreed");
+        assert_eq!(ok(4, 4, 5), Err(AgentError::Version));
+    }
 }

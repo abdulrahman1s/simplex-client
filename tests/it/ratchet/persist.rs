@@ -54,3 +54,27 @@ fn private_params_with_an_accepted_kem_round_trip() {
         private
     );
 }
+
+#[test]
+fn the_stored_form_fits_the_buffer_set_aside_so_no_copy_of_the_keys_is_left_behind() {
+    let Pair {
+        mut alice, mut bob, ..
+    } = handshake(true, true);
+    let fits = |rc: &Ratchet| {
+        let stored = rc.to_stored().unwrap();
+        assert_eq!(*stored, rc.to_bytes().unwrap());
+        assert_eq!(stored.capacity(), rc.stored_capacity(), "grown, so copied");
+    };
+    for i in 0..4 {
+        assert_eq!(recv(&mut alice, &send(&mut bob, "b")), "b");
+        assert_eq!(recv(&mut bob, &send(&mut alice, "a")), "a");
+        fits(&alice);
+        fits(&bob);
+        let far: Vec<_> = (0..150 * i).map(|_| send(&mut bob, "x")).collect();
+        if let Some(last) = far.last() {
+            assert_eq!(recv(&mut alice, last), "x");
+            fits(&alice);
+        }
+    }
+    assert!(alice.skipped_len() > 500);
+}

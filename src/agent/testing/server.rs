@@ -5,8 +5,9 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use crossbeam_channel::Sender;
 
-use super::queues::Queues;
-use crate::crypto::{Alg, KeyPair};
+use super::connector::write;
+use super::queues::{Queues, deliver};
+use crate::crypto::{Alg, KeyPair, random_vec};
 use crate::smp::SmpServer;
 use crate::smp::tests::certs::{Identity, identity};
 
@@ -100,6 +101,21 @@ impl FakeSmp {
 
     pub fn count(&self, name: &str) -> usize {
         self.lock().log.iter().filter(|n| **n == name).count()
+    }
+
+    /// What a hostile relay can do: put `body` on queue `rcv_id` without any SEND.
+    pub fn inject(&self, rcv_id: &[u8], body: Vec<u8>) {
+        let mut i = self.lock();
+        let mut pushes = Vec::new();
+        if let Some(q) = i.queues.by_rcv.get_mut(rcv_id) {
+            q.msgs.push_back((random_vec(24).unwrap(), Some(body)));
+            deliver(q, &mut pushes);
+        }
+        for (s, e, r) in pushes {
+            if let Some(tx) = i.sessions.get(&s).map(|x| x.tx.clone()) {
+                write(&tx, self.version, &[], &e, &r);
+            }
+        }
     }
 }
 

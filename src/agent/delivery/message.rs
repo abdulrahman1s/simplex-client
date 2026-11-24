@@ -78,9 +78,10 @@ impl AgentClient {
         Ok(handled)
     }
 
-    /// The ratchet is stored after every attempt. `None` is acked without a word: a message
-    /// processed before whose ACK was lost (`A_DUPLICATE`), or one that failed before. Any other
-    /// failure is acked and reported, and a crypto error moves the ratchet-sync state (`A_CRYPTO`).
+    /// A failure stores the record's ratchet-sync state but not the ratchet (`agentRatchetDecrypt'`).
+    /// `None` is acked without a word: a message processed before whose ACK was lost
+    /// (`A_DUPLICATE`), or one that failed before. Any other failure is acked and reported, and a
+    /// crypto error moves the ratchet-sync state (`A_CRYPTO`).
     fn decrypt(
         &mut self,
         store: &mut Store,
@@ -95,7 +96,7 @@ impl AgentClient {
         let mut rec = rec.clone();
         let failure = rec.decrypt_failed(enc, &e);
         let conn = rec.id;
-        self.save(store, rec, Some(ratchet.clone()), Batch::default())?;
+        self.save(store, rec, None, Batch::default())?;
         match failure {
             DecryptFailure::Ignore => Ok(None),
             DecryptFailure::Report(state) => {

@@ -2,6 +2,7 @@
 use crate::smp::{Response, SmpServer};
 use crate::store::Store;
 
+use crate::agent::SmpQueueUri;
 use crate::agent::client::{AgentClient, ConnId};
 use crate::agent::error::{AgentError, Result};
 use crate::agent::links::{BinaryConnReq, ConnShortLink, ConnectionMode, ConnectionRequestUri};
@@ -44,11 +45,7 @@ impl AgentClient {
             .smp_queues
             .first_mut()
             .ok_or(AgentError::Parse("link without queues"))?;
-        let same_host = same_srv_host(&server, &q.address.server);
-        if !same_host || q.address.sender_id != sender_id {
-            return Err(AgentError::Link("different address".into()));
-        }
-        q.address.server = server;
+        link_queue(&server, &sender_id, q)?;
         let req = ConnectionRequestUri::Contact {
             data,
             ratchet_keys: ucd.ratchet_keys,
@@ -59,6 +56,16 @@ impl AgentClient {
         self.drive(store, id);
         Ok(())
     }
+}
+
+/// `decryptData`: the queue the link data names is on the link's server, under the sender id
+/// the server answered for, and takes the link's server, as `updateConnReqServer` does.
+pub(super) fn link_queue(server: &SmpServer, sender_id: &[u8], q: &mut SmpQueueUri) -> Result<()> {
+    if !same_srv_host(server, &q.address.server) || q.address.sender_id != sender_id {
+        return Err(AgentError::Link("different address".into()));
+    }
+    q.address.server = server.clone();
+    Ok(())
 }
 
 /// `sameSrvHost`: the link's server is one of the hosts the link data names for the queue.

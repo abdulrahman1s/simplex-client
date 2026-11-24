@@ -38,14 +38,14 @@ fn pq_x3dh(
         ikm.extend_from_slice(a.shared.as_ref());
     }
     let salt = [0u8; 64];
-    let [hk, nhk, sk] = hkdf3(&salt, &ikm, b"SimpleXX3DH")?;
+    let keys = hkdf3(&salt, &ikm, b"SimpleXX3DH")?;
     let vc = hkdf_sha512::<32>(&salt, &ikm, b"SimpleXVerifyCode")?;
     Ok(InitParams {
         assoc_data: [sk1.as_bytes(), rk1.as_bytes()].concat(),
         verify_code_pq: *vc,
-        ratchet_key: Key32::new(sk),
-        snd_hk: Key32::new(hk),
-        rcv_next_hk: Key32::new(nhk),
+        ratchet_key: keys.key(2),
+        snd_hk: keys.key(0),
+        rcv_next_hk: keys.key(1),
         kem_accepted,
     })
 }

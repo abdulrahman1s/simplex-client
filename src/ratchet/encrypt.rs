@@ -1,9 +1,12 @@
 //! Encrypting a message: advance the sending chain, encrypt the header, then the padded body (Ratchet.hs `rcEncryptHeader`, `rcEncryptMsg`, `rcCheckCanPad`).
+use zeroize::Zeroizing;
+
 use super::envelope::{EncMessageHeader, EncRatchetMessage};
 use super::error::{RatchetError, Result};
 use super::header::MsgHeader;
 use super::kdf::{MessageKey, chain_kdf};
 use super::kem_state::RatchetKem;
+use super::key::Key32;
 use super::lengths::padded_header_len;
 use super::pq::PqEncryption;
 use super::state::Ratchet;
@@ -12,7 +15,25 @@ use crate::crypto::{aead_encrypt, can_pad};
 use crate::encoding::{Decode, DecodeError, Decoder, Encode, EncodeError, Large, Version};
 
 /// What `encrypt_header` hands over for `encrypt_msg`, so the message can be encrypted later (and kept in the store until then).
-#[derive(Clone, PartialEq, Eq, Debug)]
+///
+/// It encrypts one body: `encrypt_msg` takes it by value and it has no `Clone`, since a second
+/// body under the same AES-GCM key and IV would leak both plaintexts and the GHASH key.
+///
+/// ```
+/// # use simplex_client::ratchet::MsgEncryptKey;
+/// fn seal(key: MsgEncryptKey) -> Option<Vec<u8>> {
+///     key.encrypt_msg(100, b"once").ok()
+/// }
+/// ```
+///
+/// ```compile_fail,E0382
+/// # use simplex_client::ratchet::MsgEncryptKey;
+/// fn seal_twice(key: MsgEncryptKey) {
+///     let _ = key.encrypt_msg(100, b"one");
+///     let _ = key.encrypt_msg(100, b"two");
+/// }
+/// ```
+#[derive(PartialEq, Eq, Debug)]
 pub struct MsgEncryptKey {
     version: Version,
     key: MessageKey,
@@ -101,11 +122,11 @@ impl Ratchet {
 
 impl MsgEncryptKey {
     /// `rcEncryptMsg`.
-    pub fn encrypt_msg(&self, padded_len: usize, msg: &[u8]) -> Result<Vec<u8>> {
+    pub fn encrypt_msg(self, padded_len: usize, msg: &[u8]) -> Result<Vec<u8>> {
         let ad = [self.ad.as_slice(), &self.enc_header].concat();
         let (body, tag) = aead_encrypt(&self.key.key.aes(), &self.key.iv, padded_len, &ad, msg)?;
         let wire = EncRatchetMessage {
-            header: self.enc_header.clone(),
+            header: self.enc_header,
             tag,
             body,
         };
@@ -134,12 +155,17 @@ impl Encode for MsgEncryptKey {
 impl Decode for MsgEncryptKey {
     fn decode(d: &mut Decoder<'_>) -> Result<Self, DecodeError> {
         let (version, ad, key, iv) = <(Version, Vec<u8>, Vec<u8>, Vec<u8>)>::decode(d)?;
-        let bad = || DecodeError::Invalid("message key");
+        let (key, bad) = (Zeroizing::new(key), || DecodeError::Invalid("message key"));
+        if key.len() != 32 {
+            return Err(bad());
+        }
+        let mut k = Key32::new([0; 32]);
+        k.fill(&key);
         Ok(Self {
             version,
             ad,
             key: MessageKey {
-                key: super::key::Key32::new(key.try_into().map_err(|_| bad())?),
+                key: k,
                 iv: iv.try_into().map_err(|_| bad())?,
             },
             enc_header: Large::decode(d)?.0,

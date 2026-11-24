@@ -4,7 +4,7 @@ use std::time::Duration;
 use super::support::{WAIT, rig};
 use crate::agent::client::{AgentEvent, ConnId};
 use crate::agent::connection::{Confirmation, encrypt_conn_info, from_wire, link_params};
-use crate::agent::delivery::{ClientMessage, ClientMsgEnvelope, Opened};
+use crate::agent::delivery::{ClientMessage, ClientMsgEnvelope, HeaderKey, Opened};
 use crate::agent::envelope::AgentMsgEnvelope;
 use crate::agent::links::{AddressRatchetKeys, ConnectionLink, ConnectionRequestUri};
 use crate::agent::message::AgentMessage;
@@ -119,7 +119,7 @@ fn a_request_to_an_address_with_ratchet_keys_is_encrypted_and_the_answer_continu
         .public;
     let opened = Opened {
         version: Version(4),
-        sender_e2e: Some(sender.clone()),
+        header: HeaderKey::First(sender.clone()),
         envelope: Vec::new(),
     };
     let conf = Confirmation {

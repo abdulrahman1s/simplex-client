@@ -1,5 +1,5 @@
 //! A connection made without PQ takes the KEM on once chat sends with PQ on (Agent.hs `sendMessagesB_`; Ratchet.hs `rcEncryptHeader`, `pqRatchetStep`).
-use super::support::{connect, next_msg, rig};
+use super::support::{connect, connect_pq, next_msg, rig};
 use crate::agent::client::ConnId;
 use crate::agent::testing::Node;
 use crate::ratchet::{PqEncryption, Ratchet};
@@ -55,4 +55,22 @@ fn a_connection_without_pq_stays_without_while_sends_keep_it_off() {
     }
     assert!(!a.agent.conn(ca).unwrap().rec.pq);
     assert!(!ratchet(&a, ca).pq_support().0);
+}
+
+#[test]
+fn the_inviter_keeps_its_pq_support_when_the_joiners_reply_has_no_kem() {
+    let r = rig();
+    let (mut a, mut b) = (r.node("a"), r.node("b"));
+    let (ca, cb) = connect_pq(&mut a, &mut b, [true, false], false);
+    assert!(a.agent.conn(ca).unwrap().rec.pq);
+    assert!(
+        ratchet(&a, ca).pq_support().0,
+        "as initRcvRatchet_ is given it"
+    );
+    assert!(!ratchet(&b, cb).pq_support().0);
+    let mut n = [&mut a, &mut b];
+    for _ in 0..2 {
+        say(&mut n, 0, [ca, cb], PqEncryption::OFF);
+        say(&mut n, 1, [ca, cb], PqEncryption::OFF);
+    }
 }

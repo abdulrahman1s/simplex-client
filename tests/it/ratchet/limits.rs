@@ -36,7 +36,7 @@ fn a_duplicate_and_an_earlier_message_are_told_apart() {
 }
 
 #[test]
-fn a_tampered_body_fails_but_later_messages_still_decrypt() {
+fn a_tampered_body_fails_and_changes_nothing_so_the_genuine_copy_still_decrypts() {
     let Pair {
         mut alice, mut bob, ..
     } = handshake(false, false);
@@ -48,9 +48,49 @@ fn a_tampered_body_fails_but_later_messages_still_decrypt() {
     );
     let mut bad = a.clone();
     *bad.last_mut().unwrap() ^= 1;
+    let before = alice.clone();
     assert_eq!(recv_err(&mut alice, &bad), RatchetError::AesDecrypt);
+    assert_eq!(
+        alice, before,
+        "a failed body is not kept, as the reference agent"
+    );
+    assert_eq!(recv(&mut alice, &a), "a");
     assert_eq!(recv(&mut alice, &b), "b");
     assert_eq!(recv(&mut alice, &c), "c");
+}
+
+#[test]
+fn a_tampered_copy_of_a_skipped_message_keeps_its_key_for_the_genuine_one() {
+    let Pair {
+        mut alice, mut bob, ..
+    } = handshake(false, false);
+    assert_eq!(recv(&mut alice, &send(&mut bob, "first")), "first");
+    let m1 = send(&mut bob, "m1");
+    assert_eq!(recv(&mut alice, &send(&mut bob, "m2")), "m2");
+    assert_eq!(alice.skipped_len(), 1);
+    let mut bad = m1.clone();
+    *bad.last_mut().unwrap() ^= 1;
+    assert_eq!(recv_err(&mut alice, &bad), RatchetError::AesDecrypt);
+    assert_eq!(alice.skipped_len(), 1);
+    assert_eq!(recv(&mut alice, &m1), "m1");
+    assert_eq!(alice.skipped_len(), 0);
+}
+
+#[test]
+fn too_many_skipped_after_a_ratchet_step_does_not_take_the_step() {
+    let Pair {
+        mut alice, mut bob, ..
+    } = handshake(false, false);
+    assert_eq!(recv(&mut alice, &send(&mut bob, "b1")), "b1");
+    assert_eq!(recv(&mut bob, &send(&mut alice, "a1")), "a1");
+    let far: Vec<_> = (0..MAX_SKIP + 3)
+        .map(|i| send(&mut bob, &format!("x{i}")))
+        .collect();
+    let before = alice.clone();
+    let err = recv_err(&mut alice, far.last().unwrap());
+    assert_eq!(err, RatchetError::TooManySkipped(MAX_SKIP + 3));
+    assert_eq!(alice, before);
+    assert_eq!(recv(&mut alice, &far[0]), "x0");
 }
 
 #[test]

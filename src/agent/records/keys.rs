@@ -1,4 +1,6 @@
 //! Where the agent's records live in the store's `agent` namespace, and the writes that change them together.
+use zeroize::Zeroizing;
+
 use crate::encoding::{Decode, Encode};
 use crate::ratchet::Ratchet;
 use crate::store::{Op, Store};
@@ -9,8 +11,12 @@ use super::received::{SentMsg, Unacked};
 use super::request::StoredInvitation;
 use crate::agent::client::{AgentMsgId, ConnId};
 use crate::agent::error::Result;
+use crate::agent::limits::E2E_ENC_MESSAGE_LENGTH;
 
 pub const NS: &str = "agent";
+
+/// A record holds at most one message body or connection info besides its keys.
+const RECORD_CAPACITY: usize = 2 * E2E_ENC_MESSAGE_LENGTH;
 
 /// Hashes of sent messages kept for receipts: older ones are dropped as new ones are sent.
 pub const RECEIPT_WINDOW: i64 = 512;
@@ -67,13 +73,18 @@ pub fn conn_prefixes(c: ConnId) -> [Vec<u8>; 6] {
 pub struct Batch(pub Vec<Op>);
 
 impl Batch {
+    /// Encoded in a wiped buffer sized for the records the agent writes, so that growing it
+    /// leaves no copy behind; the store gets an exact copy.
     fn put(&mut self, key: Vec<u8>, v: &impl Encode) -> Result<&mut Self> {
-        self.0.push(Op::Put {
-            ns: NS,
-            key,
-            value: v.to_bytes()?,
-        });
-        Ok(self)
+        let mut value = Zeroizing::new(Vec::with_capacity(RECORD_CAPACITY));
+        v.encode(&mut value)?;
+        Ok(self.put_bytes(key, &value))
+    }
+
+    fn put_bytes(&mut self, key: Vec<u8>, value: &[u8]) -> &mut Self {
+        let value = value.to_vec();
+        self.0.push(Op::Put { ns: NS, key, value });
+        self
     }
 
     pub fn delete(&mut self, key: Vec<u8>) -> &mut Self {
@@ -86,7 +97,7 @@ impl Batch {
     }
 
     pub fn ratchet(&mut self, c: ConnId, rc: &Ratchet) -> Result<&mut Self> {
-        self.put(ratchet_key(c), rc)
+        Ok(self.put_bytes(ratchet_key(c), &rc.to_stored()?))
     }
 
     pub fn pending(&mut self, c: ConnId, p: &PendingSend) -> Result<&mut Self> {
@@ -115,7 +126,7 @@ impl Batch {
 pub fn load<T: Decode>(store: &mut Store, key: &[u8]) -> Result<Option<T>> {
     store
         .get(NS, key)?
-        .map(|b| T::from_bytes(&b))
+        .map(|b| T::from_bytes(&Zeroizing::new(b)))
         .transpose()
         .map_err(Into::into)
 }

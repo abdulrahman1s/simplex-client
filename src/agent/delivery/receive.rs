@@ -3,9 +3,9 @@ use crate::encoding::Decode;
 use crate::smp::{RcvMsg, decrypt_message};
 use crate::store::Store;
 
-use super::seal::open;
+use super::seal::{HeaderKey, open};
 use crate::agent::client::{AgentClient, AgentEvent, ConnId, OpKind};
-use crate::agent::connection::{Confirmation, ack_request};
+use crate::agent::connection::ack_request;
 use crate::agent::envelope::AgentMsgEnvelope;
 use crate::agent::error::{AgentError, Result};
 
@@ -59,52 +59,21 @@ impl AgentClient {
             return Ok(h);
         }
         let opened = open(&rq, &body)?;
-        match AgentMsgEnvelope::from_bytes(&opened.envelope)? {
-            AgentMsgEnvelope::Confirmation {
-                agent_version,
-                e2e_encryption,
-                enc_conn_info,
-            } if opened.sender_e2e.is_some() => {
-                let conf = Confirmation {
-                    agent_version,
-                    e2e: e2e_encryption,
-                    enc_conn_info,
-                };
-                self.on_confirmation(store, id, &opened, conf)?;
-                Ok(Handled::Ack)
-            }
-            AgentMsgEnvelope::Message {
-                agent_version,
-                enc_agent_message,
-            } if opened.sender_e2e.is_none() => {
-                self.update_conn_version(store, id, agent_version)?;
-                self.on_agent_message(store, id, smp_msg_id, ts.0, &enc_agent_message)
-            }
-            AgentMsgEnvelope::Invitation {
-                conn_req,
-                conn_info,
-                ..
-            } if opened.sender_e2e.is_some() => {
-                self.on_contact_request(store, id, &conn_req, conn_info)?;
-                Ok(Handled::Ack)
-            }
-            // Our addresses publish no ratchet keys, so no request can name one (`unknown ratchetKeyId`).
-            AgentMsgEnvelope::ContactRequest { .. } => {
-                Err(AgentError::Prohibited("request with unknown ratchet keys"))
-            }
-            AgentMsgEnvelope::RatchetKey {
-                agent_version,
-                e2e_encryption,
-                info,
-            } => {
-                self.update_conn_version(store, id, agent_version)?;
-                self.on_ratchet_key(store, id, e2e_encryption, info)
-            }
-            AgentMsgEnvelope::Confirmation { .. }
-            | AgentMsgEnvelope::Message { .. }
-            | AgentMsgEnvelope::Invitation { .. } => {
-                Err(AgentError::Prohibited("envelope does not match its header"))
-            }
+        let env = AgentMsgEnvelope::from_bytes(&opened.envelope)?;
+        match opened.header {
+            HeaderKey::First(_) => self.on_handshake(store, id, &opened, env),
+            HeaderKey::None => self.on_duplex(store, id, smp_msg_id, ts.0, env),
+            // The server sends a confirmation again when our ACK was lost.
+            HeaderKey::Repeated => match env {
+                AgentMsgEnvelope::Confirmation { .. } | AgentMsgEnvelope::ContactRequest { .. } => {
+                    Ok(Handled::Ack)
+                }
+                AgentMsgEnvelope::Message { .. }
+                | AgentMsgEnvelope::Invitation { .. }
+                | AgentMsgEnvelope::RatchetKey { .. } => {
+                    Err(AgentError::Prohibited("msg: public header"))
+                }
+            },
         }
     }
 

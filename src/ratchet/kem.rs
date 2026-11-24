@@ -74,8 +74,16 @@ pub fn kem_decapsulate(ct: &KemCiphertext, sk: &KemSecretKey) -> KemSharedSecret
     KemSharedSecret(Box::new(sk.0.decapsulate(&ct.0)))
 }
 
+/// Written in place: a `Large` copy of a secret key would be freed unwiped.
 fn encode_large(b: &[u8], out: &mut Vec<u8>) -> std::result::Result<(), EncodeError> {
-    Large(b.to_vec()).encode(out)
+    let len = u16::try_from(b.len()).map_err(|_| EncodeError::TooLong {
+        what: "Large",
+        len: b.len(),
+        max: usize::from(u16::MAX),
+    })?;
+    len.encode(out)?;
+    out.extend_from_slice(b);
+    Ok(())
 }
 
 fn decode_with<T>(
@@ -83,7 +91,7 @@ fn decode_with<T>(
     make: fn(&[u8]) -> Result<T>,
     what: &'static str,
 ) -> std::result::Result<T, DecodeError> {
-    make(&Large::decode(d)?.0).map_err(|_| DecodeError::Invalid(what))
+    make(&Zeroizing::new(Large::decode(d)?.0)).map_err(|_| DecodeError::Invalid(what))
 }
 
 macro_rules! large_codec {

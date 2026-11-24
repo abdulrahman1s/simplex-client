@@ -2,6 +2,7 @@
 use crate::smp::Response;
 use crate::store::Store;
 
+use super::contact_resolve::link_queue;
 use crate::agent::client::{AgentClient, ConnId};
 use crate::agent::error::{AgentError, Result};
 use crate::agent::links::{BinaryConnReq, ConnShortLink, ConnectionMode, ConnectionRequestUri};
@@ -28,12 +29,14 @@ impl AgentClient {
         };
         let (fixed, _) =
             decrypt_link_data(ConnectionMode::Invitation, link.link_key(), &key, &enc)?;
-        let BinaryConnReq::Invitation { data, e2e } = fixed.link_conn_req else {
+        let BinaryConnReq::Invitation { mut data, e2e } = fixed.link_conn_req else {
             return Err(AgentError::Link("not an invitation".into()));
         };
-        if data.smp_queues.first().map(|q| &q.address.sender_id) != Some(&sender_id) {
-            return Err(AgentError::Link("sender id differs from the link's".into()));
-        }
+        let q = data
+            .smp_queues
+            .first_mut()
+            .ok_or(AgentError::Parse("link without queues"))?;
+        link_queue(link.server(), &sender_id, q)?;
         let req = ConnectionRequestUri::Invitation { data, e2e };
         let lkey = rec.lkey.take();
         let ratchet = self.prepare_join(&mut rec, &req, lkey)?;
