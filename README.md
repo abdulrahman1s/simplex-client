@@ -57,8 +57,8 @@ natively instead.
 
 | | Official core | simplex-client |
 |---|---|---|
-| Native, x86_64 Linux | `libsimplex` + GHC runtime: **238 MB** · `simplex-chat` CLI: **87 MB** | a whole echo bot, SQLite included: **8.4 MB** (stripped release) |
-| Browser | no | **4.4 MB** wasm, **1.3 MB** gzipped |
+| Native, x86_64 Linux | `libsimplex` + GHC runtime: **238 MB** · `simplex-chat` CLI: **87 MB** | a whole echo bot, SQLite included: **8.9 MB** (stripped release) |
+| Browser | no | **5.1 MB** wasm, **1.5 MB** gzipped |
 | Node.js and Bun | a CLI process beside yours, over a local WebSocket | in-process wasm, direct TCP |
 | Language | Haskell, with a C FFI or a JSON-over-WebSocket API | Rust crate or a JS class |
 | Runtime | GHC runtime and its threads | plain threads natively, one event loop in wasm; no async runtime |
