@@ -1,4 +1,6 @@
 //! A command for a connection or a session, and the answer it gets (Client.hs `ProtocolClient` requests).
+use std::time::Duration;
+
 use crate::crypto::PrivateKey;
 use crate::smp::commands::Command;
 use crate::smp::error::SmpError;
@@ -17,6 +19,9 @@ pub struct Request {
     pub auth_key: Option<PrivateKey>,
     /// A 24-byte correlation id; random when `None`. Short-link NEW derives the sender id from it.
     pub corr_id: Option<Vec<u8>>,
+    /// How long the answer may take; `ConnConfig::command_timeout` when `None`. A proxy needs
+    /// longer, as it reaches another relay first (`connectSMPProxiedRelay`, `proxySMPCommand`).
+    pub timeout: Option<Duration>,
 }
 
 impl Request {
@@ -27,6 +32,13 @@ impl Request {
             entity_id,
             auth_key,
             corr_id: None,
+            timeout: None,
         }
+    }
+
+    #[must_use]
+    pub const fn with_timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = Some(timeout);
+        self
     }
 }

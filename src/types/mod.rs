@@ -6,9 +6,11 @@ pub mod features;
 pub mod kind;
 pub mod model;
 pub mod request;
+pub mod routing;
 
 pub use config::Config;
 pub use event::Event;
 pub use features::{REACTION_EMOJI, features_with, has_file_servers};
 pub use kind::{ErrorCode, FileKind, RequestKind};
 pub use request::Request;
+pub use routing::{ProxyFallback, ProxyMode};

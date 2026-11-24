@@ -16,6 +16,7 @@ mod handshake;
 mod hello;
 mod message;
 mod pool;
+pub mod proxy;
 mod queue_data;
 mod responses;
 mod server_error;
@@ -30,7 +31,7 @@ mod version;
 
 #[cfg(test)]
 #[cfg(feature = "native")]
-mod tests;
+pub(crate) mod tests;
 
 pub use address::{DEFAULT_PORT, SmpServer};
 pub use auth::Authorizer;
@@ -47,6 +48,7 @@ pub use handshake::{HandshakeConfig, TlsFacts, answer_server_hello, client_hands
 pub use hello::{ServerHello, encode_client_hello};
 pub use message::{RcvMsg, decrypt_message, parse_rcv_body, rcv_dh_secret};
 pub use pool::{Dialer, MAX_PIPES, Pipe, PipeId, PipeInput, SharedPool, TunnelPool};
+pub use proxy::{ProxiedRelay, ProxyClientError, ProxyError};
 pub use queue_data::{
     ContactLink, MessagingLink, NewNtfCreds, QueueLinkData, QueueMode, QueueReqData,
     SubscriptionMode,

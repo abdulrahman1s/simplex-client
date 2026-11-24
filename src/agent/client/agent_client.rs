@@ -19,12 +19,14 @@ use super::ids::ConnId;
 use super::ops::{Op, OpKind, Ops};
 use super::servers::Servers;
 use crate::agent::error::{AgentError, Result};
+use crate::agent::proxy::Proxies;
 
 pub struct AgentClient {
     pub(crate) cfg: AgentConfig,
     pub(crate) clock: Arc<dyn WallClock>,
     pub(crate) servers: Servers,
     pub(crate) ops: Ops,
+    pub(crate) proxies: Proxies,
     /// Every stored connection is loaded. Eviction: an entry leaves on `delete`.
     pub(crate) conns: HashMap<ConnId, Conn>,
     /// Receive queue id to its connection; follows `conns`.
@@ -83,6 +85,7 @@ impl AgentClient {
             clock,
             servers,
             ops: Ops::default(),
+            proxies: Proxies::default(),
             conns: HashMap::new(),
             by_rcv: HashMap::new(),
             events: Vec::new(),
@@ -115,6 +118,7 @@ impl AgentClient {
     pub fn close(&mut self) {
         self.servers.close_all();
         self.ops.forget_server(|_| false);
+        self.proxies.clear();
     }
 
     pub(crate) fn now(&self) -> i64 {

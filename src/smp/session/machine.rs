@@ -94,7 +94,7 @@ impl SmpSession {
                 Ok(())
             }
             State::Up(live) => {
-                let timeout = ms(self.cfg.command_timeout);
+                let timeout = ms(request.timeout.unwrap_or(self.cfg.command_timeout));
                 let waiter = Waiter::Tagged(tag);
                 (self.outbox).prepare(&live.session, &request, waiter, now_ms, timeout)
             }

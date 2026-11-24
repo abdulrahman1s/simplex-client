@@ -21,6 +21,7 @@ pub mod connection;
 pub mod delivery;
 pub mod links;
 pub mod message;
+mod proxy;
 pub mod records;
 pub mod resync;
 pub mod rotation;

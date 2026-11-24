@@ -58,6 +58,8 @@ fn push_event(entity_id: Vec<u8>, r: Response) -> SmpEventKind {
         | Response::Sok(_)
         | Response::Nid { .. }
         | Response::Info(_)
+        | Response::Pkey { .. }
+        | Response::Pres { .. }
         | Response::Err(_)
         | Response::Pong) => SmpEventKind::Unexpected {
             entity_id,

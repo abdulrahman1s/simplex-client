@@ -2,6 +2,8 @@
 
 use std::path::PathBuf;
 
+use super::routing::{ProxyFallback, ProxyMode};
+
 /// How the engine opens its store and which relays it uses.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Config {
@@ -13,4 +15,8 @@ pub struct Config {
     pub name: String,
     /// Relay addresses (`smp://…`, `xftp://…`); empty = the protocol's preset relays.
     pub relays: Vec<String>,
+    /// When messages go through one of our relays first; `ProxyMode::default()` is the chat's.
+    pub proxy_mode: ProxyMode,
+    /// When a message may go directly after all; `ProxyFallback::default()` is the chat's.
+    pub proxy_fallback: ProxyFallback,
 }

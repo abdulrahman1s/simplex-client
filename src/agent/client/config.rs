@@ -4,6 +4,7 @@ use std::time::Duration;
 use crate::agent::version::supported_agent_range;
 use crate::encoding::VersionRange;
 use crate::smp::{ConnConfig, SmpServer};
+use crate::types::{ProxyFallback, ProxyMode};
 
 /// `RetryInterval`: the delay stays at `initial` until `increase_after` has passed, then grows by half up to `max`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,8 +47,11 @@ impl Default for DeliveryConfig {
 
 #[derive(Debug, Clone)]
 pub struct AgentConfig {
-    /// Servers our receive queues are created on; the first is used.
+    /// Servers our receive queues are created on; the first is used. Also the proxies, and what
+    /// makes a recipient's relay "known" (`UserServers`).
     pub servers: Vec<SmpServer>,
+    /// Those of `servers` the user turned off: not proxies, unless no other is left (`ServerCfg.enabled`).
+    pub disabled: Vec<SmpServer>,
     /// The built-in servers, which short links may name by host only.
     pub presets: Vec<SmpServer>,
     pub smp: ConnConfig,
@@ -56,6 +60,10 @@ pub struct AgentConfig {
     pub step_retry: Duration,
     /// `smpAgentVRange`: the agent versions links offer and joins accept; every message carries its maximum.
     pub agent_versions: VersionRange,
+    /// `smpProxyMode`.
+    pub proxy_mode: ProxyMode,
+    /// `smpProxyFallback`.
+    pub proxy_fallback: ProxyFallback,
 }
 
 impl AgentConfig {
@@ -63,11 +71,15 @@ impl AgentConfig {
     pub fn new(servers: Vec<SmpServer>) -> Self {
         Self {
             servers,
+            disabled: Vec::new(),
             presets: Vec::new(),
             smp: ConnConfig::default(),
             delivery: DeliveryConfig::default(),
             step_retry: Duration::from_secs(5),
             agent_versions: supported_agent_range(),
+            // The agent's own `defaultNetworkConfig`; the chat sets its defaults through `types::Config`.
+            proxy_mode: ProxyMode::Never,
+            proxy_fallback: ProxyFallback::Allow,
         }
     }
 }

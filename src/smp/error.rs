@@ -2,6 +2,7 @@
 use crate::crypto::CryptoError;
 use crate::encoding::{DecodeError, EncodeError};
 
+use super::proxy::ProxyClientError;
 use super::server_error::ErrorType;
 
 /// The handshake step that failed (Transport.hs `HandshakeError`, `TransportError`).
@@ -53,6 +54,14 @@ pub enum SmpError {
     LargeMsg,
     #[error("bad server address: {0}")]
     Address(&'static str),
+    /// A forwarded command the proxy itself failed (Agent/Protocol.hs `PROXY`); the agent, which
+    /// knows both servers, makes it.
+    #[error("proxy {proxy} for {relay}: {err}")]
+    Proxy {
+        proxy: String,
+        relay: String,
+        err: ProxyClientError,
+    },
 }
 
 impl From<std::io::Error> for SmpError {

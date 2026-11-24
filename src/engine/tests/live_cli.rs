@@ -39,6 +39,8 @@ impl Native {
             key: KEY.into(),
             name: "alice".into(),
             relays,
+            proxy_mode: crate::types::ProxyMode::default(),
+            proxy_fallback: crate::types::ProxyFallback::default(),
         };
         let log = Log::new(std::io::stderr());
         let (agent, smp) = NativeAgent::new(&hello.relays, log.clone());

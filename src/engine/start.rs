@@ -25,6 +25,8 @@ impl<A: AgentPort> Engine<A> {
         self.emit(Event::Ready(self.state.user.to_wire()));
         self.configure_files(hello)?;
         self.configure_relays(hello);
+        self.agent
+            .set_routing(hello.proxy_mode, hello.proxy_fallback);
         if let Err(e) = self.agent.subscribe_all(&mut self.store) {
             self.log
                 .line(format_args!("subscribing failed: {}", e.detail()));

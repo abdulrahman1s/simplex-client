@@ -26,18 +26,30 @@ impl Auth<'_> {
 
 impl Inner {
     pub fn handle(&mut self, v: u16, sid: u64, t: &Incoming, pushes: &mut Vec<Push>) -> Response {
-        let Ok(cmd) = parse(v, &t.command) else {
-            return Response::Err(ErrorType::Block);
-        };
         let session = self
             .sessions
             .get(&sid)
             .map(|s| s.session_id.clone())
             .unwrap_or_default();
+        self.handle_in(v, sid, &session, t, pushes)
+    }
+
+    /// `t` authorised under `session`: a client's own, or the session a proxy opened here.
+    pub fn handle_in(
+        &mut self,
+        v: u16,
+        sid: u64,
+        session: &[u8],
+        t: &Incoming,
+        pushes: &mut Vec<Push>,
+    ) -> Response {
+        let Ok(cmd) = parse(v, &t.command) else {
+            return Response::Err(ErrorType::Block);
+        };
         let server = self.server_key.private.clone();
         let auth = Auth {
             t,
-            msg: authorized(&session, &t.corr_id, &t.entity_id, &t.command).unwrap(),
+            msg: authorized(session, &t.corr_id, &t.entity_id, &t.command).unwrap(),
             server: &server,
         };
         let e = &t.entity_id;

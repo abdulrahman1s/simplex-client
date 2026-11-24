@@ -28,7 +28,12 @@ impl AgentClient {
         let Some((kind, server, request)) = self.step_request(&c.rec)? else {
             return Ok(());
         };
-        let sent = self.request(id, kind, &server, request);
+        // NEW is on our own relay; every other step acts on someone else's queue.
+        let sent = if kind == OpKind::NewQueue {
+            self.request(id, kind, &server, request)
+        } else {
+            self.request_to_peer(id, kind, &server, request)
+        };
         let retry_at = self.step_retry_after();
         let c = self.conn_mut(id)?;
         c.step.in_flight = sent;

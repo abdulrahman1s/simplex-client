@@ -45,6 +45,7 @@ impl AgentClient {
                 self.on_server_up(store);
             }
             SmpEventKind::Down(_) => {
+                self.proxies.on_down(&server);
                 for c in self.conns.values_mut() {
                     if c.rec.rcv.as_ref().is_some_and(|r| r.server == *server) {
                         c.sub.subscribed = false;
@@ -113,16 +114,36 @@ impl AgentClient {
     }
 
     fn on_reply(&mut self, store: &mut Store, tag: u64, answer: Result<Response, SmpError>) {
+        if let Some(key) = self.proxies.asking.remove(&tag) {
+            return self.on_session_answer(store, key, answer);
+        }
         let Some(op) = self.ops.take(tag) else {
             return;
         };
-        let id = op.conn;
+        let answer = match self.proxies.forwards.remove(&tag) {
+            Some(fwd) => match self.on_forward_answer(&op, fwd, answer) {
+                Some(a) => a,
+                None => return,
+            },
+            None => answer,
+        };
+        self.answer_op(store, op.conn, op.kind, answer);
+    }
+
+    /// Hands a command's answer to the flow that sent it, however it travelled.
+    pub(crate) fn answer_op(
+        &mut self,
+        store: &mut Store,
+        id: ConnId,
+        kind: OpKind,
+        answer: Result<Response, SmpError>,
+    ) {
         if !self.conns.contains_key(&id) {
             return;
         }
-        let r = match op.kind {
+        let r = match kind {
             OpKind::NewQueue | OpKind::Lkey | OpKind::Lget | OpKind::Skey | OpKind::Request => {
-                self.on_step_answer(store, id, op.kind, answer)
+                self.on_step_answer(store, id, kind, answer)
             }
             OpKind::Sub => {
                 self.on_subscribed(id, answer);
