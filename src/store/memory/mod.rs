@@ -8,6 +8,7 @@ use journal::{Undo, swap};
 pub(super) use tables::Tables;
 
 use super::StoreError;
+use super::counters::Marks;
 use super::rows::{KvRow, Rows};
 
 pub(super) struct Memory {
@@ -132,6 +133,13 @@ impl Rows for Memory {
 
     fn seq_next(&mut self, name: &str) -> Result<i64, StoreError> {
         self.next_in(name)
+    }
+
+    fn counters(&mut self) -> Result<Marks, StoreError> {
+        Ok(Marks {
+            last_item: self.t.last_item,
+            seq: self.t.seq.clone(),
+        })
     }
 
     fn dump(&mut self) -> Result<Tables, StoreError> {

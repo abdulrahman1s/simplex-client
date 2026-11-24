@@ -1,7 +1,8 @@
-//! Every SQLite row read out into `Tables`, for a snapshot of a file store.
+//! Every SQLite row read out into `Tables`, for a snapshot of a file store, and the counters alone.
 
 use super::db::Db;
 use crate::store::StoreError;
+use crate::store::counters::Marks;
 use crate::store::memory::Tables;
 
 type Blob = Vec<u8>;
@@ -34,6 +35,22 @@ pub(super) fn dump(db: &mut Db) -> Result<Tables, StoreError> {
             files: files.into_iter().collect(),
             seq: seq.into_iter().collect(),
             last_item: last.map_or(0, |(n,)| n),
+        })
+    })
+}
+
+pub(super) fn counters(db: &mut Db) -> Result<Marks, StoreError> {
+    db.run(async |c| {
+        let seq: Vec<(String, i64)> = ormlite::query_as("SELECT name, next FROM seq")
+            .fetch_all(&mut *c)
+            .await?;
+        let last: Option<(i64,)> =
+            ormlite::query_as("SELECT seq FROM sqlite_sequence WHERE name = 'items'")
+                .fetch_optional(&mut *c)
+                .await?;
+        Ok(Marks {
+            last_item: last.map_or(0, |(n,)| n),
+            seq: seq.into_iter().collect(),
         })
     })
 }

@@ -302,8 +302,15 @@ The protocol, limits and settings are in [worker/README.md](worker/README.md).
   `Client.start` refuses a missing or empty `key`. The passphrase goes through Argon2id
   (19 MiB, 2 passes, 1 lane) with a random salt per store, kept in clear in the store; opening
   takes about 13 ms natively and 25 ms in wasm. A long random passphrase is still best.
-- **Older stores** (sealed before Argon2id) still open with their old unsalted HKDF key and
-  are not upgraded in place. To move one to Argon2id, start a new store.
+- **Older stores** (sealed before Argon2id) still open with their old unsalted HKDF key, and
+  their key is not upgraded in place. They get the counter checks and the snapshot MAC on
+  their first open, but someone holding a copy from before that open can still roll rows back.
+  To move one to Argon2id, start a new store.
+- **Tampering at rest.** A snapshot carries a MAC over all of its bytes, so a changed,
+  dropped or rolled-back row or a rewound id counter is refused when it opens. Swapping in a
+  whole older snapshot is not caught. The SQLite store checks its id counters against a sealed
+  copy and overwrites deleted rows (`secure_delete`).
+- **Limitation:** in SQLite, putting back an older sealed row (one row, or the counters' sealed copy with its counters) is not detected, because nothing MACs the whole file.
 
 ## Architecture
 

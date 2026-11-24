@@ -31,7 +31,9 @@ impl Db {
         let options = SqliteConnectOptions::new()
             .filename(path)
             .journal_mode(SqliteJournalMode::Wal)
-            .synchronous(SqliteSynchronous::Normal);
+            .synchronous(SqliteSynchronous::Normal)
+            // As simplexmq: deleted rows are overwritten, not left in free pages.
+            .pragma("secure_delete", "ON");
         let conn = rt.block_on(options.connect())?;
         let mut db = Db {
             rt,

@@ -1,6 +1,7 @@
 //! The row operations both backends provide; every value passed here is already sealed.
 
 use super::StoreError;
+use super::counters::Marks;
 use super::memory::Tables;
 
 /// A sealed row of the kv table: its key and value.
@@ -40,6 +41,8 @@ pub(super) trait Rows: Send {
 
     /// The counter's next value, starting at 1.
     fn seq_next(&mut self, name: &str) -> Result<i64, StoreError>;
+    /// Every counter as kept in clear, and the highest item id given out.
+    fn counters(&mut self) -> Result<Marks, StoreError>;
 
     /// Every row, as sealed as it is kept.
     fn dump(&mut self) -> Result<Tables, StoreError>;

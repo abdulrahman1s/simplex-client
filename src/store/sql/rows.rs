@@ -2,6 +2,7 @@
 
 use super::db::{Db, exec};
 use crate::store::StoreError;
+use crate::store::counters::Marks;
 use crate::store::memory::Tables;
 use crate::store::rows::{KvRow, Rows};
 
@@ -116,6 +117,10 @@ impl Rows for Db {
         let q = q.bind(name);
         let (next,): (i64,) = self.run(async |c| Ok(q.fetch_one(c).await?))?;
         Ok(next)
+    }
+
+    fn counters(&mut self) -> Result<Marks, StoreError> {
+        super::dump::counters(self)
     }
 
     fn dump(&mut self) -> Result<Tables, StoreError> {

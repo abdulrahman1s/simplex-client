@@ -93,3 +93,8 @@ All notable changes to this project are documented here. The format follows
   an empty `key`. A new store derives its key with Argon2id (19 MiB, 2 passes, 1 lane) over
   the passphrase and a random per-store salt kept in its `kdf` meta row, instead of one
   unsalted HKDF. Stores made before still open with their old key and are not upgraded.
+- Snapshots are authenticated as a whole: format 2 ends with an HMAC over every byte, so a
+  changed, deleted or rolled-back row or a rewound counter is refused on open. The id counters
+  are checked against a sealed copy in both backends, which a store from before gets on its
+  first open, and SQLite overwrites deleted rows (`secure_delete`). In SQLite, putting back an
+  older sealed row is still not detected.
