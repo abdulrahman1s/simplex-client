@@ -8,6 +8,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Private message routing (SMP proxying, `PRXY`/`PFWD`) with the chat's defaults; set it with
+  `ClientBuilder::private_routing` / `allow_direct`, or `privateRouting` / `allowDirect` in JS.
 - Initial extraction from the author's app, ported from simplex-chat v7.1.4 and simplexmq
   commit `fdbcb24d`.
 - Protocol stack: SMP queues, the agent's double ratchet with the post-quantum KEM, chat

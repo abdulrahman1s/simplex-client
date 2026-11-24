@@ -96,3 +96,10 @@ test("a browser-style start without a tunnel or TCP is refused with a clear erro
     (e) => e.code === "bad_option" && /tunnel/.test(e.detail),
   );
 });
+
+test("an unknown privateRouting value is refused with a clear error", async () => {
+  await assert.rejects(
+    Client.start({ key: "k", transport: "tcp", privateRouting: "sometimes" }),
+    (e) => e.code === "bad_option" && /privateRouting/.test(e.detail),
+  );
+});

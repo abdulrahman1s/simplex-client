@@ -12,6 +12,8 @@ small, plain API.
 ## Features
 
 - SMP queues over TLS, with the agent's double ratchet and the post-quantum KEM
+- Private message routing: messages reach other people's relays through one of yours, so
+  their relay never sees your IP address
 - Chat messages, contacts, groups, replies, edits, deletes and reactions
 - XFTP file upload and download, with file crypto and descriptions
 - Calls (signalling and frame crypto)
@@ -20,6 +22,29 @@ small, plain API.
 - A `wasm32-unknown-unknown` build of the whole client for browsers, Node.js and Bun, reaching
   relays through a WebSocket tunnel or direct TCP
 - Low-level modules stay public if you need to go below `Client`
+
+### Private message routing
+
+Messages to a relay that isn't one of yours go through one of your relays (SMP proxying), so
+the recipient's relay sees that relay's address, never yours. That is the chat's default; you
+can make it stricter:
+
+```rust
+use simplex_client::{Client, ProxyMode};
+
+let client = Client::builder("./data")
+    .private_routing(ProxyMode::Always) // Always, Unknown (default), Never
+    .allow_direct(false)                // never fall back to sending directly (default)
+    .start()?;
+```
+
+```js
+const client = await Client.start({
+  key: "passphrase",
+  privateRouting: "always", // "always" | "unknown" (default) | "never"
+  allowDirect: false,
+});
+```
 
 ## Why this library
 
@@ -55,7 +80,8 @@ What the official core still has that this crate lacks:
 
 - **Maturity and audits.** The official core is the reference implementation and has had
   security audits; this crate has not.
-- **Private message routing.** Messages go to the relay directly.
+- **Tor and SOCKS.** There is no onion or SOCKS transport, so private routing is the only IP
+  protection.
 - **Files in the browser.** The wasm build has no XFTP file transfers yet.
 - **Coverage of newer features.** Features added after 7.1.4 are not tracked.
 

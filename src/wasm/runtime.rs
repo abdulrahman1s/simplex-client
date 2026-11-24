@@ -77,8 +77,8 @@ impl Core {
             key: o.key.clone(),
             name: o.name.clone(),
             relays: o.relays.clone(),
-            proxy_mode: crate::types::ProxyMode::default(),
-            proxy_fallback: crate::types::ProxyFallback::default(),
+            proxy_mode: o.proxy_mode,
+            proxy_fallback: o.proxy_fallback,
         };
         engine.start(&config)?;
         // `Ready` only reaches JS on the first flush, after `start` has resolved; `user` must

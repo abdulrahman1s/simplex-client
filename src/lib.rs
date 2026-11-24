@@ -30,4 +30,4 @@ pub use client::{
     Member, Message, Result,
 };
 pub use types::model::*;
-pub use types::{ErrorCode, Request, RequestKind};
+pub use types::{ErrorCode, ProxyMode, Request, RequestKind};

@@ -2,6 +2,7 @@
 use wasm_bindgen::{JsCast, JsValue};
 
 use super::convert::error;
+use crate::types::{ProxyFallback, ProxyMode};
 
 /// How long a call that waits for an answer waits, as the native client does.
 const TIMEOUT_MS: i64 = 60_000;
@@ -56,6 +57,8 @@ pub(super) struct Options {
     pub(super) timeout_ms: i64,
     /// Write the engine's log to the console.
     pub(super) log: bool,
+    pub(super) proxy_mode: ProxyMode,
+    pub(super) proxy_fallback: ProxyFallback,
 }
 
 fn get(o: &JsValue, key: &str) -> Option<JsValue> {
@@ -94,6 +97,16 @@ impl Options {
             None => None,
         };
         let timeout_ms = get(o, "timeout").and_then(|v| v.as_f64());
+        let proxy_mode = match text(o, "privateRouting")? {
+            Some(m) => m
+                .parse()
+                .map_err(|_| error("bad_option", "privateRouting is always, unknown or never"))?,
+            None => ProxyMode::default(),
+        };
+        let proxy_fallback = match get(o, "allowDirect").and_then(|v| v.as_bool()) {
+            Some(true) => ProxyFallback::Allow,
+            Some(false) | None => ProxyFallback::AllowProtected,
+        };
         Ok(Self {
             name: text(o, "name")?.unwrap_or_else(|| "SimpleX user".into()),
             key: text(o, "key")?.ok_or_else(|| need("key"))?,
@@ -104,6 +117,8 @@ impl Options {
             #[allow(clippy::cast_possible_truncation, reason = "milliseconds")]
             timeout_ms: timeout_ms.map_or(TIMEOUT_MS, |t| t as i64),
             log: get(o, "log").and_then(|v| v.as_bool()).unwrap_or(false),
+            proxy_mode,
+            proxy_fallback,
         })
     }
 }

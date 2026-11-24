@@ -12,7 +12,7 @@ use crate::engine::NativeAgent;
 use crate::engine::agent_port::AgentPort;
 use crate::engine::clock::{Clock, SystemClock};
 use crate::engine::log::Log;
-use crate::types::Config;
+use crate::types::{Config, ProxyFallback, ProxyMode};
 
 /// Events kept for `events()` before the oldest are dropped.
 pub(super) const EVENTS_CAP: usize = 1024;
@@ -34,8 +34,8 @@ impl ClientBuilder {
                 key: String::new(),
                 name: "SimpleX bot".into(),
                 relays: Vec::new(),
-                proxy_mode: crate::types::ProxyMode::default(),
-                proxy_fallback: crate::types::ProxyFallback::default(),
+                proxy_mode: ProxyMode::default(),
+                proxy_fallback: ProxyFallback::default(),
             },
             log: None,
             timeout: Duration::from_secs(60),
@@ -58,6 +58,24 @@ impl ClientBuilder {
     /// Adds a relay (`smp://…` or `xftp://…`). With none, the protocol's preset relays are used.
     pub fn relay(mut self, address: impl Into<String>) -> Self {
         self.config.relays.push(address.into());
+        self
+    }
+
+    /// When messages go through one of our relays instead of straight to the recipient's,
+    /// which would see our IP address ([`ProxyMode::Unknown`] by default: for relays not ours).
+    pub fn private_routing(mut self, mode: ProxyMode) -> Self {
+        self.config.proxy_mode = mode;
+        self
+    }
+
+    /// Whether a message may go straight to the recipient's relay when private routing to it
+    /// fails (no by default).
+    pub fn allow_direct(mut self, allow: bool) -> Self {
+        self.config.proxy_fallback = if allow {
+            ProxyFallback::Allow
+        } else {
+            ProxyFallback::AllowProtected
+        };
         self
     }
 
@@ -87,5 +105,20 @@ impl ClientBuilder {
         F: FnOnce(&Config, &Log) -> (A, Receiver<A::Smp>) + Send + 'static,
     {
         Client::start(self, clock, agent)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn routing_settings_reach_the_config_and_default_to_the_chats() {
+        let b = ClientBuilder::new(PathBuf::from("x"));
+        assert_eq!(b.config.proxy_mode, ProxyMode::Unknown);
+        assert_eq!(b.config.proxy_fallback, ProxyFallback::AllowProtected);
+        let b = b.private_routing(ProxyMode::Always).allow_direct(true);
+        assert_eq!(b.config.proxy_mode, ProxyMode::Always);
+        assert_eq!(b.config.proxy_fallback, ProxyFallback::Allow);
     }
 }
