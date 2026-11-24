@@ -1,7 +1,7 @@
 // One WebSocket, one TCP socket: tunnel protocol v1 (README.md, "Protocol").
 // Frame handling is serialized on one promise chain so state changes and writes stay in order.
 import { connect } from "cloudflare:sockets";
-import { askCounter } from "./admission";
+import { admitWhile, askCounter } from "./admission";
 import { MAX_HELLO_BYTES } from "./clienthello";
 import type { Env } from "./env";
 import { checkClientRecords, ServerRecords } from "./handshake";
@@ -100,10 +100,13 @@ class Tunnel {
     if ("error" in target) return this.fail(target.error);
     const token = this.cx.env.TUNNEL_TOKEN;
     if (token && !tokenEquals(hello.token ?? "", token)) return this.fail("unauthorized");
-    const admission = await this.admit();
-    if (admission !== "ok") return this.fail(admission);
-    const address = await resolveAddress(target.host);
+    const admitted = await admitWhile(
+      () => this.admit(),
+      () => resolveAddress(target.host),
+    );
+    if (admitted.admission !== "ok") return this.fail(admitted.admission);
     if (this.closed()) return;
+    const address = admitted.value;
     if (address === null) return this.fail("connect_failed");
     if (checkAddress(address)) return this.fail("forbidden_host");
 
@@ -254,6 +257,7 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
  */
 async function resolveAddress(host: string): Promise<string | null> {
   if (isIpLiteral(host)) return host;
+  // Never rejects: `admitWhile` may leave it unawaited after a refusal.
   const addresses = await resolve(host).catch(() => []);
   return addresses[0] ?? null;
 }

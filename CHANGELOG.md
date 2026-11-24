@@ -11,6 +11,8 @@ All notable changes to this project are documented here. The format follows
 - Through the tunnel, the TLS ClientHello goes out right behind the tunnel hello instead of
   waiting for `{"ok":true}`, so connecting to a relay or file server takes one round trip
   less. The relay's bytes are still refused until the tunnel says yes.
+- File uploads in wasm keep up to 768 KiB unacknowledged instead of 256 KiB. The pinned XFTP
+  server grants about 1 MiB, so an upload moves three times as much per round trip.
 
 ## [0.1.0] - 2026-11-24
 

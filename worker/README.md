@@ -51,7 +51,8 @@ does. If that matters to you, deploy your own Worker, or put it behind a network
 2. Send the first frame as **text** JSON: `{"host":"smp4.simplex.im","port":5223}`. Add
    `"token":"..."` when the deployment sets `TUNNEL_TOKEN`. The target is in a frame, not the
    URL, so it never appears in request URLs or logs.
-3. The Worker validates the target and connects with
+3. The Worker validates the target. It asks the per-IP counter for a slot and looks the
+   name up at the same time, then connects with
    `connect({hostname, port}, {secureTransport: "off", allowHalfOpen: false})`.
    - When the socket opens, it sends the text frame `{"ok":true}`.
    - On any failure, it sends `{"ok":false,"error":"<code>"}` and closes with code 1008
@@ -158,7 +159,8 @@ One tunnel is one TCP socket.
 
 Values that are missing, malformed or not positive fall back to the default. On the Workers
 Free plan, each tunnel costs one request against the daily request allowance and one DNS
-lookup subrequest. It also makes Durable Object calls: one to admit, one to release, and six
+lookup subrequest. The lookup runs while the counter decides, so a tunnel the counter refuses
+has made one too. It also makes Durable Object calls: one to admit, one to release, and six
 renewals per hour while it stays open.
 
 ## Configuration
