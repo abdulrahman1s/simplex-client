@@ -8,18 +8,19 @@ use crossbeam_channel::Receiver;
 
 use super::clock::JsClock;
 use super::console::Console;
-use super::options::Options;
+use super::options::{Options, Transport};
 use super::outcome::Outcome;
 use super::shared::Shared;
 use super::socket::WsDialer;
 use super::sugar::Sugar;
+use super::tcp::TcpDialer;
 use super::waiters::Waiters;
 use crate::agent::client::AgentClient;
 use crate::engine::jobs::JobDone;
 use crate::engine::log::Log;
 use crate::engine::machine::{IDLE, MIN_SLEEP};
 use crate::engine::{AgentPort, Clock, Engine, NativeAgent};
-use crate::smp::{self, ConnConfig, SharedPool, SmpEvent, SystemClock, TunnelPool};
+use crate::smp::{self, ConnConfig, Dialer, SharedPool, SmpEvent, SystemClock, TunnelPool};
 use crate::store::{Store, StoreError};
 use crate::types::Config;
 
@@ -52,11 +53,15 @@ impl Core {
             Log::discard()
         };
         let (tx, smp) = crossbeam_channel::unbounded();
-        let dialer = WsDialer {
-            url: o.tunnel.clone(),
-            shared: Rc::downgrade(shared),
+        let shared = Rc::downgrade(shared);
+        let dialer: Box<dyn Dialer> = match &o.transport {
+            Transport::Tunnel(url) => Box::new(WsDialer {
+                url: url.clone(),
+                shared,
+            }),
+            Transport::Tcp => Box::new(TcpDialer { shared }),
         };
-        let pool = TunnelPool::new(ConnConfig::default(), o.token.clone(), Box::new(dialer), tx);
+        let pool = TunnelPool::new(ConnConfig::default(), o.token.clone(), dialer, tx);
         let pool: SharedPool = Rc::new(RefCell::new(pool));
         let smp_clock: Arc<dyn smp::Clock> = Arc::new(SystemClock::new());
         let agent = NativeAgent::with_client(&o.relays, log.clone(), |cfg| {

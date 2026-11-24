@@ -13,8 +13,20 @@ pub(super) struct Link {
     pub(super) session: SmpSession,
     /// The TLS ClientHello, held until the tunnel answers `{"ok":true}`.
     pub(super) hello: Option<Vec<u8>>,
-    /// The pipe is open and the tunnel hello went out.
+    /// The pipe is open and, through a tunnel, the tunnel hello went out.
     pub(super) opened: bool,
+    /// Through the tunnel, not direct TCP.
+    pub(super) tunnel: bool,
+}
+
+/// Where a pipe goes: the relay's first host that is not an onion one, and its port.
+pub(super) fn target(server: &SmpServer) -> Result<(&str, u16), SmpError> {
+    let host = (server.hosts.iter())
+        .find(|h| !h.ends_with(".onion"))
+        .ok_or(SmpError::Io(
+            "the relay has no host reachable without Tor".into(),
+        ))?;
+    Ok((host, server.port.unwrap_or(DEFAULT_PORT)))
 }
 
 impl Link {
@@ -22,6 +34,7 @@ impl Link {
     pub(super) fn new(
         id: PipeId,
         pipe: Box<dyn Pipe>,
+        tunnel: bool,
         server: &SmpServer,
         cfg: &ConnConfig,
         now: u64,
@@ -33,6 +46,7 @@ impl Link {
             session,
             hello: Some(hello),
             opened: false,
+            tunnel,
         })
     }
 
@@ -41,19 +55,18 @@ impl Link {
         self.opened && self.hello.is_none()
     }
 
-    /// The tunnel hello names the relay's first host it can reach: not an onion one.
-    pub(super) fn send_tunnel_hello(
+    /// The pipe opened: through a tunnel the hello names the relay, straight to the relay
+    /// TLS begins at once.
+    pub(super) fn on_open(
         &mut self,
         server: &SmpServer,
         token: Option<&str>,
     ) -> Result<(), SmpError> {
-        let host = (server.hosts.iter())
-            .find(|h| !h.ends_with(".onion"))
-            .ok_or(SmpError::Io(
-                "the relay has no host the tunnel can reach".into(),
-            ))?;
-        let port = server.port.unwrap_or(DEFAULT_PORT);
         self.opened = true;
+        if !self.tunnel {
+            return self.send_client_hello();
+        }
+        let (host, port) = target(server)?;
         self.pipe.send_text(&tunnel_hello(host, port, token))
     }
 

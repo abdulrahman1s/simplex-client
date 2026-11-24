@@ -19,7 +19,7 @@ pub(super) struct WsDialer {
 }
 
 impl Dialer for WsDialer {
-    fn dial(&mut self, id: PipeId) -> Result<Box<dyn Pipe>, SmpError> {
+    fn dial(&mut self, id: PipeId, _: &str, _: u16) -> Result<Box<dyn Pipe>, SmpError> {
         Ok(Box::new(WsPipe::open(&self.url, id, &self.shared)?))
     }
 }

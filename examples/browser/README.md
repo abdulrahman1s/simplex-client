@@ -24,6 +24,7 @@ or with `wasm-pack`:
 wasm-pack build --target web --out-dir examples/browser/pkg -- --no-default-features --features wasm
 ```
 
+`scripts/build-js.sh` builds the same into `pkg/web` (and the Node build into `pkg/node`).
 The `wasm-bindgen` CLI must match the crate's `wasm-bindgen` version (0.2.130).
 
 ## Run
@@ -46,7 +47,7 @@ await init();
 const client = await Client.start({
   name: "Alice",
   key: "passphrase",
-  tunnel: "wss://simplex-tunnel.<account>.workers.dev/v1",
+  tunnel: "wss://simplex-tunnel.<account>.workers.dev/v1", // or transport: "tcp" on Node
   relays: [],             // optional smp:// addresses; the presets when empty
   snapshot: savedBytes,   // optional Uint8Array from client.save()
   tunnelToken: undefined, // optional, when the Worker sets TUNNEL_TOKEN

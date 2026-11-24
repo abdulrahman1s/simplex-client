@@ -25,6 +25,13 @@ pub trait Pipe {
 }
 
 pub trait Dialer {
-    /// Opens a pipe to the tunnel. What it reports reaches `TunnelPool::on_input` under `id`.
-    fn dial(&mut self, id: PipeId) -> Result<Box<dyn Pipe>, SmpError>;
+    /// Opens a pipe for `host:port`, the relay's first host that is not an onion one. What it
+    /// reports reaches `TunnelPool::on_input` under `id`.
+    fn dial(&mut self, id: PipeId, host: &str, port: u16) -> Result<Box<dyn Pipe>, SmpError>;
+
+    /// Whether the pipe goes to the tunnel, which wants its hello first, or straight to the
+    /// relay (direct TCP), where TLS starts as soon as it opens.
+    fn tunnelled(&self) -> bool {
+        true
+    }
 }

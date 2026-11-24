@@ -15,6 +15,7 @@ mod runtime;
 mod shared;
 mod socket;
 mod sugar;
+mod tcp;
 mod timer;
 mod waiters;
 

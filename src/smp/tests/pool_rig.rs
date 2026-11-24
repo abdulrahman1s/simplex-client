@@ -23,6 +23,7 @@ pub struct Wire {
     pub frames: Vec<Vec<u8>>,
     pub largest_frame: usize,
     pub closed: Vec<PipeId>,
+    pub targets: Vec<String>,
 }
 
 struct FakePipe(PipeId, Rc<RefCell<Wire>>);
@@ -45,12 +46,19 @@ impl Pipe for FakePipe {
     }
 }
 
-struct FakeDialer(Rc<RefCell<Wire>>);
+/// `.1`: through the tunnel, or straight to the relay.
+struct FakeDialer(Rc<RefCell<Wire>>, bool);
 
 impl Dialer for FakeDialer {
-    fn dial(&mut self, id: PipeId) -> Result<Box<dyn Pipe>, SmpError> {
-        self.0.borrow_mut().dialled.push(id);
+    fn dial(&mut self, id: PipeId, host: &str, port: u16) -> Result<Box<dyn Pipe>, SmpError> {
+        let mut w = self.0.borrow_mut();
+        w.dialled.push(id);
+        w.targets.push(format!("{host}:{port}"));
         Ok(Box::new(FakePipe(id, Rc::clone(&self.0))))
+    }
+
+    fn tunnelled(&self) -> bool {
+        self.1
     }
 }
 
@@ -65,10 +73,19 @@ impl Rig {
         Self::with(quiet())
     }
 
+    /// Pipes straight to the relay, as direct TCP on node.
+    pub fn direct() -> Self {
+        Self::build(quiet(), false)
+    }
+
     pub fn with(cfg: ConnConfig) -> Self {
+        Self::build(cfg, true)
+    }
+
+    fn build(cfg: ConnConfig, tunnel: bool) -> Self {
         let wire = Rc::new(RefCell::new(Wire::default()));
         let (tx, events) = unbounded();
-        let dialer = Box::new(FakeDialer(Rc::clone(&wire)));
+        let dialer = Box::new(FakeDialer(Rc::clone(&wire), tunnel));
         let pool = TunnelPool::new(cfg, Some("tok".into()), dialer, tx);
         Self { pool, wire, events }
     }

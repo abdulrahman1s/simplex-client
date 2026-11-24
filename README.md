@@ -96,6 +96,32 @@ const snapshot = client.save(); // sealed store bytes; pass back as `snapshot` t
 
 [`examples/browser`](examples/browser) is a minimal chat page with the full JS API.
 
+### Node.js
+
+The same build runs on Node.js 22+. There no tunnel is needed: the client dials relays over
+direct TCP (`node:net`), and TLS still runs inside wasm. Install from git (building needs
+Rust with the `wasm32-unknown-unknown` target and `wasm-bindgen-cli` 0.2.130):
+
+```sh
+npm install github:abdulrahman1s/simplex-client
+```
+
+```js
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { Client } from "simplex-client";
+
+const saved = existsSync("bot.snapshot") ? new Uint8Array(readFileSync("bot.snapshot")) : undefined;
+const bot = await Client.start({ name: "Echo Bot", key: "passphrase", snapshot: saved });
+bot.on("request", (req) => bot.accept(req.id));
+bot.on("message", (msg) => { if (!msg.mine && msg.text) bot.reply(msg, msg.text); });
+bot.on("change", () => writeFileSync("bot.snapshot", bot.save()));
+console.log("my address:", await bot.createAddress());
+```
+
+`transport: "tcp"` picks direct TCP explicitly; a `tunnel` URL uses the WebSocket tunnel
+instead. `scripts/build-js.sh` builds both packages (`pkg/web` and `pkg/node`), and
+[`examples/node/bot.mjs`](examples/node/bot.mjs) is the bot above with a safer save.
+
 ## Architecture
 
 ```

@@ -6,7 +6,7 @@ use crossbeam_channel::Sender;
 use crate::smp::address::SmpServer;
 use crate::smp::events::{SmpEvent, SmpEventKind};
 
-use super::link::Link;
+use super::link::{Link, target};
 use super::tunnel_pool::{MAX_NOTES, MAX_PIPES, TunnelPool};
 use super::why::ms;
 
@@ -28,8 +28,10 @@ impl TunnelPool {
         }
         self.next_pipe += 1;
         let id = self.next_pipe;
-        let link = (self.dialer.dial(id))
-            .and_then(|pipe| Link::new(id, pipe, &slot.server, &self.cfg, now));
+        let tunnel = self.dialer.tunnelled();
+        let link = target(&slot.server)
+            .and_then(|(host, port)| self.dialer.dial(id, host, port))
+            .and_then(|pipe| Link::new(id, pipe, tunnel, &slot.server, &self.cfg, now));
         let mut out = Vec::new();
         match link {
             Ok(l) => slot.link = Some(l),

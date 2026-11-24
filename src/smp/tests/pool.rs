@@ -177,3 +177,26 @@ fn a_tunnel_that_never_answers_fails_by_the_connect_timeout() {
     assert!(is_failed(&events[0]), "{events:?}");
     assert_eq!(rig.wire.borrow().closed.len(), 1);
 }
+
+#[test]
+fn a_direct_pipe_starts_tls_on_open_without_a_tunnel_hello() {
+    let mut served = serve(0, answer_with(Response::Ok));
+    let mut rig = Rig::direct();
+    rig.pool.ensure(&served.server, T0);
+    let id = rig.last_pipe();
+    assert_eq!(rig.wire.borrow().targets, ["fake.test:5223"]);
+    rig.pool.on_input(id, PipeInput::Open, T0);
+    assert!(rig.wire.borrow().texts.is_empty());
+    assert_eq!(rig.wire.borrow().frames.len(), 1, "the ClientHello");
+    let mut seen = Vec::new();
+    let up = rig.until(&mut served, id, T0, &mut seen, |e| {
+        matches!(e, SmpEventKind::Up(_) | SmpEventKind::ConnectFailed(_))
+    });
+    assert!(matches!(up, SmpEventKind::Up(_)), "{up:?}");
+    rig.pool.send(&served.server, sub(b"q1"), 3, T0).unwrap();
+    let reply = rig.until(&mut served, id, T0 + 5, &mut seen, |e| {
+        matches!(e, SmpEventKind::Reply { tag: 3, .. })
+    });
+    assert!(matches!(reply, SmpEventKind::Reply { answer: Ok(_), .. }));
+    assert_eq!(served.finish(), None);
+}

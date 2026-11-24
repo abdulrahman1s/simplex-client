@@ -43,9 +43,9 @@ impl Slot {
     ) {
         let Some(link) = &mut self.link else { return };
         let done = match input {
-            PipeInput::Open if !link.opened => link
-                .send_tunnel_hello(&self.server, token)
-                .map_err(Why::Failed),
+            PipeInput::Open if !link.opened => {
+                link.on_open(&self.server, token).map_err(Why::Failed)
+            }
             PipeInput::Open => Ok(()),
             PipeInput::Text(text) => match parse_tunnel_reply(&text) {
                 Ok(()) => link.send_client_hello().map_err(Why::Failed),

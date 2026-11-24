@@ -21,6 +21,8 @@ All notable changes to this project are documented here. The format follows
 - The full client on `wasm32-unknown-unknown`: a JS `Client` (`Client.start`, named events,
   Promise-returning calls) on a single-threaded runtime, reaching relays through a WebSocket
   byte tunnel with TLS inside wasm; `examples/browser` is a minimal chat page.
+- The same build on Node.js 22+, over direct TCP with no tunnel; a `simplex-client` npm
+  package (built by `scripts/build-js.sh`, not published) and `examples/node/bot.mjs`.
 - `store`: an in-memory backend beside SQLite, and `export_snapshot`/`open_snapshot` for a
   sealed, versioned snapshot of either.
 - CI for formatting, clippy, tests, wasm, MSRV 1.95, cargo-deny and docs.
