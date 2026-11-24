@@ -15,6 +15,7 @@ mod members_join;
 mod members_list;
 mod members_peers;
 mod members_pipe;
+mod members_range;
 mod members_support;
 mod messages;
 mod messages_change;

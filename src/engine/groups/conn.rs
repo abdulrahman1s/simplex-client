@@ -17,6 +17,26 @@ pub(crate) fn apply_handshake(m: &mut MemberRecord, msg: &ChatMessage, profile: 
 }
 
 impl<A: AgentPort> Engine<A> {
+    /// `updateMemberChatVRange`: each JSON message offers the sender's range, so a member who
+    /// upgraded is seen to. A binary file chunk carries none.
+    pub(crate) fn refresh_member_range(
+        &mut self,
+        group: i64,
+        member: i64,
+        msg: &ChatMessage,
+    ) -> Result<()> {
+        if matches!(msg.event, ChatEvent::FileChunk { .. }) {
+            return Ok(());
+        }
+        let mut m = self.member(group, member)?;
+        let range = Some(peer_range(msg));
+        if m.chat_v == range {
+            return Ok(());
+        }
+        m.chat_v = range;
+        Ok(self.save_member(m)?)
+    }
+
     /// `INV`: the link of an invitation the user made for this member.
     pub(crate) fn on_member_invitation(
         &mut self,
