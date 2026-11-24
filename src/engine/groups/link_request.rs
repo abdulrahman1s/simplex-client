@@ -53,6 +53,7 @@ impl<A: AgentPort> Engine<A> {
                 .line(format_args!("a group link request was dropped"));
             return self.drop_link_request(&invitation);
         };
+        self.room_for_link_join(group)?;
         // The link's role is member: `/_create link #1 member` (Commands.hs 3377).
         let role = GroupMemberRole::Member;
         let member_id = MemberId::mint()?;

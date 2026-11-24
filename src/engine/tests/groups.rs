@@ -15,6 +15,7 @@ mod leave;
 mod limits;
 mod link_acpt;
 mod links;
+mod links_cap;
 mod links_host;
 mod links_join;
 mod members;

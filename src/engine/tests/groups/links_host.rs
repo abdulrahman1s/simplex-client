@@ -9,7 +9,7 @@ use crate::engine::agent_port::{AgentEvent, ConnId};
 use crate::engine::records::{MemberCategory, MemberRecord, MemberStatus};
 use crate::engine::tests::{Call, T};
 
-fn contact(name: &str) -> Vec<u8> {
+pub(super) fn contact(name: &str) -> Vec<u8> {
     let msg = ChatMessage::without_id(ChatEvent::Contact {
         profile: Profile::new(name, ""),
         member_key: None,
@@ -20,7 +20,7 @@ fn contact(name: &str) -> Vec<u8> {
     msg.to_json().unwrap()
 }
 
-fn asks(t: &mut T, link: ConnId, conn_info: Vec<u8>) {
+pub(super) fn asks(t: &mut T, link: ConnId, conn_info: Vec<u8>) {
     t.agent(AgentEvent::Req {
         conn: link,
         invitation: vec![7],

@@ -31,6 +31,7 @@ mod join;
 mod leave;
 mod link;
 mod link_accept;
+pub(crate) mod link_cap;
 mod link_data;
 mod link_event;
 mod link_join;

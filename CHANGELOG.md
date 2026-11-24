@@ -93,6 +93,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- At most 50 joins through a group's link wait for their connection; past that the oldest is
+  dropped with its connection. 7.1.4 accepts group link requests without limit, each with a
+  member, a connection and server queues.
 - `x.grp.link.acpt` acts only on a member waiting for approval or review. 7.1.4 takes any
   member, so a moderator could demote an owner or bring a removed member back; such a message
   is now ignored.
