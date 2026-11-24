@@ -4,7 +4,19 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # The RustCrypto crates still pin getrandom 0.3; the 0.4 copy only exists to turn on
+      # its JS backend, so a major bump of our 0.3 line cannot build.
+      - dependency-name: getrandom
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # Pinned through its `toolchain` input; its tags are Rust versions, not action releases.
+      - dependency-name: dtolnay/rust-toolchain
+  - package-ecosystem: npm
+    directory: /worker
     schedule:
       interval: weekly
