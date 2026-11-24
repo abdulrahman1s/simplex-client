@@ -1,4 +1,4 @@
-//! A sans-I/O TLS 1.3 client: network bytes are pushed in and bytes to send are taken out; the same handshake and records as `TlsStream`.
+//! A sans-I/O TLS 1.3 client (RFC 8446): network bytes are pushed in and bytes to send are taken out; the same handshake and records as `TlsStream`.
 use std::collections::VecDeque;
 
 use super::app_rx::{AppReceiver, Received};

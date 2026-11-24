@@ -19,7 +19,7 @@ mod wire;
 mod writer;
 
 #[cfg(test)]
-mod testing;
+pub(crate) mod testing;
 #[cfg(test)]
 mod tests;
 

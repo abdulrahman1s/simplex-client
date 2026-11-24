@@ -3,10 +3,7 @@
 //! `send` never blocks; a command's answer arrives on the returned channel, or with `send_tagged` as an `SmpEventKind::Reply`
 //! on the event channel, so an owner thread can wait on one channel. Pushes and up/down changes go to the event channel,
 //! and the owner re-sends its SUBs on `Up`. Authorisation is computed in the writer, against the session the command goes out on.
-mod backoff;
 mod connect;
-mod liveness;
-mod pending;
 mod queue;
 mod reader;
 mod run;
@@ -24,18 +21,12 @@ use super::clock::{Clock, SystemClock};
 use super::config::ConnConfig;
 use super::error::SmpError;
 use super::events::{SessionInfo, SmpEvent};
-use super::responses::Response;
+use super::flow::{Answer, Pending, Request};
 use super::tls_connector::TlsConnector;
 use super::transport::Connector;
-use pending::{Pending, Reply};
-use queue::{Ctl, Outgoing};
+use queue::{Ctl, Outgoing, Reply};
 use run::Channels;
 use shared::{Shared, lock};
-
-pub use queue::Request;
-
-/// The answer to one command: the response, or the server's ERR, a timeout, or the connection going down.
-pub type Answer = Result<Response, SmpError>;
 
 pub struct SmpConnection {
     shared: Arc<Shared>,

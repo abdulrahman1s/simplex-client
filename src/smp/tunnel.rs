@@ -1,6 +1,4 @@
-//! Framing of the WebSocket byte tunnel a browser client reaches SMP relays through (the Worker's own protocol, not simplexmq).
-//!
-//! The first text frame asks for a TCP connection, the Worker answers with one text frame, and binary frames carry raw bytes after that.
+//! The WebSocket byte tunnel to SMP relays (the Worker's own protocol, not simplexmq): a JSON hello, a JSON reply, then binary frames of raw bytes.
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

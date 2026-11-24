@@ -10,11 +10,11 @@ use crate::smp::error::SmpError;
 use crate::smp::events::{SessionInfo, SmpEventKind};
 use crate::smp::transport::{Connector, Wire};
 
-use super::backoff::Backoff;
 use super::queue::{Ctl, Outgoing};
 use super::shared::{Shared, lock};
 use super::writer::Out;
 use super::{connect, reader, writer};
+use crate::smp::flow::Backoff;
 
 pub struct Channels {
     pub cmd_rx: Receiver<Outgoing>,
