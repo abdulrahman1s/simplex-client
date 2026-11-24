@@ -82,3 +82,5 @@ All notable changes to this project are documented here. The format follows
 
 - The HPACK integer decoder refuses a sixth continuation byte before shifting, so a 32-bit
   (wasm) build no longer shifts past its word size on a hostile header block.
+- The HTTP/2 frame reader drops taken bytes once per read instead of once per frame, so a
+  server that sends many tiny frames costs linear time, not quadratic.
