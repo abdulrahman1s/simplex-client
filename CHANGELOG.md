@@ -88,3 +88,8 @@ All notable changes to this project are documented here. The format follows
   longer takes the slot back for up to 30 minutes.
 - A snapshot whose item or id counter is at its maximum is refused as damaged when the counter
   would move, instead of panicking (debug) or wrapping to a negative id (release).
+- **Breaking:** the store key is required: `ClientBuilder::start` fails without `.key(…)`
+  (it used to default to an empty key that anyone could open), and JS `Client.start` refuses
+  an empty `key`. A new store derives its key with Argon2id (19 MiB, 2 passes, 1 lane) over
+  the passphrase and a random per-store salt kept in its `kdf` meta row, instead of one
+  unsalted HKDF. Stores made before still open with their old key and are not upgraded.

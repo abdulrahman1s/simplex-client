@@ -4,6 +4,7 @@ mod error;
 mod files;
 mod handle;
 mod items;
+mod kdf;
 mod kv;
 mod memory;
 mod op;

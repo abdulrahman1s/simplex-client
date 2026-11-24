@@ -3,6 +3,7 @@ mod atomic;
 #[cfg(feature = "native")]
 mod disk;
 mod items;
+mod kdf;
 mod reopen;
 mod snapshot;
 

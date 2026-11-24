@@ -1,9 +1,10 @@
-//! `Store`: a backend of sealed rows, the sealer, and the sealed check row that proves the key.
+//! `Store`: a backend of sealed rows, the sealer from the KDF record, and the check row that proves the key.
 
 #[cfg(feature = "native")]
 use std::path::Path;
 
 use super::StoreError;
+use super::kdf::{KDF_ROW, Kdf};
 use super::memory::{Memory, Tables};
 use super::rows::Rows;
 use super::seal::Sealer;
@@ -33,29 +34,43 @@ impl Store {
         Self::with_rows(Box::new(Memory::new(Tables::default())), key, true)
     }
 
-    /// `create`: write the check row when there is none, as a new store does.
+    /// `create`: make a new store (KDF record and check row) when there is no check row.
     pub(super) fn with_rows(
-        rows: Box<dyn Rows>,
+        mut rows: Box<dyn Rows>,
         key: &str,
         create: bool,
     ) -> Result<Store, StoreError> {
+        let check = rows.meta_get(CHECK_KEY)?;
+        let kdf = match (&check, rows.meta_get(KDF_ROW)?) {
+            (None, _) if !create => return Err(StoreError::Corrupt("no key check row".into())),
+            (None, _) if key.is_empty() => {
+                return Err(StoreError::Invalid("a new store needs a non-empty key"));
+            }
+            (None, _) => Kdf::new()?,
+            (Some(_), Some(record)) => Kdf::decode(&record)?,
+            (Some(_), None) => Kdf::Legacy,
+        };
         let mut store = Store {
             rows,
-            sealer: Sealer::new(key),
+            sealer: kdf.sealer(key)?,
             rev: 0,
         };
         let aad: [&[u8]; 2] = [CHECK_AAD, CHECK_KEY.as_bytes()];
-        match store.rows.meta_get(CHECK_KEY)? {
+        match check {
             Some(sealed) => store
                 .sealer
                 .open(&aad, &sealed)
                 .map(drop)
                 .map_err(|_| StoreError::WrongKey)?,
-            None if create => {
+            None => {
                 let sealed = store.sealer.seal(&aad, CHECK_PLAIN)?;
-                store.atomic(|rows, _| rows.meta_put(CHECK_KEY, sealed))?;
+                store.atomic(|rows, _| {
+                    if let Some(record) = kdf.encode() {
+                        rows.meta_put(KDF_ROW, record)?;
+                    }
+                    rows.meta_put(CHECK_KEY, sealed)
+                })?;
             }
-            None => return Err(StoreError::Corrupt("no key check row".into())),
         }
         store.rev = 0;
         Ok(store)

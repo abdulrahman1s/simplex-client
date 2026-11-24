@@ -12,6 +12,7 @@ use crate::engine::NativeAgent;
 use crate::engine::agent_port::AgentPort;
 use crate::engine::clock::{Clock, SystemClock};
 use crate::engine::log::Log;
+use crate::store::StoreError;
 use crate::types::{Config, ProxyFallback, ProxyMode};
 
 /// Events kept for `events()` before the oldest are dropped.
@@ -49,7 +50,7 @@ impl ClientBuilder {
         self
     }
 
-    /// The passphrase that seals the store (empty by default).
+    /// The passphrase that seals the store; required, and stretched with Argon2id.
     pub fn key(mut self, key: impl Into<String>) -> Self {
         self.config.key = key.into();
         self
@@ -104,6 +105,11 @@ impl ClientBuilder {
         A: AgentPort + 'static,
         F: FnOnce(&Config, &Log) -> (A, Receiver<A::Smp>) + Send + 'static,
     {
+        if self.config.key.is_empty() {
+            return Err(
+                StoreError::Invalid("no store key: set one with ClientBuilder::key").into(),
+            );
+        }
         Client::start(self, clock, agent)
     }
 }
@@ -120,5 +126,16 @@ mod tests {
         let b = b.private_routing(ProxyMode::Always).allow_direct(true);
         assert_eq!(b.config.proxy_mode, ProxyMode::Always);
         assert_eq!(b.config.proxy_fallback, ProxyFallback::Allow);
+    }
+
+    #[test]
+    fn start_without_a_key_fails_before_touching_the_folder() {
+        let dir = std::env::temp_dir().join("sxc-builder-no-key-never-made");
+        let started = ClientBuilder::new(dir.clone()).start();
+        assert!(matches!(
+            started,
+            Err(super::super::Error::Store(StoreError::Invalid(_)))
+        ));
+        assert!(!dir.exists());
     }
 }

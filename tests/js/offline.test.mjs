@@ -103,3 +103,10 @@ test("an unknown privateRouting value is refused with a clear error", async () =
     (e) => e.code === "bad_option" && /privateRouting/.test(e.detail),
   );
 });
+
+test("an empty key is refused: it would seal the store with nothing", async () => {
+  await assert.rejects(
+    Client.start({ key: "", transport: "tcp" }),
+    (e) => e.code === "bad_option" && /key/.test(e.detail),
+  );
+});

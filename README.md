@@ -34,6 +34,7 @@ can make it stricter:
 use simplex_client::{Client, ProxyMode};
 
 let client = Client::builder("./data")
+    .key("store passphrase")
     .private_routing(ProxyMode::Always) // Always, Unknown (default), Never
     .allow_direct(false)                // never fall back to sending directly (default)
     .start()?;
@@ -294,6 +295,15 @@ npx wrangler deploy
 ```
 
 The protocol, limits and settings are in [worker/README.md](worker/README.md).
+
+## Security notes
+
+- **The store key is required.** `ClientBuilder::start` fails without `.key(…)`, and JS
+  `Client.start` refuses a missing or empty `key`. The passphrase goes through Argon2id
+  (19 MiB, 2 passes, 1 lane) with a random salt per store, kept in clear in the store; opening
+  takes about 13 ms natively and 25 ms in wasm. A long random passphrase is still best.
+- **Older stores** (sealed before Argon2id) still open with their old unsalted HKDF key and
+  are not upgraded in place. To move one to Argon2id, start a new store.
 
 ## Architecture
 
