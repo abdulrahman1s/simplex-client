@@ -21,6 +21,11 @@ All notable changes to this project are documented here. The format follows
   Ed25519 signing and verifying get about 10% faster, and Ed448 key generation about 25%.
   `scripts/build-js.sh` skips `wasm-opt` with a warning when binaryen is missing, except
   under `REQUIRE_WASM_OPT`, which CI and the release set.
+- The SQLite store goes through rusqlite instead of ormlite (sqlx) on a private tokio runtime.
+  A sealed write takes about 20 µs instead of 80 µs and a read about 6 µs instead of 26 µs.
+  tokio, sqlx and rustls leave the native build: 156 crates in the lock file instead of 275,
+  and the stripped echo bot shrinks from 8.9 MB to 7.8 MB. Store files and their settings are
+  unchanged (WAL, `synchronous = NORMAL`, `secure_delete`, `foreign_keys`, a 5 s busy timeout).
 
 ## [0.1.0] - 2026-11-24
 

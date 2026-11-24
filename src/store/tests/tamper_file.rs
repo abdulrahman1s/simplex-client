@@ -1,26 +1,11 @@
 //! A SQLite file changed without the key: rewound or missing counters are caught.
-use ormlite::sqlite::SqliteConnectOptions;
-use ormlite::{ConnectOptions, Connection, Executor};
-
 use super::Dir;
 use crate::store::{Store, StoreError};
 
 /// Runs `sql` on the file through a connection of its own.
 fn tamper(d: &Dir, sql: &str) {
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .build()
-        .unwrap();
-    rt.block_on(async {
-        let mut c = SqliteConnectOptions::new()
-            .filename(d.db())
-            .connect()
-            .await
-            .unwrap();
-        c.execute(ormlite::AssertSqlSafe(sql.to_owned()))
-            .await
-            .unwrap();
-        c.close().await.unwrap();
-    });
+    let c = rusqlite::Connection::open(d.db()).unwrap();
+    c.execute_batch(sql).unwrap();
 }
 
 fn reopen(d: &Dir) -> Result<Store, StoreError> {

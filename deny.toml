@@ -46,7 +46,9 @@ deny = [
     { crate = "async-std" },
     { crate = "reqwest" },
     { crate = "chrono" },
-    { crate = "rusqlite", reason = "the store goes through ormlite" },
+    { crate = "ormlite", reason = "the store goes through rusqlite" },
+    { crate = "sqlx", reason = "the store goes through rusqlite" },
+    { crate = "tokio", reason = "no async runtime: threads and crossbeam channels" },
 ]
 
 [sources]

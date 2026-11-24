@@ -35,17 +35,12 @@ impl From<std::io::Error> for StoreError {
 }
 
 #[cfg(feature = "native")]
-impl From<ormlite::SqlxError> for StoreError {
-    fn from(e: ormlite::SqlxError) -> Self {
-        use ormlite::SqlxError as E;
+impl From<rusqlite::Error> for StoreError {
+    fn from(e: rusqlite::Error) -> Self {
         match e {
-            E::Io(io) => StoreError::Io(io),
-            E::Database(db) => {
-                let code: i64 = db.code().and_then(|c| c.parse().ok()).unwrap_or(0);
-                match code & 0xff {
-                    11 | 26 => StoreError::Corrupt(db.message().to_owned()),
-                    _ => StoreError::Sql(db.message().to_owned()),
-                }
+            // SQLITE_CORRUPT and SQLITE_NOTADB: the file is damaged or not a store.
+            rusqlite::Error::SqliteFailure(f, msg) if matches!(f.extended_code & 0xff, 11 | 26) => {
+                StoreError::Corrupt(msg.unwrap_or_else(|| f.to_string()))
             }
             other => StoreError::Sql(other.to_string()),
         }

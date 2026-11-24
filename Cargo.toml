@@ -18,7 +18,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = ["native"]
 # Threads, TCP, SQLite and the engine: everything a running client needs.
-native = ["dep:ormlite", "dep:libsqlite3-sys", "dep:tokio", "dep:zstd"]
+native = ["dep:rusqlite", "dep:zstd"]
 # The client in a browser, Node.js or Bun: randomness from `crypto.getRandomValues`, time from
 # `Date.now`, relays through a WebSocket tunnel, and the `wasm` module's JS bindings.
 wasm = ["getrandom/wasm_js", "getrandom04/wasm_js", "dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
@@ -41,18 +41,16 @@ getrandom = "0.3"
 getrandom04 = { package = "getrandom", version = "0.4", optional = true }
 hkdf = "0.13.0"
 hmac = "0.13"
-ormlite = { version = "0.25", default-features = false, features = ["sqlite", "runtime-tokio-rustls", "json", "uuid"], optional = true }
-# Not used directly: turns on `bundled` so SQLite is compiled in.
-libsqlite3-sys = { version = "0.37", features = ["bundled"], optional = true }
 poly1305 = "0.9"
 ruzstd = "0.9.1"
+# The store's file. `bundled` compiles SQLite in; 0.39 is the release on libsqlite3-sys 0.37.
+rusqlite = { version = "0.39", features = ["bundled"], optional = true }
 salsa20 = "0.11.0"
 sha2 = "0.11"
 sha3 = "0.12.0"
 sntrup761 = "=0.4.0"
 subtle = "2"
 thiserror = "2.0"
-tokio = { version = "1.45", default-features = false, features = ["rt"], optional = true }
 x25519-dalek = { version = "3.0.0", features = ["static_secrets"] }
 x448 = "=0.14.0-pre.12"
 zeroize = "1"

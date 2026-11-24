@@ -1,4 +1,4 @@
-//! The SQLite backend: the store as a file, through ormlite.
+//! The SQLite backend: the store as a file, through rusqlite.
 
 mod db;
 mod dump;

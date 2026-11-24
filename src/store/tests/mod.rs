@@ -4,6 +4,8 @@ mod atomic;
 mod disk;
 mod items;
 mod kdf;
+#[cfg(feature = "native")]
+mod pragmas;
 mod reopen;
 mod snapshot;
 mod tamper;
