@@ -121,6 +121,14 @@ impl<A: AgentPort> Engine<A> {
             Request::Moderate { group, item } => self.moderate(group, item),
             Request::DeleteForMe { chat, item } => self.delete_for_me(chat, item),
             Request::Forward { from, item, to } => self.forward(from, item, to),
+            Request::SyncRatchet {
+                chat,
+                member,
+                force,
+            } => {
+                let conn = self.conn_of(chat, member)?;
+                self.sync_ratchet(&conn, force)
+            }
             Request::ContactMember {
                 group,
                 member,

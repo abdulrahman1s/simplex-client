@@ -101,6 +101,7 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::SetMessageTtl { .. }
         | Request::Forward { .. }
         | Request::ContactMember { .. }
+        | Request::SyncRatchet { .. }
         | Request::SetBlocked { .. }
         | Request::SetMemberBlocked { .. }
         | Request::ShowCode(_)

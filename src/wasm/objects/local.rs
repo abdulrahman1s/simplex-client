@@ -66,6 +66,20 @@ chat_local!(Friend);
 chat_local!(Group);
 
 #[wasm_bindgen]
+impl Friend {
+    /// "Fix connection": a new ratchet with them; `force` asks even while it works.
+    #[wasm_bindgen(js_name = fixConnection, unchecked_return_type = "Promise<void>")]
+    pub fn fix_connection(&self, force: Option<bool>) -> js_sys::Promise {
+        let (chat, force) = (self.chat(), force.unwrap_or(false));
+        self.shared().queue(Request::SyncRatchet {
+            chat,
+            member: None,
+            force,
+        })
+    }
+}
+
+#[wasm_bindgen]
 impl Message {
     /// Deletes this message here only, with its file.
     #[wasm_bindgen(js_name = deleteForMe, unchecked_return_type = "Promise<void>")]

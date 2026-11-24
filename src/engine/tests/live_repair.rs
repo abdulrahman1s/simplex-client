@@ -97,3 +97,29 @@ fn a_connection_the_cli_resyncs_and_then_switches_keeps_working_with_a_new_agree
     assert!(!chat.contains("IntegrityError"), "{chat}");
     assert!(!chat.contains("decryptionError"), "{chat}");
 }
+
+#[test]
+#[ignore = "needs a local smp-server, xftp-server and CLI; see live_cli"]
+fn a_fix_the_engine_forces_agrees_with_the_cli_and_messages_go_on() {
+    let dir = Dir::new();
+    let mut n = Native::start(&dir);
+    let mut c = Cli::open(var("SIMPLEX_TEST_CLI").parse().unwrap());
+    let (cid, bob) = connect(&mut n, &mut c);
+    both_ways(&mut n, &mut c, cid, bob, "connecting");
+    let (before, _) = codes(&mut n, &mut c, cid, bob);
+    n.req(Request::SyncRatchet {
+        chat: ChatRef::Direct(bob),
+        member: None,
+        force: true,
+    });
+    until(&mut n, &mut c, "the CLI's ratchet in sync again", |_, c| {
+        cli_event(c, "contactRatchetSync", |e| {
+            let s = e.pointer("/ratchetSyncProgress/ratchetSyncStatus");
+            s.and_then(Value::as_str) == Some("ok")
+        })
+    });
+    both_ways(&mut n, &mut c, cid, bob, "the engine's fix");
+    let (ours, theirs) = codes(&mut n, &mut c, cid, bob);
+    assert_eq!(ours, theirs);
+    assert_ne!(ours, before, "a new ratchet is a new code");
+}

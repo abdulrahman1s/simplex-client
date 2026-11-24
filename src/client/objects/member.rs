@@ -104,6 +104,17 @@ impl Member {
         })
     }
 
+    /// "Fix connection": a new ratchet with the member; `force` asks even while it works.
+    pub fn fix_connection(&self, force: bool) -> Result<()> {
+        let member = Some(self.listed_id()?);
+        let chat = crate::types::model::ChatRef::Group(self.group);
+        self.client.request(Request::SyncRatchet {
+            chat,
+            member,
+            force,
+        })
+    }
+
     /// Only a member from the group's list has a number to act on.
     fn listed_id(&self) -> Result<i64> {
         self.id().ok_or_else(|| Error::Failed {

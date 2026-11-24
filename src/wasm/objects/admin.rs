@@ -55,6 +55,17 @@ impl Member {
         })
     }
 
+    /// "Fix connection": a new ratchet with the member; `force` asks even while it works.
+    #[wasm_bindgen(js_name = fixConnection, unchecked_return_type = "Promise<void>")]
+    pub fn fix_connection(&self, force: Option<bool>) -> js_sys::Promise {
+        let force = force.unwrap_or(false);
+        listed(self, |group, member| Request::SyncRatchet {
+            chat: ChatRef::Group(group),
+            member: Some(member),
+            force,
+        })
+    }
+
     /// Removes the member; with `messages`, what they wrote shows deleted for all. Admins only.
     #[wasm_bindgen(unchecked_return_type = "Promise<void>")]
     pub fn remove(&self, messages: Option<bool>) -> js_sys::Promise {

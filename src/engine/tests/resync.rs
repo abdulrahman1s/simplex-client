@@ -87,7 +87,7 @@ fn an_agreed_resync_with_a_group_member_is_told_without_a_code_change() {
 fn resyncs(t: &T) -> Vec<ConnId> {
     let c = t.e.agent.calls.iter();
     c.filter_map(|c| match c {
-        Call::SynchronizeRatchet { conn } => Some(*conn),
+        Call::SynchronizeRatchet { conn, .. } => Some(*conn),
         _ => None,
     })
     .collect()
@@ -124,4 +124,35 @@ fn a_resync_the_agent_refuses_is_only_logged() {
     let out = sync(&mut t, conn, SyncState::Required);
     assert!(!out.iter().any(|e| matches!(e, Event::Failed { .. })));
     assert!(messages(&out).is_empty(), "no sync was started");
+}
+
+#[test]
+fn fixing_a_connection_asks_the_agent_with_force_and_says_so() {
+    let mut t = T::started();
+    let (bob, conn) = t.friend("bob");
+    let out = t.req(Request::SyncRatchet {
+        chat: crate::types::model::ChatRef::Direct(bob),
+        member: None,
+        force: true,
+    });
+    let asked =
+        t.e.agent
+            .calls
+            .iter()
+            .any(|c| matches!(c, Call::SynchronizeRatchet { conn: c, force: true } if *c == conn));
+    assert!(asked);
+    let shown = messages(&out);
+    assert!(shown.iter().any(|m| matches!(
+        &m.body,
+        MessageBody::Notice(ChatNotice::RatchetSync {
+            status: SyncStatus::Started,
+            ..
+        })
+    )));
+    let none = t.req(Request::SyncRatchet {
+        chat: crate::types::model::ChatRef::Group(9),
+        member: None,
+        force: false,
+    });
+    assert!(none.iter().any(|e| matches!(e, Event::Failed { .. })));
 }

@@ -171,6 +171,14 @@ pub enum Request {
         member: i64,
         text: Option<String>,
     },
+    /// "Fix connection": a new ratchet with a friend, or with `member` of a group
+    /// (`APISyncContactRatchet`, `APISyncGroupMemberRatchet`). Without `force` only a
+    /// connection that needs one is fixed; the engine starts that one itself anyway.
+    SyncRatchet {
+        chat: ChatRef,
+        member: Option<i64>,
+        force: bool,
+    },
     /// A moderator deletes a member's message for everyone (`APIDeleteMemberChatItem`).
     Moderate {
         group: i64,

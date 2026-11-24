@@ -124,4 +124,13 @@ impl Friend {
     pub fn send_live(&self, text: &str) -> Result<()> {
         self.client.send_live(self.chat(), text)
     }
+
+    /// "Fix connection": a new ratchet with them; `force` asks even while it works.
+    pub fn fix_connection(&self, force: bool) -> Result<()> {
+        self.client.request(Request::SyncRatchet {
+            chat: self.chat(),
+            member: None,
+            force,
+        })
+    }
 }

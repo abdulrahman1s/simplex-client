@@ -24,7 +24,7 @@ pub fn kind_of(r: &Request) -> RequestKind {
         Request::SetMuted { .. } => K::Mute,
         Request::SetTimer { .. } => K::Timer,
         Request::SendLink { .. } | Request::Forward { .. } | Request::SendLive { .. } => K::Send,
-        Request::ContactMember { .. } => K::Connect,
+        Request::ContactMember { .. } | Request::SyncRatchet { .. } => K::Connect,
         Request::UpdateLive { .. } => K::Edit,
         Request::SetPrefs { .. } => K::Prefs,
         Request::SetMemberRole { .. }

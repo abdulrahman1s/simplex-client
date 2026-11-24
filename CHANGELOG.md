@@ -104,6 +104,13 @@ All notable changes to this project are documented here. The format follows
   `APISendMemberContactInvitation`), where the group allows the user direct messages. The member
   shows as a friend, connecting, until they accept. **Breaking:** `Request` has a new variant.
 
+- "Fix connection": `Request::SyncRatchet { chat, member, force }` (`friend.fix_connection`,
+  `member.fix_connection`; JS `fixConnection`) starts a ratchet re-sync with a friend or a group
+  member, with `force` even while the connection works (`APISyncContactRatchet`,
+  `APISyncGroupMemberRatchet`). The engine already started one by itself when a connection
+  needed it. The agent port's `synchronize_ratchet` takes `force`. **Breaking:** `Request` has a
+  new variant and `AgentPort::synchronize_ratchet` a new argument.
+
 ### Fixed
 
 - The profile sent to friends said disappearing messages were allowed, so an official app
