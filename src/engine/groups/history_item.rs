@@ -27,15 +27,14 @@ impl<A: AgentPort> Engine<A> {
         it: &ItemRecord,
     ) -> Result<Vec<Vec<u8>>> {
         let mentions = self.history_mentions(g, it);
-        let (content, file) = match &it.body {
-            MessageBody::Text(t) => {
-                let text = quote_mentions(t, mentions.keys().map(String::as_str));
-                (MsgContent::Text { text }, None)
-            }
-            _ => match self.history_file(ChatRef::Group(g.id), id, it)? {
-                Some(found) => found,
-                None => return Ok(Vec::new()),
-            },
+        let (content, file) = if let MessageBody::Text(t) = &it.body {
+            let text = quote_mentions(t, mentions.keys().map(String::as_str));
+            (MsgContent::Text { text }, None)
+        } else {
+            let Some(found) = self.history_file(ChatRef::Group(g.id), id, it)? else {
+                return Ok(Vec::new());
+            };
+            found
         };
         // `msgContentHasText`
         if file.is_none() && content.text().is_empty() {

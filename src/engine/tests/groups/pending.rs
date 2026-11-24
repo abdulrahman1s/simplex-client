@@ -3,10 +3,11 @@
 use std::time::Duration;
 
 use crate::types::model::{ChatRef, Delivery, MessageBody};
+use crate::types::{Request, RequestKind};
 
 use super::members::{acpt, invited_bob};
 use super::members_support::{link, sent_on};
-use super::messages::{member_id, send};
+use super::messages::{failed, member_id, send};
 use crate::chat::ChatEvent;
 use crate::chat::group::{GroupMemberRole, IntroInvitation};
 use crate::engine::agent_port::{AgentEvent, ConnId};
@@ -16,13 +17,39 @@ use crate::engine::tests::T;
 /// alice's "team" with bob invited and his CONF in: a member still connecting.
 fn bob_connecting(t: &mut T) -> (i64, i64, ConnId) {
     let (g, bob, conn, _) = invited_bob(t);
-    let info = acpt(t, g, bob, "bob");
+    accepted(t, g, bob, conn)
+}
+
+fn accepted(t: &mut T, g: i64, m: i64, conn: ConnId) -> (i64, i64, ConnId) {
+    let info = acpt(t, g, m, "bob");
     t.agent(AgentEvent::Conf {
         conn,
         conn_info: info,
     });
-    assert_eq!(t.e.state.members[&(g, bob)].status, MemberStatus::Accepted);
-    (g, bob, conn)
+    assert_eq!(t.e.state.members[&(g, m)].status, MemberStatus::Accepted);
+    (g, m, conn)
+}
+
+/// Friend bob added to `g` and his CONF in: ((group, member, member conn), friend).
+fn bob_connecting_in(t: &mut T, g: i64) -> ((i64, i64, ConnId), i64) {
+    let (bf, _) = t.friend("bob");
+    t.req(Request::AddMember {
+        group: g,
+        friend: bf,
+    });
+    let m =
+        t.e.state
+            .members_of(g)
+            .find(|m| m.friend == Some(bf))
+            .unwrap()
+            .clone();
+    let conn = m.conn.unwrap();
+    t.agent(AgentEvent::Invitation {
+        conn,
+        full: link(1),
+        short: None,
+    });
+    (accepted(t, g, m.id, conn), bf)
 }
 
 fn texts(events: &[ChatEvent]) -> Vec<String> {
@@ -109,31 +136,7 @@ fn x_grp_mem_fwd_for_a_member_still_connecting_is_delivered_on_its_con() {
     let mut t = T::started();
     let (g, members) = t.group("team", &["carol"], GroupMemberRole::Owner);
     let (carol, carol_conn) = members[0];
-    let (_, bob, conn) = {
-        let (bf, _) = t.friend("bob");
-        t.req(crate::types::Request::AddMember {
-            group: g,
-            friend: bf,
-        });
-        let m =
-            t.e.state
-                .members_of(g)
-                .find(|m| m.friend == Some(bf))
-                .unwrap()
-                .clone();
-        let conn = m.conn.unwrap();
-        t.agent(AgentEvent::Invitation {
-            conn,
-            full: link(1),
-            short: None,
-        });
-        let info = acpt(&t, g, m.id, "bob");
-        t.agent(AgentEvent::Conf {
-            conn,
-            conn_info: info,
-        });
-        (g, m.id, conn)
-    };
+    let ((_, bob, conn), _) = bob_connecting_in(&mut t, g);
     t.e.state.members.get_mut(&(g, carol)).unwrap().status = MemberStatus::Accepted;
     t.agent(AgentEvent::Con { conn });
     let intro = IntroInvitation {
@@ -199,5 +202,53 @@ fn a_message_the_announcer_forwards_to_a_post_member_does_not_wait() {
             .get(NS, &keys::pending(g, carol))
             .unwrap()
             .is_some()
+    );
+}
+
+#[test]
+fn nothing_waits_for_a_member_who_is_gone() {
+    let mut t = T::started();
+    let (g, members) = t.group("team", &["carol"], GroupMemberRole::Owner);
+    let carol = members[0].0;
+    let ((_, _, conn), _) = bob_connecting_in(&mut t, g);
+    t.agent(AgentEvent::Con { conn });
+    t.e.drop_member_conn(g, carol).unwrap();
+    t.e.state.members.get_mut(&(g, carol)).unwrap().status = MemberStatus::Left;
+    let intro = IntroInvitation {
+        group_conn_req: link(2),
+    };
+    let carol_id = member_id(&t, g, carol);
+    t.peer_says(
+        &conn,
+        1,
+        ChatEvent::GrpMemInv {
+            member_id: carol_id,
+            intro,
+        },
+    );
+    assert!(
+        t.e.store
+            .get(NS, &keys::pending(g, carol))
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[test]
+fn the_user_still_joining_sends_nothing_and_keeps_nothing() {
+    let mut t = T::started();
+    let (g, members) = t.group("team", &["alice"], GroupMemberRole::Member);
+    let host = members[0].0;
+    let mut gr = t.e.state.groups[&g].clone();
+    gr.status = MemberStatus::Accepted;
+    t.e.save_group(gr).unwrap();
+    t.e.state.members.get_mut(&(g, host)).unwrap().status = MemberStatus::Accepted;
+    let out = t.req(send(g, "too early", vec![]));
+    assert!(failed(&out, RequestKind::Send));
+    assert!(
+        t.e.store
+            .get(NS, &keys::pending(g, host))
+            .unwrap()
+            .is_none()
     );
 }

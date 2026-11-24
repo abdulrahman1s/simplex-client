@@ -3,7 +3,7 @@
 use super::relay::forwardable;
 use crate::chat::ChatEvent;
 use crate::engine::agent_port::ConnId;
-use crate::engine::records::{GroupRecord, MemberCategory, MemberRecord, MemberStatus};
+use crate::engine::records::{GroupRecord, MemberCategory, MemberRecord};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum SendAction {
@@ -22,7 +22,8 @@ pub(crate) fn send_action(
     recipients: &[i64],
     event: &ChatEvent,
 ) -> Option<SendAction> {
-    if m.conn.is_some() && m.status == MemberStatus::Rejected {
+    // `connDisabled`, `ConnDeleted`, rejected: a member gone has no connection to wait for.
+    if m.status.gone() {
         return None;
     }
     if let Some(conn) = m.reachable() {

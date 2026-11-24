@@ -20,9 +20,10 @@ use crate::engine::records::{GroupRecord, ItemRecord, keys};
 const MAX_SENT_MENTIONS: usize = 3;
 
 impl<A: AgentPort> Engine<A> {
-    /// Commands.hs `assertUserGroupRole`: the user is in the group with at least `min`.
+    /// Commands.hs `assertUserGroupRole`: the user is in the group with at least `min`; and,
+    /// as `getGroupRecipients` asks before any send, joined, not still joining.
     pub(crate) fn assert_my_role(g: &GroupRecord, min: &GroupMemberRole) -> Result<()> {
-        if !g.status.current() {
+        if !(g.status.current() && g.status.active()) {
             return Err(fail(
                 Code::RequestFailed,
                 "not an active member of the group",
