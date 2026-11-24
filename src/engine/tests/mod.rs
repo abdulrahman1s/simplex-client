@@ -22,6 +22,7 @@ mod live_cli;
 mod live_group;
 mod live_offline;
 mod live_repair;
+mod live_timed;
 mod local;
 mod msg_delete;
 mod prefs;
@@ -37,6 +38,9 @@ mod resync;
 mod send;
 mod start;
 mod streams;
+pub(crate) mod timed;
+mod timed_keep;
+mod timed_prefs;
 
 use std::path::PathBuf;
 

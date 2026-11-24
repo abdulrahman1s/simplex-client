@@ -17,6 +17,25 @@ All notable changes to this project are documented here. The format follows
   `changes_do_not_follow`), and deltas of an older snapshot are skipped. **Breaking:**
   `StoreError` has this new variant, so an exhaustive `match` on it needs an arm. The README and the
   Node bot example keep a log of changes instead of saving the whole store on every change.
+- Disappearing messages, as SimpleX Chat 7.1.4 has them. `Request::SetTimer { chat, ttl }`
+  (`friend.set_timer`, `group.set_timer`; JS `friend.setTimer(seconds)`,
+  `group.setTimer(seconds)`, `null` for off) offers a friend a timer in the profile they are
+  sent, or sets a group's as an owner. Each message then carries its `ttl` and is deleted with
+  its file: the user's own counts from sending, a received one from when `MarkRead` reads it.
+  A friend's timer is taken over from their profile without an answer, as the official apps
+  do, and the conversation gets a `ChatNotice::Timer` whenever the timer that applies changes.
+  The timers last across restarts: what came due while the client was off goes at the next
+  start. `Friend.timer` and `ChatGroup.timer` give the timer that applies, and
+  `ChatMessage.timed` (JS `message.ttl`, `message.expiresAt`) a message's own. **Breaking:**
+  `Request`, `RequestKind` and `ChatNotice` have new variants and `ChatMessage`, `Friend` and
+  `ChatGroup` new fields.
+
+### Fixed
+
+- The profile sent to friends said disappearing messages were allowed, so an official app
+  offered its user a timer, but this client kept their messages for good. The timer is now
+  kept. A profile change now goes to each friend with their own timer in it, so renaming no
+  longer turns a friend's timer off.
 
 ### Changed
 

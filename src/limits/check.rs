@@ -81,6 +81,7 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::DeleteGroupLink(_)
         | Request::Delete { .. }
         | Request::SetMuted { .. }
+        | Request::SetTimer { .. }
         | Request::SetBlocked { .. }
         | Request::SetMemberBlocked { .. }
         | Request::ShowCode(_)

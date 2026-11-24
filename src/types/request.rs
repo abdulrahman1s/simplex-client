@@ -77,6 +77,13 @@ pub enum Request {
         chat: ChatRef,
         on: bool,
     },
+    /// Disappearing messages: new messages in the chat go `ttl` seconds after they are sent
+    /// (the user's) or read (received ones); `None` turns it off. For a friend it is offered
+    /// to them; for a group it is the group's preference, which only an owner sets.
+    SetTimer {
+        chat: ChatRef,
+        ttl: Option<i64>,
+    },
     SetBlocked {
         friend: i64,
         on: bool,

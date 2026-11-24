@@ -33,6 +33,12 @@ impl Message {
         self.info.text()
     }
 
+    /// A disappearing message: its ttl, and when it goes (a received one once it is read).
+    #[must_use]
+    pub const fn timed(&self) -> Option<crate::types::model::Timed> {
+        self.info.timed
+    }
+
     /// Sent by the user.
     #[must_use]
     pub fn mine(&self) -> bool {

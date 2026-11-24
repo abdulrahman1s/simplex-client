@@ -7,6 +7,7 @@ use crate::engine::agent_port::AgentPort;
 use crate::engine::machine::Engine;
 use crate::engine::profile::picture_of;
 use crate::engine::records::{GroupRecord, MemberRecord, MemberStatus};
+use crate::engine::timed::rules::group_ttl;
 
 /// Codec `membership`.
 pub(crate) const fn membership(status: MemberStatus) -> Membership {
@@ -71,6 +72,7 @@ impl<A: AgentPort> Engine<A> {
             link: g.link.clone(),
             picture: g.profile.image.as_ref().and_then(|i| picture_of(&i.0)),
             owner: g.my_role == GroupMemberRole::Owner,
+            timer: group_ttl(g).flatten(),
             ..ChatGroup::default()
         }
     }

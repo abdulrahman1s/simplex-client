@@ -87,6 +87,11 @@ impl Client {
         self.request(Request::MarkRead(chat))
     }
 
+    /// Disappearing messages in `chat`: new ones last `ttl` seconds, or `None` to turn it off.
+    pub fn set_timer(&self, chat: ChatRef, ttl: Option<i64>) -> Result<()> {
+        self.request(Request::SetTimer { chat, ttl })
+    }
+
     /// Up to `count` messages before the message `before` (or the newest), oldest first.
     pub fn history(
         &self,

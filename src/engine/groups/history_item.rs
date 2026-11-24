@@ -65,6 +65,7 @@ impl<A: AgentPort> Engine<A> {
         };
         c.mentions = mentions;
         c.file = file.as_ref().map(|f| f.invitation.clone());
+        c.ttl = it.timed.map(|t| t.ttl);
         let shared = it.shared_id.clone();
         let mut events = vec![(shared.clone().map(SharedMsgId), ChatEvent::MsgNew(c))];
         if let (Some(HistoryFile { descr, .. }), Some(s)) = (&file, &shared) {

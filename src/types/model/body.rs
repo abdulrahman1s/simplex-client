@@ -48,6 +48,9 @@ pub enum ChatNotice {
     YouRemoved(String),
     GroupDeleted,
     GroupNameChanged(String),
+    /// The chat's disappearing-messages timer changed (`CISndChatFeature`/`CIRcvChatFeature`
+    /// `CFTimedMessages`): seconds, or `None` when messages no longer disappear.
+    Timer(Option<i64>),
     NameChanged {
         from: String,
         to: String,

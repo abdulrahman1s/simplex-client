@@ -109,6 +109,7 @@ fn a_joined_notice_in_a_group_also_reports_the_member() {
         reactions: Vec::new(),
         edited: false,
         mentions: Vec::new(),
+        timed: None,
     };
     let notes = lift(&Event::Messages(vec![m.clone()]), &mut Roster::default());
     let member = Note::MemberAdd {

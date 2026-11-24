@@ -10,6 +10,8 @@ mod limits;
 mod objects;
 #[path = "wasm_client/support.rs"]
 mod support;
+#[path = "wasm_client/timer.rs"]
+mod timer;
 
 use std::rc::Rc;
 

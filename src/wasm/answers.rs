@@ -52,6 +52,7 @@ pub(super) fn answer(e: &Event) -> Option<(Want, bool, Result<Payload, Value>)> 
                 | RequestKind::Delete
                 | RequestKind::React
                 | RequestKind::Mute
+                | RequestKind::Timer
                 | RequestKind::Block
                 | RequestKind::File
                 | RequestKind::GroupLink

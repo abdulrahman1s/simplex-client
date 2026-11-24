@@ -70,4 +70,15 @@ impl Group {
     pub fn mark_read(&self) -> Result<()> {
         self.client.mark_read(self.chat())
     }
+
+    /// Seconds new messages last, when the group has disappearing messages on.
+    #[must_use]
+    pub const fn timer(&self) -> Option<i64> {
+        self.info.timer
+    }
+
+    /// The group's disappearing messages: `ttl` seconds, or `None` for off. Owners only.
+    pub fn set_timer(&self, ttl: Option<i64>) -> Result<()> {
+        self.client.set_timer(self.chat(), ttl)
+    }
 }

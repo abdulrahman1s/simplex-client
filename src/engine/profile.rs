@@ -4,7 +4,8 @@ use crate::types::model::Picture;
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
 
-use super::records::UserRecord;
+use super::records::{FriendRecord, UserRecord};
+use super::timed::rules::my_pref;
 use crate::chat::compress::compress_to_limit;
 use crate::chat::image::ImageData;
 use crate::chat::limits::MAX_CONN_INFO_LENGTH_PQ;
@@ -17,6 +18,17 @@ pub fn sent_profile(user: &UserRecord) -> Profile {
     let mut p = Profile::new(&user.name, "");
     p.short_descr = Some(user.about.clone()).filter(|a| !a.is_empty());
     p.image = user.picture.as_ref().map(data_uri);
+    p
+}
+
+/// The profile as one friend is sent it: the user's timer for them in its preferences
+/// (Types.hs `userProfileDirect` with `mergePreferences`, no fallback to a user-wide timer).
+#[must_use]
+pub fn sent_profile_to(user: &UserRecord, f: &FriendRecord) -> Profile {
+    let mut p = sent_profile(user);
+    if let Some(prefs) = p.preferences.as_mut() {
+        prefs.timed_messages = Some(my_pref(f));
+    }
     p
 }
 

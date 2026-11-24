@@ -68,6 +68,19 @@ impl Message {
         num(self.info.at)
     }
 
+    /// Seconds a disappearing message lasts; `undefined` for one that stays.
+    #[wasm_bindgen(getter)]
+    pub fn ttl(&self) -> Option<f64> {
+        self.info.timed.map(|t| num(t.ttl))
+    }
+
+    /// When a disappearing message goes, in milliseconds since the epoch; `undefined` until a
+    /// received one is read, since reading starts its count.
+    #[wasm_bindgen(getter, js_name = expiresAt)]
+    pub fn expires_at(&self) -> Option<f64> {
+        self.info.timed?.delete_at.map(num)
+    }
+
     /// The quoted message's id, when this one is a reply.
     #[wasm_bindgen(getter, js_name = replyTo)]
     pub fn reply_to(&self) -> Option<f64> {

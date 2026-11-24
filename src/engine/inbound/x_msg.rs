@@ -44,6 +44,7 @@ impl<A: AgentPort> Engine<A> {
             |(b, _)| b.clone(),
         );
         let mut item = ItemRecord::new(MessageAuthor::Friend, body, self.clock.wall_ms());
+        item.timed = self.incoming_timed(ChatRef::Direct(friend), c.ttl, false)?;
         item.shared_id = shared;
         item.reply = c
             .quote

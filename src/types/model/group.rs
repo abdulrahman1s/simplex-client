@@ -26,6 +26,9 @@ pub struct ChatGroup {
     pub link: Option<String>,
     pub picture: Option<Picture>,
     pub owner: bool,
+    /// Seconds new messages last, when the group has disappearing messages on.
+    #[serde(default)]
+    pub timer: Option<i64>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

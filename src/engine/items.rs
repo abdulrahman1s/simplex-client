@@ -25,6 +25,7 @@ impl<A: AgentPort> Engine<A> {
         if let Some(shared) = &item.shared_id {
             self.put_index(&keys::shared(chat, item.member, shared), id)?;
         }
+        self.enter_timed(chat, id, item.timed)?;
         let m = item.to_wire(id, chat, self.read_mark(chat));
         self.state.last.insert(chat, m.clone());
         Ok(m)

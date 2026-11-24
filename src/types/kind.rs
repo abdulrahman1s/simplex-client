@@ -22,6 +22,7 @@ pub enum RequestKind {
     Delete,
     React,
     Mute,
+    Timer,
     Block,
     Code,
     Members,

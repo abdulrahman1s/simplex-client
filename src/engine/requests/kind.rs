@@ -22,6 +22,7 @@ pub fn kind_of(r: &Request) -> RequestKind {
         Request::Delete { .. } => K::Delete,
         Request::React { .. } => K::React,
         Request::SetMuted { .. } => K::Mute,
+        Request::SetTimer { .. } => K::Timer,
         Request::SetBlocked { .. } | Request::SetMemberBlocked { .. } => K::Block,
         Request::ShowCode(_) | Request::Verify { .. } => K::Code,
         Request::Members(_) => K::Members,

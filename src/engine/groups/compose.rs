@@ -62,12 +62,15 @@ impl<A: AgentPort> Engine<A> {
             None => (MsgContainer::simple(content), None),
         };
         container.mentions = msg_mentions;
+        let timed = self.outgoing_timed(ChatRef::Group(group))?;
+        container.ttl = timed.map(|t| t.ttl);
         let msg = ChatMessage::new(ChatEvent::MsgNew(container))?;
         sized(&msg)?;
         let sent = self.send_to_group(group, &msg, None)?;
         let now = self.clock.wall_ms();
         let mut item = ItemRecord::new(MessageAuthor::Me, MessageBody::Text(text.to_owned()), now);
         item.reply = reply;
+        item.timed = timed;
         item.shared_id = msg.msg_id.map(|m| m.0);
         item.mentions = mentions
             .iter()

@@ -55,6 +55,7 @@ fn failed_slot(kind: RequestKind) -> Option<usize> {
         | K::Delete
         | K::React
         | K::Mute
+        | K::Timer
         | K::Block
         | K::File
         | K::GroupLink

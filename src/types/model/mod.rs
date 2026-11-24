@@ -21,7 +21,7 @@ pub use chat_ref::ChatRef;
 pub use conn_event::{DecryptError, IntegrityError, SwitchPhase, SyncStatus};
 pub use friend::{Friend, FriendRequest};
 pub use group::{ChatGroup, GroupMember, Membership};
-pub use message::{ChatMessage, Delivery, Mention, MessageAuthor, Quote, Reaction};
+pub use message::{ChatMessage, Delivery, Mention, MessageAuthor, Quote, Reaction, Timed};
 pub use picture::Picture;
 pub use preview::ChatPreview;
 pub use profile::{ChatProfile, MyStatus, Playing, Presence};

@@ -15,6 +15,7 @@ small, plain API.
 - Private message routing: messages reach other people's relays through one of yours, so
   their relay never sees your IP address
 - Chat messages, contacts, groups, replies, edits, deletes and reactions
+- Disappearing messages, for a friend or a group
 - XFTP file upload and download, with file crypto and descriptions, natively and in the
   browser, Node.js and Bun
 - Calls (signalling and frame crypto)
@@ -280,6 +281,27 @@ client.on("fileProgress", ({ percent, sending }) => {
   console.log(`${sending ? "sending" : "receiving"}: ${percent}%`);
 });
 ```
+
+### Disappearing messages
+
+A timer makes new messages in a chat go after that many seconds: the user's own from when they
+are sent, received ones from when the chat is marked read. Each one goes with its file, and
+timers last across restarts.
+
+```js
+await friend.setTimer(86400); // a day; the friend is offered it in your profile
+await friend.setTimer(null);  // off, for both of you
+await group.setTimer(3600);   // the group's timer: owners only
+
+client.on("message", (message) => {
+  if (message.ttl) console.log(`lasts ${message.ttl}s, goes at ${message.expiresAt}`);
+});
+```
+
+A friend's timer comes with their profile and becomes yours for them, as in the official
+apps. `friend.timer` and `group.timer` say which timer applies. A received message counts down
+only once it is read, so a bot that never calls `markRead()` keeps them; call it after
+handling a message if they should go.
 
 ## Limits
 

@@ -7,7 +7,7 @@ use crate::chat::{ChatEvent, ChatMessage, encode_chat_message};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
-use crate::engine::profile::{MAX_PICTURE_URI, sent_profile};
+use crate::engine::profile::{MAX_PICTURE_URI, sent_profile, sent_profile_to};
 use crate::engine::records::UserRecord;
 use crate::limits::{MAX_BIO_BYTES, is_valid_name, json_len};
 
@@ -54,42 +54,42 @@ impl<A: AgentPort> Engine<A> {
             ));
         }
         let changed = new != sent_profile(&self.state.user);
-        let body = changed
-            .then(|| {
-                let msg = ChatMessage::new(ChatEvent::Info {
-                    profile: new,
-                    member_key: None,
-                })?;
-                encode_chat_message(&msg, true)
-            })
-            .transpose()?;
+        if changed {
+            // Each friend's copy differs only in their timer, so one that fits says all fit.
+            let msg = ChatMessage::new(ChatEvent::Info {
+                profile: new,
+                member_key: None,
+            })?;
+            encode_chat_message(&msg, true)?;
+        }
         self.save_user(user)?;
         self.emit(Event::Profile(self.state.user.to_wire()));
-        if let Some(body) = body {
-            self.send_to_friends(&body);
+        if changed {
+            let friends: Vec<i64> = (self.state.friends.values())
+                .filter(|f| f.reachable())
+                .map(|f| f.id)
+                .collect();
+            for friend in friends {
+                // One friend's relay failing is no reason to keep the profile from the rest.
+                if let Err(e) = self.send_profile(friend) {
+                    self.log
+                        .line(format_args!("profile not sent: {}", e.detail));
+                }
+            }
         }
         Ok(())
     }
 
-    fn send_to_friends(&mut self, body: &[u8]) {
-        let conns: Vec<_> = self
-            .state
-            .friends
-            .values()
-            .filter(|f| f.reachable())
-            .map(|f| f.conn)
-            .collect();
-        for conn in conns {
-            // One friend's relay failing is no reason to keep the profile from the rest.
-            if let Err(e) = self.agent.send(
-                &mut self.store,
-                &conn,
-                self.state.pq_of(&conn),
-                body.to_vec(),
-            ) {
-                self.log
-                    .line(format_args!("profile not sent: {}", e.detail()));
-            }
-        }
+    /// `x.info` with the profile as this friend sees it, their timer included
+    /// (Types.hs `userProfileDirect`).
+    pub(crate) fn send_profile(&mut self, friend: i64) -> Result<()> {
+        let f = self.friend(friend)?;
+        let msg = ChatMessage::new(ChatEvent::Info {
+            profile: sent_profile_to(&self.state.user, &f),
+            member_key: None,
+        })?;
+        let body = encode_chat_message(&msg, true)?;
+        self.agent.send(&mut self.store, &f.conn, f.pq, body)?;
+        Ok(())
     }
 }

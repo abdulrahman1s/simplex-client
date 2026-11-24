@@ -110,6 +110,7 @@ impl<A: AgentPort> Engine<A> {
             self.agent.next_wake(),
             self.next_call_wake(),
             self.next_relay_wake(),
+            self.next_timed_wake(),
         ];
         let Some(at) = wake.into_iter().flatten().min() else {
             return IDLE;
@@ -123,6 +124,7 @@ impl<A: AgentPort> Engine<A> {
         self.agent.on_tick(&mut self.store, now);
         self.expire_calls(now);
         self.relay_tick(now);
+        self.expire_timed(now);
         self.pump();
     }
 }

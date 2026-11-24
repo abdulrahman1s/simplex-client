@@ -7,6 +7,7 @@ use super::agent_port::AgentPort;
 use super::machine::Engine;
 use super::profile::picture_of;
 use super::records::FriendRecord;
+use super::timed::rules::friend_ttl;
 
 fn friend(f: &FriendRecord) -> Friend {
     Friend {
@@ -19,6 +20,7 @@ fn friend(f: &FriendRecord) -> Friend {
         muted: f.muted,
         verified: f.verified.is_some(),
         picture: f.image.as_deref().and_then(picture_of),
+        timer: friend_ttl(f).flatten(),
         ..Friend::default()
     }
 }

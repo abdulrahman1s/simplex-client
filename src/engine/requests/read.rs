@@ -1,4 +1,4 @@
-//! MarkRead: the conversation is read up to its newest item (local; the codec reports nothing).
+//! MarkRead: the conversation is read up to its newest item (local; the codec reports nothing), which starts its timed items' count.
 
 use crate::types::model::ChatRef;
 
@@ -37,6 +37,6 @@ impl<A: AgentPort> Engine<A> {
         if let Some(last) = self.state.last.get_mut(&chat) {
             last.unread = false;
         }
-        Ok(())
+        self.start_read_timers(chat, newest)
     }
 }

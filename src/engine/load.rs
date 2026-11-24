@@ -58,6 +58,10 @@ pub fn load(store: &mut Store) -> Result<(State, Option<UserRecord>), StoreError
     for m in all::<MemberRecord>(store, keys::MEMBER_PREFIX)? {
         state.members.insert((m.group, m.id), m);
     }
+    state.timed.extend(super::timed::index::load_due(store)?);
+    state
+        .timed_unread
+        .extend(super::timed::index::load_unread(store)?);
     let user = get::<UserRecord>(store, keys::USER)?;
     Ok((state, user))
 }

@@ -3,20 +3,13 @@
 use crate::types::model::{ChatNotice, ChatRef, MessageAuthor, MessageBody};
 use crate::types::{Event, RequestKind};
 
-use crate::chat::profile::Profile;
 use crate::engine::agent_port::{AgentFailure, AgentPort, ConnId};
 use crate::engine::error::{Code, EngineError, Result, fail};
 use crate::engine::machine::Engine;
 use crate::engine::profile::{conn_info, received_profile};
 use crate::engine::records::{ConnKind, ConnRecord, FriendRecord, ItemRecord, keys};
 use crate::engine::relays::Retry;
-
-pub(crate) fn apply_profile(f: &mut FriendRecord, p: &Profile) {
-    f.name.clone_from(&p.display_name);
-    f.about = p.short_descr.clone().unwrap_or_default();
-    f.image = p.image.as_ref().map(|i| i.0.clone());
-    f.prefs.clone_from(&p.preferences);
-}
+use crate::engine::timed::adopt::apply_profile;
 
 fn unknown() -> EngineError {
     fail(Code::RequestFailed, "an event for an unknown connection")

@@ -22,6 +22,9 @@ pub struct Friend {
     pub muted: bool,
     pub seen: Vec<String>,
     pub picture: Option<Picture>,
+    /// Seconds new messages last, when disappearing messages are on for both sides.
+    #[serde(default)]
+    pub timer: Option<i64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

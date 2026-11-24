@@ -61,6 +61,19 @@ pub struct ChatMessage {
     pub reactions: Vec<Reaction>,
     pub edited: bool,
     pub mentions: Vec<Mention>,
+    /// A disappearing message: how long it lasts and when it goes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timed: Option<Timed>,
+}
+
+/// A disappearing message (Messages.hs `CITimed`). The user's own count from sending; a
+/// received one's count starts when it is read, so until then `delete_at` is `None`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Timed {
+    /// Seconds.
+    pub ttl: i64,
+    /// Milliseconds since the epoch.
+    pub delete_at: Option<i64>,
 }
 
 impl ChatMessage {

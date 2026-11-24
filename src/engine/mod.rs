@@ -28,6 +28,7 @@ pub mod run;
 mod start;
 pub mod state;
 mod time;
+mod timed;
 
 #[cfg(test)]
 #[cfg(feature = "native")]

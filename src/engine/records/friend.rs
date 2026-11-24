@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::chat::preferences::{FeatureAllowed, Preferences};
+use crate::chat::preferences::{FeatureAllowed, Preferences, TimedPref};
 use crate::chat::version::VersionRange;
 use crate::engine::agent_port::ConnId;
 
@@ -44,6 +44,10 @@ pub struct FriendRecord {
     /// Their chat version range, from the last message that carried one (`peerChatVRange`).
     #[serde(default)]
     pub chat_v: Option<VersionRange>,
+    /// The user's disappearing-messages preference for this friend (`Contact.userPreferences`
+    /// `timedMessages`); `None` reads as the default, allowed with no timer (`engine::timed`).
+    #[serde(default)]
+    pub my_timer: Option<TimedPref>,
 }
 
 const fn pq_on() -> bool {
@@ -126,6 +130,7 @@ impl FriendRecord {
             verified: None,
             pq: true,
             chat_v: None,
+            my_timer: None,
         }
     }
 

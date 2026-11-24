@@ -1,6 +1,6 @@
 //! What the engine thread keeps in memory: a cache of the records, rebuilt from the store at start.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::types::model::{ChatMessage, ChatRef};
 
@@ -34,6 +34,13 @@ pub struct State {
     pub chats_dirty: bool,
     pub address: AddressState,
     pub calls: CallState,
+    /// Timed items with a delete time, earliest first: (delete at, chat, item), as the store's
+    /// `timed_due` keys hold them. Eviction: an entry leaves when its item goes, by its timer or
+    /// any other deletion, or with its chat.
+    pub timed: BTreeSet<(i64, ChatRef, i64)>,
+    /// Received timed items not read yet, by chat, as the store's `timed_unread` keys hold
+    /// them. Eviction: an entry leaves when its item is read or goes, or with its chat.
+    pub timed_unread: BTreeSet<(ChatRef, i64)>,
 }
 
 impl State {

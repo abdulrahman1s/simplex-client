@@ -34,6 +34,7 @@ mod picture;
 mod redaction;
 mod restrict;
 mod seed;
+mod timed;
 
 use crate::types::model::{ChatRef, Membership, MessageAuthor, MessageBody};
 use crate::types::{Event, Request};

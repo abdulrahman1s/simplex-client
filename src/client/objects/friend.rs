@@ -65,4 +65,16 @@ impl Friend {
     pub fn mark_read(&self) -> Result<()> {
         self.client.mark_read(self.chat())
     }
+
+    /// Seconds new messages last, when disappearing messages are on for both sides.
+    #[must_use]
+    pub const fn timer(&self) -> Option<i64> {
+        self.info.timer
+    }
+
+    /// Offers the friend disappearing messages after `ttl` seconds, or turns them off for
+    /// both sides with `None`.
+    pub fn set_timer(&self, ttl: Option<i64>) -> Result<()> {
+        self.client.set_timer(self.chat(), ttl)
+    }
 }

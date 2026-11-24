@@ -42,6 +42,8 @@ impl<A: AgentPort> Engine<A> {
             .ok_or_else(|| fail(Code::RequestFailed, "file has no name"))?;
         let mut container = MsgContainer::simple(content(kind, text, preview, duration));
         container.file = Some(FileInvitation::xftp(&name, size));
+        let timed = self.outgoing_timed(chat)?;
+        container.ttl = timed.map(|t| t.ttl);
         let msg = ChatMessage::new(ChatEvent::MsgNew(container))?;
         sized(&msg)?;
         let sent = self.send_offer(chat, &msg)?;
@@ -55,6 +57,7 @@ impl<A: AgentPort> Engine<A> {
             state: FileState::Sending { percent: 0 },
         };
         let mut item = ItemRecord::new(MessageAuthor::Me, show(kind, media), self.clock.wall_ms());
+        item.timed = timed;
         item.shared_id = msg.msg_id.map(|m| m.0);
         let m = self.add_item(chat, &item)?;
         for (_, conn, agent_id) in &sent {

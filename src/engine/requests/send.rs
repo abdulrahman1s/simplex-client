@@ -36,7 +36,7 @@ impl<A: AgentPort> Engine<A> {
         let content = MsgContent::Text {
             text: text.to_owned(),
         };
-        let (container, reply) = match reply_to {
+        let (mut container, reply) = match reply_to {
             Some(item) => {
                 let q = self
                     .item(ChatRef::Direct(id), item)?
@@ -46,12 +46,15 @@ impl<A: AgentPort> Engine<A> {
             }
             None => (MsgContainer::simple(content), None),
         };
+        let timed = self.outgoing_timed(ChatRef::Direct(id))?;
+        container.ttl = timed.map(|t| t.ttl);
         let msg = ChatMessage::new(ChatEvent::MsgNew(container))?;
         let body = encode_sized(&msg, PQ)?;
         let agent_id = self.agent.send(&mut self.store, &f.conn, f.pq, body)?;
         let now = self.clock.wall_ms();
         let mut item = ItemRecord::new(MessageAuthor::Me, MessageBody::Text(text.to_owned()), now);
         item.reply = reply;
+        item.timed = timed;
         item.shared_id = msg.msg_id.map(|m| m.0);
         let m = self.add_item(ChatRef::Direct(id), &item)?;
         self.put_index(&keys::sent(&f.conn, agent_id), m.id)?;
