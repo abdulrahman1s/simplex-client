@@ -5,7 +5,10 @@ mod file_size;
 mod model;
 mod parts;
 mod replicas;
+#[cfg(test)]
+mod tests;
 mod validate;
+mod yaml_line;
 mod yaml_node;
 mod yaml_parse;
 mod yaml_print;

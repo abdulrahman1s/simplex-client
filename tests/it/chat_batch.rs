@@ -89,6 +89,21 @@ fn a_forward_inside_a_signed_element_and_a_signed_forward_both_parse() {
     assert_eq!(p.signed, Some(signed));
 }
 
+/// serde_json's recursion limit stays on: deep JSON is a parse error, not a stack overflow.
+#[test]
+fn deeply_nested_json_in_a_message_is_refused_without_overflowing() {
+    let depth = 50_000;
+    let body = format!(
+        r#"{{"event":"x.msg.new","params":{{"content":{}{}}}}}"#,
+        "[".repeat(depth),
+        "]".repeat(depth)
+    );
+    let e = ChatMessage::from_json(body.as_bytes())
+        .unwrap_err()
+        .to_string();
+    assert!(e.contains("recursion"), "{e}");
+}
+
 #[test]
 fn a_nested_forward_element_is_refused() {
     let inner = encode_forward_element(&forward_header(), &ok_json()).unwrap();
