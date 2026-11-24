@@ -58,6 +58,10 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::SendFile { text, .. }
         | Request::SendLink { text, .. }
         | Request::SendLive { text, .. }
+        | Request::SetAddressSettings {
+            auto_reply: Some(text),
+            ..
+        }
         | Request::UpdateLive { text, .. } => text_fits(text),
         Request::NewGroup(name) | Request::SetGroupProfile { name, .. } => {
             if !is_valid_name(name.trim()) {
@@ -102,6 +106,10 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::Forward { .. }
         | Request::ContactMember { .. }
         | Request::SyncRatchet { .. }
+        | Request::ShareAddress(_)
+        | Request::SetAddressSettings {
+            auto_reply: None, ..
+        }
         | Request::SetBlocked { .. }
         | Request::SetMemberBlocked { .. }
         | Request::ShowCode(_)

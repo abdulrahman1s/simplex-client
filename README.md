@@ -346,6 +346,14 @@ await group.setPrefs({ voice: { on: false }, files: { on: true, role: "moderator
 await group.delete();               // an owner deletes it for every member too
 ```
 
+### Your address
+
+```js
+await client.setAddressSettings({ autoAccept: true, autoReply: "Hi! I'm a bot." });
+await client.shareAddress(true); // shows it in the profile every friend gets
+console.log(friend.raw.address); // a friend's shared address, if they show one
+```
+
 ### Link previews
 
 The page makes a link's preview (the client fetches nothing) and sends it with the text:

@@ -25,6 +25,7 @@ fn friend(user: Option<&Preferences>, f: &FriendRecord) -> Friend {
         timer: friend_ttl(user, f).flatten(),
         alias: f.local.alias.clone(),
         item_ttl: f.local.item_ttl,
+        address: f.address.clone(),
         prefs: to_wire(f.my_prefs.as_ref()),
         ..Friend::default()
     }

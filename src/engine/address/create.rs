@@ -73,6 +73,8 @@ impl<A: AgentPort> Engine<A> {
             full,
             short,
             accepted: Vec::new(),
+            auto_accept: false,
+            auto_reply: None,
         };
         let shared = rec.shared();
         self.save_address(rec)?;

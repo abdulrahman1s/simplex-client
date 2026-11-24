@@ -179,6 +179,15 @@ pub enum Request {
         member: Option<i64>,
         force: bool,
     },
+    /// The address's settings: accept requests as they come, and send `auto_reply` to each
+    /// friend made through it once connected (`APISetAddressSettings`).
+    SetAddressSettings {
+        auto_accept: bool,
+        auto_reply: Option<String>,
+    },
+    /// Shows the address in the profile every friend gets, or takes it out
+    /// (`APISetProfileAddress`).
+    ShareAddress(bool),
     /// A moderator deletes a member's message for everyone (`APIDeleteMemberChatItem`).
     Moderate {
         group: i64,

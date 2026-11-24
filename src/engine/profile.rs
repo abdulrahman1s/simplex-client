@@ -17,6 +17,7 @@ use crate::chat::{ChatEvent, ChatMessage, Result, parse_chat_messages};
 pub fn sent_profile(user: &UserRecord) -> Profile {
     let mut p = Profile::new(&user.name, "");
     p.preferences = Some(full(user.prefs.as_ref()));
+    p.contact_link.clone_from(&user.contact_link);
     p.short_descr = Some(user.about.clone()).filter(|a| !a.is_empty());
     p.image = user.picture.as_ref().map(data_uri);
     p

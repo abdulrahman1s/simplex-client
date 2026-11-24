@@ -44,11 +44,13 @@ pub(crate) fn apply_profile(user: Option<&Preferences>, f: &mut FriendRecord, p:
     let changed = f.name != p.display_name
         || f.about != about
         || f.image != image
-        || f.prefs != p.preferences;
+        || f.prefs != p.preferences
+        || f.address != p.contact_link;
     f.name.clone_from(&p.display_name);
     f.about = about;
     f.image = image;
     f.prefs.clone_from(&p.preferences);
+    f.address.clone_from(&p.contact_link);
     if changed {
         adopt_timer(user, f, p);
     }

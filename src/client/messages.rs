@@ -5,7 +5,7 @@ use std::path::Path;
 use super::error::{Result, unexpected};
 use super::handle::Client;
 use super::waiters::{Answer, Want};
-use crate::types::model::{ChatMessage, ChatPrefs, ChatRef, LinkInfo};
+use crate::types::model::{ChatMessage, ChatRef};
 use crate::types::{Event, FileKind, Request, RequestKind};
 
 impl Client {
@@ -85,56 +85,6 @@ impl Client {
 
     pub fn mark_read(&self, chat: ChatRef) -> Result<()> {
         self.request(Request::MarkRead(chat))
-    }
-
-    /// Disappearing messages in `chat`: new ones last `ttl` seconds, or `None` to turn it off.
-    pub fn set_timer(&self, chat: ChatRef, ttl: Option<i64>) -> Result<()> {
-        self.request(Request::SetTimer { chat, ttl })
-    }
-
-    /// Sends `msg` to `to` as the user's own, marked forwarded.
-    pub fn forward(&self, msg: &ChatMessage, to: ChatRef) -> Result<()> {
-        self.request(Request::Forward {
-            from: msg.chat,
-            item: msg.id,
-            to,
-        })
-    }
-
-    /// Starts a live message, seen as it is written; `update_live` sends the rest.
-    pub fn send_live(&self, chat: ChatRef, text: &str) -> Result<()> {
-        self.request(Request::SendLive {
-            chat,
-            text: text.to_owned(),
-        })
-    }
-
-    /// The live message's text so far; `done` finishes it.
-    pub fn update_live(&self, msg: &ChatMessage, text: &str, done: bool) -> Result<()> {
-        self.request(Request::UpdateLive {
-            chat: msg.chat,
-            item: msg.id,
-            text: text.to_owned(),
-            done,
-        })
-    }
-
-    /// `text` with the preview of the link it has.
-    pub fn send_link(&self, chat: ChatRef, text: &str, preview: LinkInfo) -> Result<()> {
-        self.request(Request::SendLink {
-            chat,
-            text: text.to_owned(),
-            preview,
-            reply_to: None,
-        })
-    }
-
-    /// The user's chat preferences, sent to every friend they change (`Request::SetPrefs`).
-    pub fn set_prefs(&self, prefs: ChatPrefs) -> Result<()> {
-        self.request(Request::SetPrefs {
-            friend: None,
-            prefs,
-        })
     }
 
     /// Up to `count` messages before the message `before` (or the newest), oldest first.

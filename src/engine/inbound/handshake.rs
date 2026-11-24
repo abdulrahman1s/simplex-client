@@ -115,7 +115,7 @@ impl<A: AgentPort> Engine<A> {
         let m = self.add_item(ChatRef::Direct(id), &item)?;
         self.emit(Event::Messages(vec![m]));
         self.state.chats_dirty = true;
-        Ok(())
+        self.send_auto_reply(id)
     }
 
     /// The agent retries what it can, so an error ends nothing here: an invitation being made

@@ -22,6 +22,12 @@ pub struct AddressRecord {
     pub short: Option<String>,
     #[serde(default)]
     pub accepted: Vec<Accepted>,
+    /// Requests are accepted as they come (`AddressSettings.autoAccept`).
+    #[serde(default)]
+    pub auto_accept: bool,
+    /// Sent to each friend made through the address once connected (`autoReply`).
+    #[serde(default)]
+    pub auto_reply: Option<String>,
 }
 
 impl AddressRecord {

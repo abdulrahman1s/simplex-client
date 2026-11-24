@@ -25,6 +25,7 @@ pub fn kind_of(r: &Request) -> RequestKind {
         Request::SetTimer { .. } => K::Timer,
         Request::SendLink { .. } | Request::Forward { .. } | Request::SendLive { .. } => K::Send,
         Request::ContactMember { .. } | Request::SyncRatchet { .. } => K::Connect,
+        Request::SetAddressSettings { .. } | Request::ShareAddress(_) => K::Address,
         Request::UpdateLive { .. } => K::Edit,
         Request::SetPrefs { .. } => K::Prefs,
         Request::SetMemberRole { .. }

@@ -2,6 +2,7 @@
 
 mod address;
 mod address_join;
+mod address_settings;
 mod calls;
 mod change;
 mod codes;
@@ -19,6 +20,7 @@ mod integrity;
 mod limits;
 mod link;
 mod live_address;
+mod live_autoreply;
 mod live_call;
 mod live_cli;
 mod live_forward;

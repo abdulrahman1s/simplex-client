@@ -10,7 +10,7 @@ use crate::engine::records::{ConnKind, ConnRecord, FriendRecord, RequestRecord, 
 const PQ: bool = true;
 
 impl<A: AgentPort> Engine<A> {
-    fn request_of(&self, id: i64) -> Result<RequestRecord> {
+    pub(super) fn request_of(&self, id: i64) -> Result<RequestRecord> {
         let found = self.state.address.requests.get(&id);
         found
             .cloned()
@@ -22,6 +22,15 @@ impl<A: AgentPort> Engine<A> {
         if let Some(inv) = req.member.clone() {
             return self.accept_member_invite(req, inv);
         }
+        self.accept_address_request(request, req).map(|_| ())
+    }
+
+    /// A request through the address: the friend it makes.
+    pub(crate) fn accept_address_request(
+        &mut self,
+        request: i64,
+        req: RequestRecord,
+    ) -> Result<i64> {
         let ours = conn_info(&self.state.user)?;
         let conn = self
             .agent
@@ -41,7 +50,7 @@ impl<A: AgentPort> Engine<A> {
             self.save_address(a)?;
         }
         self.forget_request(request, false)?;
-        Ok(())
+        Ok(id)
     }
 
     /// The requester is never told: the request is forgotten here and at the agent.

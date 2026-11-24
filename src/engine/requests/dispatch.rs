@@ -129,6 +129,11 @@ impl<A: AgentPort> Engine<A> {
                 let conn = self.conn_of(chat, member)?;
                 self.sync_ratchet(&conn, force)
             }
+            Request::SetAddressSettings {
+                auto_accept,
+                auto_reply,
+            } => self.set_address_settings(auto_accept, auto_reply),
+            Request::ShareAddress(on) => self.share_address(on),
             Request::ContactMember {
                 group,
                 member,

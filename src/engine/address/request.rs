@@ -64,7 +64,7 @@ impl<A: AgentPort> Engine<A> {
         self.put(&keys::request(id), &rec)?;
         self.state.address.requests.insert(id, rec);
         self.state.chats_dirty = true;
-        Ok(())
+        self.auto_answer(id)
     }
 
     /// Tells the agent to forget a request; one it no longer has is only logged.

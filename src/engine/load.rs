@@ -82,6 +82,10 @@ impl<A: AgentPort> Engine<A> {
     pub(crate) fn profile_wire(&self) -> crate::types::model::ChatProfile {
         let mut p = self.state.user.to_wire();
         p.item_ttl = self.state.settings.item_ttl;
+        if let Some(a) = &self.state.address.record {
+            p.auto_accept = a.auto_accept;
+            p.auto_reply.clone_from(&a.auto_reply);
+        }
         p
     }
 

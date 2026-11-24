@@ -15,7 +15,7 @@ use crate::store::Store;
 const SHORT: &str = "https://smp6.simplex.im/a#0sPWloEa5zFH0sfc_vANe4RUUebBQSGcvTKpKRH300s";
 const FULL: &str = "simplex:/contact#/?v=6-8&smp=smp%3A%2F%2FAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE%3D%40fake.test%2F-FWjHkx7I4TOSuF3q4l2S4jD2BgprZRG%23%2F%3Fv%3D1-4%26dh%3DMCowBQYDK2VuAyEAQWIOFJ7ZTMqTFfTsHuyRYNDwszkpHQfRxObZXAWAIRU%253D%26q%3Dc";
 
-fn made(t: &mut T) -> ConnId {
+pub(super) fn made(t: &mut T) -> ConnId {
     t.req(Request::CreateAddress);
     let conn = t.e.state.address.creating.unwrap();
     t.agent(AgentEvent::Address {
@@ -26,7 +26,7 @@ fn made(t: &mut T) -> ConnId {
     conn
 }
 
-fn contact(name: &str, req_id: Option<&[u8]>) -> Vec<u8> {
+pub(super) fn contact(name: &str, req_id: Option<&[u8]>) -> Vec<u8> {
     let msg = ChatMessage::without_id(ChatEvent::Contact {
         profile: Profile::new(name, ""),
         member_key: None,
@@ -37,7 +37,7 @@ fn contact(name: &str, req_id: Option<&[u8]>) -> Vec<u8> {
     msg.to_json().unwrap()
 }
 
-fn asks(t: &mut T, conn: ConnId, inv: u8, conn_info: Vec<u8>) -> Vec<Event> {
+pub(super) fn asks(t: &mut T, conn: ConnId, inv: u8, conn_info: Vec<u8>) -> Vec<Event> {
     t.agent(AgentEvent::Req {
         conn,
         invitation: vec![inv],

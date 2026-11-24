@@ -41,6 +41,8 @@ impl<A: AgentPort> Engine<A> {
             keys::file_prefix(id),
             // A member contact's link not sent yet (`groups::member_contact`).
             format!("minv/{id}").into_bytes(),
+            // An auto-reply not sent yet (`address::settings`).
+            format!("areply/{id}").into_bytes(),
         ];
         for prefix in prefixes {
             for key in self.store.keys_with_prefix(NS, &prefix)? {

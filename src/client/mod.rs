@@ -2,6 +2,7 @@
 
 mod answers;
 mod builder;
+mod content;
 mod dispatch;
 mod error;
 mod event;
@@ -12,6 +13,7 @@ mod messages;
 mod objects;
 mod people;
 mod roster;
+mod settings;
 mod spawn;
 mod stream;
 mod waiters;

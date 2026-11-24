@@ -16,6 +16,9 @@ pub struct UserRecord {
     /// The user's chat preferences (`Profile.preferences`); `None` reads as the defaults.
     #[serde(default)]
     pub prefs: Option<Preferences>,
+    /// The address shown in the profile (`APISetProfileAddress`), its full link.
+    #[serde(default)]
+    pub contact_link: Option<String>,
 }
 
 impl UserRecord {
@@ -37,6 +40,9 @@ impl UserRecord {
             picture: self.picture.clone(),
             prefs: to_wire(self.prefs.as_ref()),
             item_ttl: 0,
+            address_shared: self.contact_link.is_some(),
+            auto_accept: false,
+            auto_reply: None,
         }
     }
 }

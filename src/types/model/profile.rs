@@ -19,6 +19,15 @@ pub struct ChatProfile {
     /// Read only here: `Request::SetMessageTtl` changes it.
     #[serde(default)]
     pub item_ttl: i64,
+    /// The user's address shows in their profile (`Request::ShareAddress`).
+    #[serde(default)]
+    pub address_shared: bool,
+    /// Requests to the address are accepted as they come, and `auto_reply` sent to each new
+    /// friend (`Request::SetAddressSettings`).
+    #[serde(default)]
+    pub auto_accept: bool,
+    #[serde(default)]
+    pub auto_reply: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

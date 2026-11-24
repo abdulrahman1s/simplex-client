@@ -40,6 +40,9 @@ pub struct Friend {
     /// `Some(0)` keeps them.
     #[serde(default)]
     pub item_ttl: Option<i64>,
+    /// The address their profile shows, to pass on or connect through.
+    #[serde(default)]
+    pub address: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

@@ -111,6 +111,16 @@ All notable changes to this project are documented here. The format follows
   needed it. The agent port's `synchronize_ratchet` takes `force`. **Breaking:** `Request` has a
   new variant and `AgentPort::synchronize_ratchet` a new argument.
 
+- Address settings: `Request::SetAddressSettings { auto_accept, auto_reply }`
+  (`client.set_address_settings`; JS `setAddressSettings({ autoAccept, autoReply })`) accepts
+  requests to the address as they come and sends the auto-reply to each friend made through it
+  once connected (`APISetAddressSettings`, Subscriber.hs `autoAccept`, `sendAutoReply`).
+  `Request::ShareAddress(on)` (JS `shareAddress`) shows the address in the profile every
+  friend gets (`APISetProfileAddress`), and deleting the address takes it out. A friend's shown
+  address is in `Friend.address`; the settings in `ChatProfile`. **Breaking:** `Request` has
+  new variants, `Friend` and `ChatProfile` new fields, and `UserRecord` and `AddressRecord` new
+  fields.
+
 ### Fixed
 
 - The profile sent to friends said disappearing messages were allowed, so an official app

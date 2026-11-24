@@ -38,6 +38,7 @@ impl<A: AgentPort> Engine<A> {
             status: p.status,
             picture: self.state.user.picture.clone(),
             prefs: self.state.user.prefs.clone(),
+            contact_link: self.state.user.contact_link.clone(),
         };
         self.update_profile(user)
     }

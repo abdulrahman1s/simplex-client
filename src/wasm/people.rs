@@ -44,6 +44,37 @@ impl Client {
         super::objects::local::set_ttl(&self.shared, None, seconds)
     }
 
+    /// `{ autoAccept, autoReply }`: requests to the address are accepted as they come, and
+    /// `autoReply` sent to each new friend once connected.
+    #[wasm_bindgen(js_name = setAddressSettings, unchecked_return_type = "Promise<void>")]
+    pub fn set_address_settings(
+        &self,
+        #[wasm_bindgen(
+            unchecked_param_type = "{ autoAccept?: boolean, autoReply?: string | null }"
+        )]
+        settings: JsValue,
+    ) -> js_sys::Promise {
+        let json = super::convert::from_js(&settings);
+        let auto_accept = json
+            .get("autoAccept")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+        let auto_reply = json
+            .get("autoReply")
+            .and_then(|v| v.as_str())
+            .map(str::to_owned);
+        self.shared.queue(Request::SetAddressSettings {
+            auto_accept,
+            auto_reply,
+        })
+    }
+
+    /// Shows the address in the profile every friend gets, or takes it out.
+    #[wasm_bindgen(js_name = shareAddress, unchecked_return_type = "Promise<void>")]
+    pub fn share_address(&self, on: bool) -> js_sys::Promise {
+        self.shared.queue(Request::ShareAddress(on))
+    }
+
     #[wasm_bindgen(js_name = setName, unchecked_return_type = "Promise<void>")]
     pub fn set_name(&self, name: &str) -> js_sys::Promise {
         let profile = {

@@ -51,6 +51,9 @@ pub struct FriendRecord {
     pub my_prefs: Option<Preferences>,
     #[serde(default)]
     pub local: ChatLocal,
+    /// The address their profile shows, if any (`Profile.contactLink`).
+    #[serde(default)]
+    pub address: Option<String>,
 }
 
 const fn pq_on() -> bool {
@@ -81,6 +84,7 @@ impl FriendRecord {
             chat_v: None,
             my_prefs: None,
             local: ChatLocal::default(),
+            address: None,
         }
     }
 
