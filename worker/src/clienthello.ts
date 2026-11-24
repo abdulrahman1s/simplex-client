@@ -1,5 +1,5 @@
-// The open-proxy guard: the client's first TLS record must be a ClientHello that offers only
-// the SimpleX ALPNs (smp/1, xftp/1) and names no server (no SNI, no ECH), as simplex-client sends.
+// What a SimpleX ClientHello is: it offers only the SimpleX ALPNs (smp/1, xftp/1) and names no
+// server (no SNI, no ECH), as simplex-client sends. handshake.ts applies it to every record.
 
 /** The largest first record we buffer: a TLS plaintext record body is at most 2^14 bytes. */
 export const MAX_HELLO_RECORD = 16384;
@@ -27,6 +27,15 @@ export function checkClientHello(buf: Uint8Array): HelloCheck {
     return helloIsSimplex(buf.subarray(5, 5 + len)) ? "ok" : "not_tls";
   } catch {
     return "not_tls";
+  }
+}
+
+/** True when a handshake record's body is one whole SimpleX ClientHello; never throws. */
+export function isSimplexHello(record: Uint8Array): boolean {
+  try {
+    return helloIsSimplex(record);
+  } catch {
+    return false;
   }
 }
 

@@ -16,6 +16,7 @@ invocation_logs = false
 
 [vars]
 ALLOWED_PORTS = "5223,443"
+# Hosts besides the preset SimpleX relays: exact names, *.example.com, or * for any public host.
 ALLOWED_HOSTS = ""
 ALLOWED_ORIGINS = ""
 MAX_TUNNELS_PER_IP = "8"

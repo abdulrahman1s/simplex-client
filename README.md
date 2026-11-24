@@ -278,9 +278,12 @@ real, deploy your own (see below): it takes three commands and fits Cloudflare's
 - **Cloudflare can see** your IP, the relay host and port, and the timing and sizes of the
   fixed 16 KiB SMP blocks.
 - **Cloudflare cannot see** message content, keys, contacts or which queues you use.
-- **It is not an open proxy.** It allows only ports 5223 and 443, public hosts, and a TLS
-  ClientHello with ALPN `smp/1` or `xftp/1` and no SNI. Every IP is rate-limited and has a cap
-  on open tunnels.
+- **It is not an open proxy.** By default it reaches only the preset SimpleX relays (SMP and
+  XFTP), on ports 5223 and 443. Every record the client sends before the relay's first
+  encrypted one must be a TLS ClientHello with ALPN `smp/1` or `xftp/1` and no SNI. Every IP
+  is rate-limited and has a cap on open tunnels, and when the limits cannot be checked the
+  tunnel is refused. Your own relays need a Worker of your own with them in `ALLOWED_HOSTS`
+  (`*` allows any public host).
 
 Deploy your own and pass its URL as `tunnel`, with one click:
 

@@ -98,3 +98,9 @@ All notable changes to this project are documented here. The format follows
   are checked against a sealed copy in both backends, which a store from before gets on its
   first open, and SQLite overwrites deleted rows (`secure_delete`). In SQLite, putting back an
   older sealed row is still not detected.
+- **Breaking (tunnel Worker):** it is no longer an open TCP proxy by default. Without
+  `ALLOWED_HOSTS` it reaches only the preset SimpleX SMP and XFTP relays; `ALLOWED_HOSTS` adds
+  hosts and `ALLOWED_HOSTS=*` allows any public host. Every record the client sends before the
+  relay's first encrypted record is checked (a second ClientHello after a HelloRetryRequest
+  too), the relay must answer in TLS records, and the per-IP limits fail closed when the
+  counter or the rate limiter errors.

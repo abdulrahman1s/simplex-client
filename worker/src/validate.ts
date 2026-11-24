@@ -20,7 +20,7 @@ export interface Hello {
 
 export interface Policy {
   ports: ReadonlySet<number>;
-  /** Exact names or `*.example.com` patterns; empty allows any public host. */
+  /** Exact names, `*.example.com` patterns, or `*` for any public host; empty allows none. */
   hosts: readonly string[];
 }
 
@@ -70,7 +70,7 @@ export function checkTarget(
 
   const error = isIpLiteral(host) ? checkAddress(host) : checkName(host);
   if (error) return { error };
-  if (policy.hosts.length > 0 && !policy.hosts.some((p) => hostMatches(host, p))) {
+  if (!policy.hosts.some((p) => hostMatches(host, p))) {
     return { error: "forbidden_host" };
   }
   return { host };
@@ -92,6 +92,7 @@ export function socketHostname(host: string): string {
 }
 
 export function hostMatches(host: string, pattern: string): boolean {
+  if (pattern === "*") return true;
   return pattern.startsWith("*.") ? host.endsWith(pattern.slice(1)) : host === pattern;
 }
 

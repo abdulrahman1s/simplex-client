@@ -1,7 +1,9 @@
 // simplex-tunnel: a WebSocket to TCP byte pipe so simplex-client in a browser can reach SMP and
 // XFTP relays. TLS runs end to end in the client; this Worker only sees ciphertext.
 import type { Env } from "./env";
+import { allowedHosts } from "./hosts";
 import { ipKey } from "./ipkey";
+import { firstGate } from "./admission";
 import { readLimits } from "./limits";
 import { startTunnel } from "./tunnel";
 import { originAllowed, parseList, parsePorts } from "./validate";
@@ -30,16 +32,14 @@ export default {
     }
 
     const clientKey = await ipKey(request.headers.get("CF-Connecting-IP") ?? "", env.IP_SALT);
-    if (env.TUNNEL_RL) {
-      const { success } = await env.TUNNEL_RL.limit({ key: clientKey }).catch(() => ({ success: true }));
-      if (!success) return text("rate_limited\n", 429);
-    }
+    const rl = env.TUNNEL_RL;
+    if (rl && !(await firstGate(() => rl.limit({ key: clientKey })))) return text("rate_limited\n", 429);
 
     const [client, server] = Object.values(new WebSocketPair());
     startTunnel(server, {
       env,
       limits: readLimits(env),
-      policy: { ports: parsePorts(env.ALLOWED_PORTS), hosts: parseList(env.ALLOWED_HOSTS) },
+      policy: { ports: parsePorts(env.ALLOWED_PORTS), hosts: allowedHosts(env.ALLOWED_HOSTS) },
       clientKey,
       waitUntil: (p) => ctx.waitUntil(p),
     });
