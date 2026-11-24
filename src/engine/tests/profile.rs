@@ -1,9 +1,9 @@
 //! The user's picture and profile out, the friend's profile and preferences in (codec: pictures, preferences).
 
-use base64::Engine as _;
-use base64::engine::general_purpose::STANDARD;
 use crate::types::model::Picture;
 use crate::types::{Event, Request, RequestKind};
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD;
 
 use super::T;
 use crate::chat::image::ImageData;

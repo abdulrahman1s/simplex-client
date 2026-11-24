@@ -14,9 +14,11 @@ fn ok_json() -> Vec<u8> {
 }
 
 fn text_json(t: &str) -> Vec<u8> {
-    msg(E::MsgNew(simplex_client::chat::container::MsgContainer::text(t)))
-        .to_json()
-        .unwrap()
+    msg(E::MsgNew(
+        simplex_client::chat::container::MsgContainer::text(t),
+    ))
+    .to_json()
+    .unwrap()
 }
 
 #[test]
@@ -154,9 +156,9 @@ fn compressed_blocks_that_together_exceed_the_element_limit_are_refused() {
 #[test]
 fn forward_depth_is_one_for_json_forwards() {
     let nested = |n: usize| -> ChatMessage {
-        let mut m = msg(E::MsgNew(simplex_client::chat::container::MsgContainer::text(
-            "hello",
-        )));
+        let mut m = msg(E::MsgNew(
+            simplex_client::chat::container::MsgContainer::text("hello"),
+        ));
         for _ in 0..n {
             let fwd = GrpMsgForward {
                 sender: FwdSender::Channel,

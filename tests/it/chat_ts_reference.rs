@@ -57,7 +57,9 @@ fn image_message_with_an_xftp_file_invitation_round_trips_exactly() {
     let E::MsgNew(c) = &m.event else { panic!() };
     assert_eq!(
         c.file,
-        Some(simplex_client::chat::file::FileInvitation::xftp("a.jpg", 1000))
+        Some(simplex_client::chat::file::FileInvitation::xftp(
+            "a.jpg", 1000
+        ))
     );
     assert_eq!(value(&m.to_json().unwrap()), value(j.as_bytes()));
 }

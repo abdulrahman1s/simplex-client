@@ -1,8 +1,8 @@
 //! Reading the records back at start, and writing them through the cache.
 
+use crate::types::model::ChatRef;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
-use crate::types::model::ChatRef;
 
 use super::agent_port::AgentPort;
 use super::machine::Engine;

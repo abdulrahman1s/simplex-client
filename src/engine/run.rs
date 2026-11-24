@@ -1,7 +1,7 @@
 //! The engine thread's loop: requests, SMP events, the writer and the agent's timers, one at a time.
 
-use crossbeam_channel::{Receiver, Select, Sender, never};
 use crate::types::{Event, Request};
+use crossbeam_channel::{Receiver, Select, Sender, never};
 
 use super::agent_port::AgentPort;
 use super::machine::{Engine, OUT_CAP};

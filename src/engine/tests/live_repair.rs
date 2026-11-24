@@ -2,9 +2,9 @@
 //! for the CLI): its ratchet re-synced (`/_sync … force=on`), then its queue switched (`/_switch`),
 //! each followed by messages both ways. Same servers and variables as `live_cli`.
 
-use serde_json::{Value, json};
 use crate::types::model::{ChatRef, MessageBody};
 use crate::types::{Event, Request};
+use serde_json::{Value, json};
 
 use super::Dir;
 use super::live_cli::{Native, cli_event, cli_send, connect, engine_msg, until, var};

@@ -383,9 +383,9 @@ fn the_twelve_preset_servers_parse_with_32_byte_key_hashes() {
 #[cfg(feature = "native")]
 #[test]
 fn a_server_that_never_answers_makes_connect_fail_instead_of_hang() {
+    use simplex_client::xftp::{ClientConfig, connect};
     use std::sync::mpsc;
     use std::time::Duration;
-    use simplex_client::xftp::{ClientConfig, connect};
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
     let (done, hold) = mpsc::channel::<()>();

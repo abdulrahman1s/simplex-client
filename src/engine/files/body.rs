@@ -3,10 +3,10 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use base64::Engine as _;
-use base64::engine::general_purpose::STANDARD;
 use crate::types::FileKind;
 use crate::types::model::{FileState, Media, MessageBody};
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD;
 
 use crate::chat::content::MsgContent;
 use crate::chat::image::ImageData;

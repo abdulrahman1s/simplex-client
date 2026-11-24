@@ -10,9 +10,9 @@ mod chat_batch;
 mod chat_compress;
 mod chat_golden_grp;
 mod chat_golden_msg;
-mod chat_ts_reference;
 mod chat_roundtrip;
 mod chat_support;
+mod chat_ts_reference;
 #[cfg(feature = "native")]
 mod client_live;
 mod crypto;

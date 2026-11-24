@@ -1,7 +1,7 @@
 //! The user's profile record (Types.hs `Profile` as the engine keeps it; the paper and status stay local).
 
-use serde::{Deserialize, Serialize};
 use crate::types::model::{ChatProfile, MyStatus, Picture};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UserRecord {

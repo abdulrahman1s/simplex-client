@@ -71,7 +71,9 @@ fn open(c: &Contact, user: Vec<u8>) -> Result<UserContactData, AgentError> {
     assert_eq!(fixed.link_conn_req, inv(CLI_CONTACT_FULL).binary());
     match link {
         simplex_client::agent::short_link::ConnLinkData::Contact { data, .. } => Ok(data),
-        simplex_client::agent::short_link::ConnLinkData::Invitation { .. } => panic!("invitation data"),
+        simplex_client::agent::short_link::ConnLinkData::Invitation { .. } => {
+            panic!("invitation data")
+        }
     }
 }
 

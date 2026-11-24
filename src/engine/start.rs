@@ -1,6 +1,6 @@
 //! The start: records back, the user made on a first start, Features, Ready, subscriptions, the list.
 
-use crate::types::{Event, Config, REACTION_EMOJI, features_with};
+use crate::types::{Config, Event, REACTION_EMOJI, features_with};
 
 use super::agent_port::AgentPort;
 use super::load::load;

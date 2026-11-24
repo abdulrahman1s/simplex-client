@@ -5,12 +5,12 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use crossbeam_channel::{Receiver, Select};
-use serde_json::{Value, json};
 use crate::types::model::{
     CallRequest, CallSignal, ChatMessage, ChatRef, FileState, MessageAuthor, MessageBody, Picture,
 };
-use crate::types::{Event, FileKind, Config, Request};
+use crate::types::{Config, Event, FileKind, Request};
+use crossbeam_channel::{Receiver, Select};
+use serde_json::{Value, json};
 
 use super::{Dir, KEY};
 use crate::agent::tests::cli::{Cli, connected, kind, received_text};
@@ -34,7 +34,12 @@ pub(super) struct Native {
 impl Native {
     pub(super) fn start(dir: &Dir) -> Native {
         let relays = vec![var("SIMPLEX_TEST_SMP"), var("SIMPLEX_TEST_XFTP")];
-        let hello = Config { dir: dir.0.clone(), key: KEY.into(), name: "alice".into(), relays };
+        let hello = Config {
+            dir: dir.0.clone(),
+            key: KEY.into(),
+            name: "alice".into(),
+            relays,
+        };
         let log = Log::new(std::io::stderr());
         let (agent, smp) = NativeAgent::new(&hello.relays, log.clone());
         let store = Store::open(&dir.0.join("chat.db"), KEY).unwrap();

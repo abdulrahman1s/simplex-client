@@ -39,12 +39,7 @@ pub fn json(event: ChatEvent) -> Vec<u8> {
     ChatMessage::new(event).unwrap().to_json().unwrap()
 }
 
-pub fn from_host(
-    t: &mut T,
-    host: &ConnId,
-    msg_id: i64,
-    body: Vec<u8>,
-) -> Vec<crate::types::Event> {
+pub fn from_host(t: &mut T, host: &ConnId, msg_id: i64, body: Vec<u8>) -> Vec<crate::types::Event> {
     t.agent(AgentEvent::Msg {
         conn: *host,
         msg_id,

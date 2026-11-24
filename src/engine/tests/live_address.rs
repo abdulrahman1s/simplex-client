@@ -1,9 +1,9 @@
 //! Addresses against the official CLI 7.1.4: each side's address used by the other, and a deleted
 //! address that stops working. Same servers and variables as `live_cli`.
 
-use serde_json::Value;
 use crate::types::model::{ChatRef, MessageAuthor, MessageBody};
 use crate::types::{Event, Request};
+use serde_json::Value;
 
 use super::Dir;
 use super::live_cli::{Native, engine_msg, until, var};

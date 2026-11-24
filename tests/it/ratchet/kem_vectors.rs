@@ -1,12 +1,12 @@
 //! sntrup761 vectors made by simplexmq's C (the pinned reference sources, simplex-chat v7.1.4 and simplexmq fdbcb24d): the Rust KEM and the ratchet agree with it.
 use crate::hex::unhex;
-use std::collections::HashMap;
 use simplex_client::crypto::{Alg, KeyPair};
 use simplex_client::ratchet::{
     CURRENT_E2E_VERSION, E2eParams, KemCiphertext, KemKeyPair, KemParams, KemPublicKey,
     KemSecretKey, KemSharedSecret, PqSupport, PrivKem, PrivParams, Ratchet, RatchetVersions,
     kem_decapsulate, pq_x3dh_rcv, pq_x3dh_snd,
 };
+use std::collections::HashMap;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_test::wasm_bindgen_test as test;
 

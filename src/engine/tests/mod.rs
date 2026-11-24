@@ -37,7 +37,7 @@ mod streams;
 use std::path::PathBuf;
 
 use crate::types::model::ChatMessage;
-use crate::types::{Event, Config, Request};
+use crate::types::{Config, Event, Request};
 
 use super::agent_port::{AgentEvent, ConnId};
 use super::clock::FakeClock;
@@ -63,7 +63,12 @@ impl Dir {
     }
 
     pub fn hello(&self, name: &str) -> Config {
-        Config { dir: self.0.clone(), key: KEY.into(), name: name.into(), relays: Vec::new() }
+        Config {
+            dir: self.0.clone(),
+            key: KEY.into(),
+            name: name.into(),
+            relays: Vec::new(),
+        }
     }
 }
 

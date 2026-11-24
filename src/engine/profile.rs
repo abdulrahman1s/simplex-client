@@ -1,8 +1,8 @@
 //! Profiles between the user's record, `x.info` and the page (Types.hs `Profile`, `userProfileDirect`).
 
+use crate::types::model::Picture;
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
-use crate::types::model::Picture;
 
 use super::records::UserRecord;
 use crate::chat::compress::compress_to_limit;

@@ -4,9 +4,9 @@
 
 use std::time::Duration;
 
-use serde_json::{Value, json};
 use crate::types::model::{ChatRef, Membership, MessageAuthor, MessageBody};
 use crate::types::{Event, Request};
+use serde_json::{Value, json};
 
 use super::Dir;
 use super::live_cli::{Native, engine_msg, var};

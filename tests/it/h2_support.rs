@@ -4,7 +4,9 @@ use std::io::{self, Read, Write};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
-use simplex_client::h2::frames::{CLIENT_PREFACE, FrameHeader, HEADER_LEN, encode_frame, parse_header};
+use simplex_client::h2::frames::{
+    CLIENT_PREFACE, FrameHeader, HEADER_LEN, encode_frame, parse_header,
+};
 
 #[derive(Default)]
 struct State {

@@ -32,6 +32,12 @@ fn messages_have_the_padded_sizes_of_their_pq_support_and_flow_both_ways() {
 
 #[test]
 fn the_header_is_padded_to_88_without_pq_and_2310_with_it() {
-    assert_eq!(padded_header_len(simplex_client::ratchet::PqSupport::OFF), 88);
-    assert_eq!(padded_header_len(simplex_client::ratchet::PqSupport::ON), 2310);
+    assert_eq!(
+        padded_header_len(simplex_client::ratchet::PqSupport::OFF),
+        88
+    );
+    assert_eq!(
+        padded_header_len(simplex_client::ratchet::PqSupport::ON),
+        2310
+    );
 }

@@ -53,7 +53,7 @@ pub enum ChatNotice {
     },
     CodeChanged,
     /// The connection's queue moved (`RCESwitchQueue`, or `SCESwitchQueue` when the item is the
-    /// user's). `member`: in a group, who the user's own switch is with ("... for <name>").
+    /// user's). `member`: in a group, who the user's own switch is with ("... for \<name\>").
     AddressSwitch {
         phase: SwitchPhase,
         member: Option<String>,
