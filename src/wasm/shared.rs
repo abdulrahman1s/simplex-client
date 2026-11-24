@@ -20,6 +20,8 @@ pub(super) struct Shared {
     pub(super) requests: RefCell<VecDeque<Request>>,
     pub(super) handlers: RefCell<Handlers>,
     pub(super) timer: RefCell<Option<Timer>>,
+    /// Requests seen, for tests; `None` unless a test turns it on, emptied by each look.
+    pub(super) tap: RefCell<Option<Vec<Request>>>,
     /// A run is under way: a JS handler calling the client must not start another inside it.
     busy: Cell<bool>,
     again: Cell<bool>,
@@ -33,6 +35,7 @@ impl Shared {
             requests: RefCell::new(VecDeque::new()),
             handlers: RefCell::new(Handlers::default()),
             timer: RefCell::new(None),
+            tap: RefCell::new(None),
             busy: Cell::new(false),
             again: Cell::new(false),
         })
@@ -45,6 +48,9 @@ impl Shared {
     }
 
     pub(super) fn request(self: &Rc<Self>, request: Request) {
+        if let Some(seen) = self.tap.borrow_mut().as_mut() {
+            seen.push(request.clone());
+        }
         self.requests.borrow_mut().push_back(request);
         self.run();
     }
@@ -64,7 +70,7 @@ impl Shared {
                 Some(core) => core.run(inbox, requests),
                 None => Outcome::default(),
             };
-            outcome.deliver(&self.handlers);
+            outcome.deliver(self);
             if !self.again.get() {
                 break;
             }
@@ -81,13 +87,13 @@ impl Shared {
     }
 
     /// Ends the client: the network closes, waiting calls fail, the timer stops.
-    pub(super) fn close(&self) {
+    pub(super) fn close(self: &Rc<Self>) {
         let core = self.core.borrow_mut().take();
         if let Some(timer) = self.timer.borrow_mut().take() {
             timer.stop();
         }
         if let Some(core) = core {
-            core.close().deliver(&self.handlers);
+            core.close().deliver(self);
         }
         self.inbox.borrow_mut().clear();
         self.requests.borrow_mut().clear();

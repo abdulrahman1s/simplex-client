@@ -8,7 +8,7 @@
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use simplex_client::{ChatMessage, Client, Delivery, Event, Friend};
+use simplex_client::{Client, Delivery, Event, Friend, Message, types};
 
 const WAIT: Duration = Duration::from_secs(60);
 
@@ -52,11 +52,11 @@ fn wait<T>(c: &Client, what: &str, pick: impl Fn(&Event) -> Option<T>) -> T {
         let ev = c
             .next_event(left)
             .unwrap_or_else(|e| panic!("waiting for {what}: {e}"));
-        if let Event::Failed {
+        if let Event::Raw(types::Event::Failed {
             request,
             code,
             detail,
-        } = &ev
+        }) = &ev
         {
             panic!("{request:?} failed: {code} {detail}");
         }
@@ -68,24 +68,23 @@ fn wait<T>(c: &Client, what: &str, pick: impl Fn(&Event) -> Option<T>) -> T {
 
 fn ready_friend(c: &Client) -> Friend {
     wait(c, "a ready friend", |e| match e {
-        Event::Chats { friends, .. } => friends.iter().find(|f| f.ready).cloned(),
+        Event::FriendAdd(f) => Some(f.clone()),
         _ => None,
     })
 }
 
-fn text(c: &Client, what: &str, text: &str) -> ChatMessage {
+fn text(c: &Client, what: &str, text: &str) -> Message {
     wait(c, what, |e| match e {
-        Event::Messages(ms) => ms.iter().find(|m| !m.mine() && m.text() == text).cloned(),
+        Event::Message(m) if !m.mine() && m.text() == text => Some(m.clone()),
         _ => None,
     })
 }
 
 fn delivered(c: &Client, text: &str) {
     wait(c, "a delivery receipt", |e| match e {
-        Event::Updated(ms) => ms
-            .iter()
-            .any(|m| m.text() == text && m.delivery == Delivery::Delivered)
-            .then_some(()),
+        Event::MessageUpdate(m) => {
+            (m.text() == text && m.info().delivery == Delivery::Delivered).then_some(())
+        }
         _ => None,
     });
 }
@@ -107,20 +106,21 @@ fn two_clients_connect_exchange_messages_with_receipts_and_survive_a_restart() {
     let link = a.create_invite().unwrap();
     b.connect(&link).unwrap();
     let (for_a, for_b) = (ready_friend(&a), ready_friend(&b));
-    assert_eq!((for_a.name.as_str(), for_b.name.as_str()), ("bob", "alice"));
+    assert_eq!((for_a.name(), for_b.name()), ("bob", "alice"));
 
-    a.send(for_a.chat(), "hello bob").unwrap();
+    for_a.send("hello bob").unwrap();
     let got = text(&b, "alice's text", "hello bob");
     delivered(&a, "hello bob");
-    b.reply(&got, "hi alice").unwrap();
+    got.reply("hi alice").unwrap();
     text(&a, "bob's reply", "hi alice");
 
     close(b);
     let b = start(&dir_b, "bob");
-    a.send(for_a.chat(), "while you restarted").unwrap();
+    for_a.send("while you restarted").unwrap();
     text(&b, "the text after the restart", "while you restarted");
     delivered(&a, "while you restarted");
-    b.send(for_b.chat(), "welcome back").unwrap();
+    let for_b = b.friend(for_b.id()).unwrap();
+    for_b.send("welcome back").unwrap();
     text(&a, "bob's text after the restart", "welcome back");
 
     close(a);

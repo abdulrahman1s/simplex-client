@@ -21,7 +21,7 @@ All notable changes to this project are documented here. The format follows
 - The full client on `wasm32-unknown-unknown`: a JS `Client` (`Client.start`, named events,
   Promise-returning calls) on a single-threaded runtime, reaching relays through a WebSocket
   byte tunnel with TLS inside wasm; `examples/browser` is a minimal chat page.
-- The same build on Node.js 22+, over direct TCP with no tunnel; a `simplex-client` npm
+- The same build on Node.js 22+ and Bun, over direct TCP with no tunnel; a `simplex-client` npm
   package (built by `scripts/build-js.sh`, not published) and `examples/node/bot.mjs`.
 - `store`: an in-memory backend beside SQLite, and `export_snapshot`/`open_snapshot` for a
   sealed, versioned snapshot of either.
@@ -31,6 +31,26 @@ All notable changes to this project are documented here. The format follows
 - The preset relays in use are checked like own relays when the config names none.
 - Chat notices for a peer's address switch and for ratchet re-syncs
   (`ChatNotice::AddressSwitch`, `ChatNotice::RatchetSync`).
+- The JS package runs on Bun too; CI runs the JS tests on Node.js and Bun.
+- Objects to act on: `Message` (`reply`, `react`, `edit`, `delete`, `author`, `chat`),
+  `FriendRequest` (`accept`, `reject`), `Friend` (`send`, `remove`, `history`, `show_code`),
+  `Group` (`send`, `add_member`, `leave`, `members`), `GroupInvite` and `Member`, in Rust and
+  in JS. The client keeps the chat list: `friend(id)`, `friends()`, `groups()`, and
+  `create_group` returns the new `Group` (JS: `client.friends`, `client.groups`,
+  `createGroup`).
+
+### Changed
+
+- **Breaking:** `simplex_client::Event` is now the high-level event: `Ready`, `Message`,
+  `MessageUpdate`, `Request`, `FriendAdd`, `FriendRemove`, `GroupAdd`, `GroupRemove`,
+  `GroupInvite`, `MemberAdd`, `Offline` and `Raw` for the rest. The engine's events stay at
+  `simplex_client::types::Event`. `simplex_client::Friend` is now the object; the chat
+  list's record is `types::model::Friend`.
+- **Breaking (JS):** events carry objects and are named `ready`, `message`, `messageUpdate`,
+  `request`, `friendAdd`, `friendRemove`, `groupAdd`, `groupRemove`, `groupInvite`,
+  `memberAdd`, `offline`, `online`, `change` and `raw` (was `event`); `chats` is gone. The
+  client's id-taking methods (`send`, `reply`, `accept`, `members`, …) moved onto the
+  objects, every method returns a Promise, `profile()` is the `user` getter, and `once` is new.
 
 ### Fixed
 

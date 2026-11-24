@@ -1,22 +1,26 @@
-//! The `Client` class JS gets: start, events, save, close, and the plumbing every method uses.
+//! The `Client` class JS gets: start, events, the escape hatch, save and close.
 use std::rc::Rc;
 
-use serde_json::json;
 use wasm_bindgen::prelude::*;
 
-use super::clock::JsClock;
-use super::convert::{error, from_js, to_js};
+use super::convert::{closed, error, from_js, plain, settled};
 use super::options::Options;
 use super::runtime::Core;
 use super::shared::Shared;
 use super::timer::Timer;
-use super::waiters::Want;
-use crate::engine::Clock;
 use crate::store::StoreError;
-use crate::types::Request;
 
-/// A running client in this tab. Every method runs to completion on this thread; methods that
-/// wait for the engine's answer return Promises, which reject with `{code, detail}`.
+#[wasm_bindgen(typescript_custom_section)]
+const EVENTS: &str = r#"
+/** What `on`, `once` and `off` take: each event and what its handler gets. */
+export type ClientEvent =
+  | "ready" | "message" | "messageUpdate" | "request"
+  | "friendAdd" | "friendRemove" | "groupAdd" | "groupRemove" | "groupInvite"
+  | "memberAdd" | "offline" | "online" | "change" | "raw";
+"#;
+
+/// A running client in this tab or process. Methods return Promises that reject with
+/// `{code, detail}`; the objects events carry (`Message`, `Friend`, …) act through it.
 #[wasm_bindgen]
 pub struct Client {
     pub(super) shared: Rc<Shared>,
@@ -33,14 +37,11 @@ fn store_error(e: &StoreError) -> JsValue {
     error(code, e)
 }
 
-fn closed() -> JsValue {
-    error("closed", "the client is closed")
-}
-
 #[wasm_bindgen]
 impl Client {
     /// Opens the store (empty, or from `options.snapshot`) and starts the engine. Relays are
-    /// dialled through `options.tunnel` as the engine needs them.
+    /// dialled through `options.tunnel`, or over TCP on Node.js and Bun.
+    #[wasm_bindgen(unchecked_return_type = "Promise<Client>")]
     pub fn start(options: JsValue) -> js_sys::Promise {
         match Self::open(&options) {
             Ok(client) => js_sys::Promise::resolve(&JsValue::from(client)),
@@ -48,29 +49,55 @@ impl Client {
         }
     }
 
-    /// Calls `handler` for each `name` event: `event` (every engine event), `message`,
-    /// `request`, `ready`, `offline`, `chats`, and `change` when the store changed.
-    pub fn on(&self, name: &str, handler: js_sys::Function) {
-        self.shared.handlers.borrow_mut().add(name, handler);
+    /// Calls `handler` for each `name` event: `ready` (the profile), `message` and
+    /// `messageUpdate` (a `Message`), `request` (a `FriendRequest`), `friendAdd` and
+    /// `friendRemove` (a `Friend`), `groupAdd` and `groupRemove` (a `Group`), `groupInvite`
+    /// (a `GroupInvite`), `memberAdd` (a `Member`), `offline`, `online`, `change` (the store
+    /// changed: save it) and `raw` (every engine event, as JSON).
+    pub fn on(
+        &self,
+        #[wasm_bindgen(unchecked_param_type = "ClientEvent")] name: &str,
+        handler: js_sys::Function,
+    ) {
+        self.shared.handlers.borrow_mut().add(name, handler, false);
     }
 
-    pub fn off(&self, name: &str, handler: &js_sys::Function) {
+    pub fn off(
+        &self,
+        #[wasm_bindgen(unchecked_param_type = "ClientEvent")] name: &str,
+        handler: &js_sys::Function,
+    ) {
         self.shared.handlers.borrow_mut().remove(name, handler);
     }
 
+    /// The next `name` event: `handler`, if given, runs for it once, and the promise
+    /// resolves with what it carries.
+    #[wasm_bindgen(unchecked_return_type = "Promise<any>")]
+    pub fn once(
+        &self,
+        #[wasm_bindgen(unchecked_param_type = "ClientEvent")] name: &str,
+        handler: Option<js_sys::Function>,
+    ) -> js_sys::Promise {
+        let mut handlers = self.shared.handlers.borrow_mut();
+        if let Some(h) = handler {
+            handlers.add(name, h, true);
+        }
+        js_sys::Promise::new(&mut |resolve, _| handlers.add(name, resolve, true))
+    }
+
     /// Sends any request as the engine's serde JSON (`{t: "send", c: {…}}`); the escape hatch
-    /// for everything without its own method.
-    pub fn request(&self, request: JsValue) -> Result<(), JsValue> {
-        let r: Request = serde_json::from_value(from_js(&request))
-            .map_err(|e| error("bad_argument", format!("not a request: {e}")))?;
-        self.tell(r)
+    /// for everything without its own method. What it causes arrives as events.
+    #[wasm_bindgen(unchecked_return_type = "Promise<void>")]
+    pub fn request(&self, request: JsValue) -> js_sys::Promise {
+        let r = serde_json::from_value(from_js(&request))
+            .map_err(|e| error("bad_argument", format!("not a request: {e}")));
+        settled(r.and_then(|r| self.shared.tell(r)))
     }
 
     /// The user's profile as the engine last reported it.
-    pub fn profile(&self) -> JsValue {
-        let core = self.shared.core.borrow();
-        let p = core.as_ref().and_then(|c| c.sugar.profile.as_ref());
-        p.map_or(JsValue::NULL, |p| to_js(&json!(p)))
+    #[wasm_bindgen(getter)]
+    pub fn user(&self) -> JsValue {
+        self.shared.profile().map_or(JsValue::NULL, |p| plain(&p))
     }
 
     /// The whole store, sealed under the key, for `Client.start({snapshot})` later.
@@ -106,39 +133,5 @@ impl Client {
         timer.arm(0);
         *shared.timer.borrow_mut() = Some(timer);
         Ok(Client { shared })
-    }
-
-    pub(super) fn tell(&self, r: Request) -> Result<(), JsValue> {
-        if self.shared.core.borrow().is_none() {
-            return Err(closed());
-        }
-        self.shared.request(r);
-        Ok(())
-    }
-
-    /// Sends `r`; the promise settles with the engine's answer to `want`, or a timeout.
-    pub(super) fn ask(&self, want: Want, r: Request) -> js_sys::Promise {
-        let mut parts = None;
-        let promise = js_sys::Promise::new(&mut |resolve, reject| parts = Some((resolve, reject)));
-        let Some(parts) = parts else {
-            return js_sys::Promise::reject(&closed());
-        };
-        let added = self.shared.core.borrow_mut().as_mut().map(|core| {
-            let deadline = JsClock.wall_ms().saturating_add(core.timeout_ms);
-            core.waiters.add(want, parts, deadline);
-        });
-        if added.is_none() {
-            return js_sys::Promise::reject(&closed());
-        }
-        self.shared.request(r);
-        promise
-    }
-
-    pub(super) fn next_tag(&self) -> u64 {
-        let mut core = self.shared.core.borrow_mut();
-        core.as_mut().map_or(0, |c| {
-            c.next_tag += 1;
-            c.next_tag
-        })
     }
 }

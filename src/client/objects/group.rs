@@ -1,0 +1,73 @@
+//! A group: write to it, invite friends, list members, leave.
+
+use super::{Friend, Member, Message};
+use crate::client::{Client, Result};
+use crate::types::model::{ChatGroup, ChatRef};
+
+#[derive(Clone, Debug)]
+pub struct Group {
+    client: Client,
+    info: ChatGroup,
+}
+
+impl Group {
+    pub(in crate::client) const fn new(client: Client, info: ChatGroup) -> Self {
+        Self { client, info }
+    }
+
+    #[must_use]
+    pub const fn id(&self) -> i64 {
+        self.info.id
+    }
+
+    /// Empty when the chat list did not have this group yet.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.info.name
+    }
+
+    /// Everything the chat list says about this group.
+    #[must_use]
+    pub const fn info(&self) -> &ChatGroup {
+        &self.info
+    }
+
+    #[must_use]
+    pub const fn chat(&self) -> ChatRef {
+        self.info.chat()
+    }
+
+    pub(super) const fn client(&self) -> &Client {
+        &self.client
+    }
+
+    pub fn send(&self, text: &str) -> Result<()> {
+        self.client.send(self.chat(), text)
+    }
+
+    /// Invites a friend; the user must own the group.
+    pub fn add_member(&self, friend: &Friend) -> Result<()> {
+        self.client.add_member(self.id(), friend.id())
+    }
+
+    pub fn leave(&self) -> Result<()> {
+        self.client.leave_group(self.id())
+    }
+
+    /// The user first, then everyone still in the group.
+    pub fn members(&self) -> Result<Vec<Member>> {
+        let list = self.client.members(self.id())?;
+        let id = self.id();
+        let member = |m| Member::listed(self.client.clone(), id, m);
+        Ok(list.into_iter().map(member).collect())
+    }
+
+    /// The newest `count` messages, oldest first.
+    pub fn history(&self, count: u32) -> Result<Vec<Message>> {
+        Message::page(&self.client, self.chat(), count)
+    }
+
+    pub fn mark_read(&self) -> Result<()> {
+        self.client.mark_read(self.chat())
+    }
+}

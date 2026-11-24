@@ -9,6 +9,14 @@ use crossbeam_channel::{RecvTimeoutError, Sender, bounded};
 use super::answers::answers;
 use super::error::{Error, Result};
 use crate::types::Event;
+use crate::types::model::ChatGroup;
+
+/// What a waiting call gets: the engine's event, or a group the chat list shows as new.
+#[derive(Debug)]
+pub(super) enum Answer {
+    Event(Event),
+    Group(ChatGroup),
+}
 
 /// What a waiting call takes as its answer.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -18,9 +26,11 @@ pub(super) enum Want {
     History(u64),
     Members(i64),
     Code(i64),
+    /// The next group the user made.
+    NewGroup,
 }
 
-const KINDS: usize = 5;
+const KINDS: usize = 6;
 
 impl Want {
     pub(super) const fn slot(self) -> usize {
@@ -30,11 +40,12 @@ impl Want {
             Self::History(_) => 2,
             Self::Members(_) => 3,
             Self::Code(_) => 4,
+            Self::NewGroup => 5,
         }
     }
 }
 
-type Slot = Option<(Want, Sender<Result<Event>>)>;
+type Slot = Option<(Want, Sender<Result<Answer>>)>;
 
 /// At most one entry per kind; an entry leaves when answered, timed out or closed.
 #[derive(Default)]
@@ -50,7 +61,7 @@ impl Waiters {
         want: Want,
         timeout: Duration,
         send: impl FnOnce() -> Result<()>,
-    ) -> Result<Event> {
+    ) -> Result<Answer> {
         let _turn = self.turns[want.slot()]
             .lock()
             .unwrap_or_else(PoisonError::into_inner);
@@ -96,11 +107,20 @@ impl Waiters {
                 code,
                 detail,
             }),
-            other => Ok(other),
+            other => Ok(Answer::Event(other)),
         };
         // The caller may have just timed out; its answer then has nowhere to go.
         let _ = tx.send(answer);
         None
+    }
+
+    /// Hands a group the user owns, new in the chat list, to the `create_group` waiting.
+    pub(super) fn created(&self, group: &ChatGroup) {
+        let taken = self.slots()[Want::NewGroup.slot()].take();
+        if let Some((_, tx)) = taken {
+            // The caller may have just timed out; the group then shows in events only.
+            let _ = tx.send(Ok(Answer::Group(group.clone())));
+        }
     }
 
     /// Every waiting call ends with `Closed`.

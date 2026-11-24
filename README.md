@@ -17,7 +17,8 @@ small, plain API.
 - Calls (signalling and frame crypto)
 - SQLite store sealed with a passphrase
 - A threaded engine and a high-level `Client`; no async runtime
-- A `wasm32-unknown-unknown` build of the whole client, reaching relays through a WebSocket tunnel
+- A `wasm32-unknown-unknown` build of the whole client for browsers, Node.js and Bun, reaching
+  relays through a WebSocket tunnel or direct TCP
 - Low-level modules stay public if you need to go below `Client`
 
 ## Why this library
@@ -31,7 +32,7 @@ natively instead.
 |---|---|---|
 | Native, x86_64 Linux | `libsimplex` + GHC runtime: **238 MB** · `simplex-chat` CLI: **87 MB** | a whole echo bot, SQLite included: **8.4 MB** (stripped release) |
 | Browser | no | **4.4 MB** wasm, **1.3 MB** gzipped |
-| Node.js | a CLI process beside yours, over a local WebSocket | in-process wasm, direct TCP |
+| Node.js and Bun | a CLI process beside yours, over a local WebSocket | in-process wasm, direct TCP |
 | Language | Haskell, with a C FFI or a JSON-over-WebSocket API | Rust crate or a JS class |
 | Runtime | GHC runtime and its threads | plain threads natively, one event loop in wasm; no async runtime |
 | Memory safety | — | `#![forbid(unsafe_code)]` |
@@ -41,7 +42,7 @@ What that buys you:
 - **One dependency, one process.** No second binary to ship, start, supervise and talk to,
   and no JSON protocol between your code and the client.
 - **It runs where the official core can't:** browsers and edge runtimes, through
-  wasm32. On Node it opens relay connections itself.
+  wasm32. On Node.js and Bun it opens relay connections itself.
 - **Small enough to bundle.** A bot, a desktop app or a web page carries the client in a few
   megabytes, and a sandboxed process needs no Haskell runtime.
 - **A small API.** Start a `Client`, read its events, call `send`, `reply` and `accept`.
@@ -76,12 +77,18 @@ An echo bot:
 use simplex_client::{Client, Event};
 
 fn main() -> simplex_client::Result<()> {
-    let client = Client::builder("./bot-data").name("Echo Bot").key("store passphrase").start()?;
+    let client = Client::builder("./bot-data")
+        .name("Echo Bot")
+        .key("store passphrase")
+        .start()?;
     println!("my address: {}", client.create_address()?);
     for event in client.events() {
         match event {
-            Event::Messages(msgs) => for m in msgs { if !m.mine() { client.reply(&m, &m.text())?; } }
-            Event::Chats { requests, .. } => for r in requests { client.accept(r.id)?; }
+            Event::Request(request) => request.accept()?,
+            Event::FriendAdd(friend) => friend.send("Hi! I echo what you write.")?,
+            Event::Message(msg) if !msg.mine() && !msg.text().is_empty() => {
+                msg.reply(msg.text())?;
+            }
             _ => {}
         }
     }
@@ -89,21 +96,29 @@ fn main() -> simplex_client::Result<()> {
 }
 ```
 
-Requests on `Client`: `send`, `reply`, `edit`, `delete`, `react`, `accept`, `reject`,
-`connect`, `create_invite`, `create_address`, `new_group`, `add_member`, `join_group`,
-`leave_group`, `send_file`, `receive_file`, `history`, `mark_read`. `request(Request)` is the
-escape hatch for anything else.
+Events carry objects that act on their own: `Message` (`reply`, `react`, `edit`, `delete`,
+`author()`, `chat()`), `FriendRequest` (`accept`, `reject`), `Friend` (`send`, `remove`,
+`history`, `show_code`) and `Group` (`send`, `add_member`, `leave`, `members`). The client
+keeps the chat list: `client.friend(id)`, `client.friends()`, `client.groups()`, and
+`client.create_group(name)` returns the new `Group`. `request(Request)` is the escape hatch
+for anything else.
 
 ### Events
 
 | Event | Fires when |
 |---|---|
-| `Event::Messages` | new messages arrive, or your own are echoed back |
-| `Event::Chats` | contacts, groups or incoming contact requests change |
-| `Event::Files` | a file transfer starts, progresses, finishes or fails |
-| `Event::Calls` | a call is offered, answered or ended |
+| `Ready(profile)` | the engine has started |
+| `Message(message)` | a message arrives, or your own is sent |
+| `MessageUpdate(message)` | a message is edited, deleted, reacted to, delivered, or its file moves |
+| `Request(request)` | someone asks to connect through your address |
+| `FriendAdd(friend)` / `FriendRemove(friend)` | a friend finishes connecting / is removed |
+| `GroupAdd(group)` / `GroupRemove(group)` | you make or join a group / leave it |
+| `GroupInvite(invite)` | you are invited into a group |
+| `MemberAdd(member)` | someone joins one of your groups |
+| `Offline(bool)` | no relay is reachable, or one is again |
+| `Raw(event)` | anything else the engine reports, and every chat list |
 
-The exact variants are listed in the crate docs (`cargo doc --open`).
+The engine's own events are `simplex_client::types::Event` (`cargo doc --open`).
 
 ## WebAssembly
 
@@ -136,29 +151,34 @@ const client = await Client.start({
   tunnel: "wss://simplex-tunnel.citizen6775.workers.dev/v1",
 });
 
-client.on("request", (request) => client.accept(request.id));
+client.on("request", (request) => request.accept());
 
-client.on("message", (message) => {
+client.on("message", async (message) => {
   if (message.mine) return;
-  client.reply(message, `You said: ${message.text}`);
+  await message.reply(`You said: ${message.text}`);
 });
 
 console.log("My address:", await client.createAddress());
-
-// Sealed store bytes. Pass them back as `snapshot` to pick up where you left off.
-const snapshot = client.save();
 ```
+
+`client.save()` returns the sealed store; pass it back as `snapshot` to pick up where you left
+off. JS events are named in camelCase: `ready`, `message`, `messageUpdate`, `request`,
+`friendAdd`, `friendRemove`, `groupAdd`, `groupRemove`, `groupInvite`, `memberAdd`, `offline`,
+`online`, `change` (save now) and `raw` (every engine event). `client.friends` and
+`client.groups` are `Map`s of `Friend` and `Group`, and `await client.createGroup(name)` gives
+a `Group`.
 
 [`examples/browser`](examples/browser) is a minimal chat page with the full JS API.
 
-### Node.js
+### Node.js and Bun
 
-The same build runs on Node.js 22+. There no tunnel is needed: the client dials relays over
-direct TCP (`node:net`), and TLS still runs inside wasm. Install from git (building needs
-Rust with the `wasm32-unknown-unknown` target and `wasm-bindgen-cli` 0.2.130):
+The same build runs on Node.js 22+ and Bun. There no tunnel is needed: the client dials
+relays over direct TCP (`node:net`), and TLS still runs inside wasm. Install from git
+(building needs Rust with the `wasm32-unknown-unknown` target and `wasm-bindgen-cli` 0.2.130):
 
 ```sh
 npm install github:abdulrahman1s/simplex-client
+bun add github:abdulrahman1s/simplex-client
 ```
 
 ```js
@@ -173,21 +193,21 @@ const bot = await Client.start({
   snapshot: existsSync(SNAPSHOT) ? readFileSync(SNAPSHOT) : undefined,
 });
 
-bot.on("request", (request) => bot.accept(request.id));
+bot.on("request", (request) => request.accept());
+bot.on("friendAdd", (friend) => friend.send("Hi! I echo what you write."));
 
-bot.on("message", (message) => {
+bot.on("message", async (message) => {
   if (message.mine || !message.text) return;
-  bot.reply(message, message.text);
+  await message.reply(message.text);
 });
 
 bot.on("change", () => writeFileSync(SNAPSHOT, bot.save()));
-
-console.log("My address:", await bot.createAddress());
 ```
 
 `transport: "tcp"` picks direct TCP explicitly; a `tunnel` URL uses the WebSocket tunnel
 instead. `scripts/build-js.sh` builds both packages (`pkg/web` and `pkg/node`), and
-[`examples/node/bot.mjs`](examples/node/bot.mjs) is the bot above with a safer save.
+[`examples/node/bot.mjs`](examples/node/bot.mjs) is the bot above with a safer save; run it
+with `node examples/node/bot.mjs` or `bun examples/node/bot.mjs`.
 
 ## Browser tunnel (Cloudflare Worker)
 

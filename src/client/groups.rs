@@ -2,7 +2,7 @@
 
 use super::error::{Result, unexpected};
 use super::handle::Client;
-use super::waiters::Want;
+use super::waiters::{Answer, Want};
 use crate::types::model::GroupMember;
 use crate::types::{Event, Request, RequestKind};
 
@@ -28,7 +28,7 @@ impl Client {
 
     /// The user first, then everyone still in the group.
     pub fn members(&self, group: i64) -> Result<Vec<GroupMember>> {
-        let Event::Members { members, .. } =
+        let Answer::Event(Event::Members { members, .. }) =
             self.ask(Want::Members(group), Request::Members(group))?
         else {
             return Err(unexpected(RequestKind::Members));

@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 extern "C" {
-    /// The global one, so it works in a page, a worker and node alike. Node returns an object.
+    /// The global one, so it works in a page, a worker, Node.js and Bun alike. Node.js returns an object.
     #[wasm_bindgen(js_name = setTimeout)]
     fn set_timeout(f: &js_sys::Function, ms: f64) -> JsValue;
     #[wasm_bindgen(js_name = clearTimeout)]

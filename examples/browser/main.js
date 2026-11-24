@@ -1,6 +1,6 @@
 // A minimal chat page: your address, requests to accept, friends, messages and a send box.
 // The store is saved to IndexedDB, sealed under the passphrase, a moment after each change.
-import init, { Client } from "./pkg/simplex_client.js";
+import init, { Client, Friend } from "./pkg/simplex_client.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -34,7 +34,7 @@ async function store(bytes) {
 }
 
 let client;
-let current; // the friend whose messages are shown
+let current; // the Friend whose messages are shown
 let saveTimer;
 
 function saveSoon() {
@@ -42,46 +42,47 @@ function saveSoon() {
   saveTimer = setTimeout(() => store(client.save()).catch(console.error), 1000);
 }
 
-function showMessage(m) {
-  if (!current || m.chat.t !== "direct" || m.chat.c !== current) return;
+function showMessage(message) {
+  if (!current || message.chat.id !== current.id || !(message.chat instanceof Friend)) return;
   const p = document.createElement("p");
-  p.className = m.mine ? "mine" : "";
+  p.className = message.mine ? "mine" : "";
   // Notices (a friend connected, a call ended) carry no text; show their kind instead.
-  p.textContent = m.text || `(${m.body.t})`;
+  p.textContent = message.text || `(${message.raw.body.t})`;
   $("messages").append(p);
   $("messages").scrollTop = $("messages").scrollHeight;
 }
 
 async function open(friend) {
-  current = friend.id;
+  current = friend;
   for (const b of $("friends").children) b.classList.toggle("on", b.dataset.id == friend.id);
   $("messages").replaceChildren();
-  const chat = { friend: friend.id };
-  for (const m of await client.history(chat)) showMessage(m);
-  client.markRead(chat);
+  for (const message of await friend.history()) showMessage(message);
+  friend.markRead();
 }
 
-function showChats({ friends }) {
-  $("friends").replaceChildren(
-    ...friends.map((f) => {
-      const b = document.createElement("button");
-      b.dataset.id = f.id;
-      b.textContent = f.ready ? f.name : `${f.name} (connecting…)`;
-      b.classList.toggle("on", f.id === current);
-      b.onclick = () => open(f);
-      return b;
-    }),
-  );
+function showFriends() {
+  const buttons = [...client.friends.values()].map((friend) => {
+    const b = document.createElement("button");
+    b.dataset.id = friend.id;
+    b.textContent = friend.ready ? friend.name : `${friend.name} (connecting…)`;
+    b.classList.toggle("on", friend.id === current?.id);
+    b.onclick = () => open(friend);
+    return b;
+  });
+  $("friends").replaceChildren(...buttons);
 }
 
-function showRequest(req) {
+function showRequest(request) {
   const row = document.createElement("div");
   row.className = "row";
-  row.append(`${req.name} wants to connect `);
-  for (const [label, act] of [["Accept", "accept"], ["Reject", "reject"]]) {
+  row.append(`${request.name} wants to connect `);
+  for (const [label, answer] of [["Accept", "accept"], ["Reject", "reject"]]) {
     const b = document.createElement("button");
     b.textContent = label;
-    b.onclick = () => { client[act](req.id); row.remove(); };
+    b.onclick = () => {
+      request[answer]();
+      row.remove();
+    };
     row.append(b);
   }
   $("requests").append(row);
@@ -107,11 +108,13 @@ async function start(e) {
   $("start").hidden = true;
   $("app").hidden = false;
   client.on("change", saveSoon);
-  client.on("ready", (p) => ($("status").textContent = `Signed in as ${p.name}.`));
-  client.on("offline", (off) => ($("status").textContent = off ? "Offline: no relay reachable." : "Online."));
-  client.on("chats", showChats);
+  client.on("ready", (me) => ($("status").textContent = `Signed in as ${me.name}.`));
+  client.on("offline", () => ($("status").textContent = "Offline: no relay reachable."));
+  client.on("online", () => ($("status").textContent = "Online."));
   client.on("request", showRequest);
   client.on("message", showMessage);
+  // The list changes when a friend is added, removed or finishes connecting.
+  client.on("raw", (event) => event.t === "chats" && showFriends());
   client.createAddress().then(
     (link) => ($("address").textContent = link),
     (err) => ($("address").textContent = `not made: ${err.detail}`),
@@ -129,7 +132,7 @@ $("connect").onsubmit = (e) => {
 };
 $("send").onsubmit = (e) => {
   e.preventDefault();
-  if (current && $("text").value) client.send({ friend: current }, $("text").value);
+  if (current && $("text").value) current.send($("text").value);
   $("text").value = "";
 };
 addEventListener("beforeunload", () => client && store(client.save()));

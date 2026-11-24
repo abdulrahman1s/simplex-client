@@ -1,4 +1,4 @@
-//! Direct TCP to a relay on Node through `node:net`: a few lines of JS behind the pool's pipe; TLS stays in wasm.
+//! Direct TCP to a relay on Node.js or Bun through `node:net`: a few lines of JS behind the pool's pipe; TLS stays in wasm.
 use std::rc::Weak;
 
 use wasm_bindgen::JsCast;
@@ -12,7 +12,7 @@ use crate::smp::{Dialer, Pipe, PipeId, PipeInput, SmpError};
 /// build that never dials TCP never loads `node:net`.
 const SHIM: &str = r#"
 const net = globalThis.process?.getBuiltinModule?.("node:net");
-if (!net) throw new Error("direct TCP needs Node.js 22 or newer");
+if (!net) throw new Error("direct TCP needs Node.js 22 or newer, or Bun");
 const s = net.connect({ host, port });
 s.setNoDelay(true);
 let done = false;
@@ -33,7 +33,7 @@ fn io(e: &JsValue) -> SmpError {
     SmpError::Io(msg.unwrap_or_else(|| "TCP failed".into()))
 }
 
-/// Dials each relay straight over TCP; only on Node.
+/// Dials each relay straight over TCP; only on Node.js and Bun.
 pub(super) struct TcpDialer {
     pub(super) shared: Weak<Shared>,
 }
