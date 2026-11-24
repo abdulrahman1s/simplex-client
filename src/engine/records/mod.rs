@@ -9,6 +9,7 @@ pub mod group;
 pub mod item;
 pub mod keys;
 pub mod member;
+pub mod pending;
 pub mod settings;
 pub mod user;
 
@@ -19,5 +20,6 @@ pub use friend::FriendRecord;
 pub use group::{GroupRecord, MemberStatus};
 pub use item::ItemRecord;
 pub use member::{MemberCategory, MemberRecord, MemberRelation};
+pub use pending::PendingMsg;
 pub use settings::SettingsRecord;
 pub use user::UserRecord;

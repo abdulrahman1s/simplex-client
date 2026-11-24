@@ -50,8 +50,9 @@ impl<A: AgentPort> Engine<A> {
         Ok(())
     }
 
-    /// The message with the file's invitation: to the friend, or to each member reachable
-    /// now. What was sent: (member, connection, agent message id); the member is 0 for a friend.
+    /// The message with the file's invitation: to the friend, or to each current member (kept
+    /// for those still connecting). What was sent now: (member, connection, agent message id);
+    /// the member is 0 for a friend. Only those get a description (`saveMemberFD`).
     pub(super) fn send_offer(
         &mut self,
         chat: ChatRef,

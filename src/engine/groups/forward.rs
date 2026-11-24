@@ -84,12 +84,14 @@ impl<A: AgentPort> Engine<A> {
         if !expected {
             return Err(dropped("x.grp.msg.forward: unexpected forwarder"));
         }
-        self.check_signature(group, author.id, signed)?;
+        let at = forward_time(fwd).unwrap_or_else(|| self.clock.wall_ms());
+        let signed = self.check_signature(group, author.id, signed, at)?;
         let ctx = GroupCtx {
             group,
             sender: forwarder,
             author: author.id,
             forwarded: true,
+            signed,
         };
         self.forwarded_event(ctx, fwd, msg)
     }

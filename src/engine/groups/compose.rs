@@ -1,4 +1,4 @@
-//! Send in a group: one item, the message to every member reachable now, with its quote and mentions (Commands.hs `sendGroupContentMessages_`; Internal.hs `prepareGroupMsg`, `getCIMentions`).
+//! Send in a group: one item, the message to every current member (kept for those still connecting), with its quote and mentions (Commands.hs `sendGroupContentMessages_`; Internal.hs `prepareGroupMsg`, `getCIMentions`).
 
 use crate::types::Event;
 use crate::types::model::{ChatRef, Mention, MessageAuthor, MessageBody, Quote};
@@ -20,9 +20,10 @@ use crate::engine::records::{GroupRecord, ItemRecord, keys};
 const MAX_SENT_MENTIONS: usize = 3;
 
 impl<A: AgentPort> Engine<A> {
-    /// Commands.hs `assertUserGroupRole`: the user is in the group with at least `min`.
+    /// Commands.hs `assertUserGroupRole`: the user is in the group with at least `min`; and,
+    /// as `getGroupRecipients` asks before any send, joined, not still joining.
     pub(crate) fn assert_my_role(g: &GroupRecord, min: &GroupMemberRole) -> Result<()> {
-        if !g.status.current() {
+        if !(g.status.current() && g.status.active()) {
             return Err(fail(
                 Code::RequestFailed,
                 "not an active member of the group",
@@ -113,7 +114,7 @@ impl<A: AgentPort> Engine<A> {
 
     /// `prepareGroupMsg` `quoteData`: a deleted item or a notice cannot be quoted; the quote
     /// names its author's member id (the user's own for the user's).
-    fn group_quote(&mut self, g: &GroupRecord, item: i64) -> Result<(QuotedMsg, Quote)> {
+    pub(crate) fn group_quote(&mut self, g: &GroupRecord, item: i64) -> Result<(QuotedMsg, Quote)> {
         let q = self
             .item(ChatRef::Group(g.id), item)?
             .filter(|q| q.body != MessageBody::Deleted)

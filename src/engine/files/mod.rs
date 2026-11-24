@@ -6,6 +6,7 @@ mod config;
 mod descr;
 mod done;
 mod forget;
+mod history;
 mod inbound;
 mod locate;
 mod offer;
@@ -22,8 +23,10 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 pub(crate) use body::edit_caption;
+pub(crate) use history::HistoryFile;
 pub(crate) use inbound::offer;
 pub use transfers::{FileDone, FileKey, Transfers};
+pub(crate) use uploaded::descr_parts;
 
 use crate::xftp::XftpServer;
 

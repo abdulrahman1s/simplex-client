@@ -71,6 +71,19 @@ impl MemberStatus {
         )
     }
 
+    /// `memberActive`: in the group with a working connection, or waiting for approval.
+    #[must_use]
+    pub const fn active(self) -> bool {
+        matches!(
+            self,
+            Self::PendingApproval
+                | Self::PendingReview
+                | Self::Connected
+                | Self::Complete
+                | Self::Creator
+        )
+    }
+
     /// `memberRemoved`: gone for good.
     #[must_use]
     pub const fn gone(self) -> bool {

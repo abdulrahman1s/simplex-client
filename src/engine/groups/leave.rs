@@ -40,8 +40,10 @@ impl<A: AgentPort> Engine<A> {
     }
 
     /// The agent's connection with the member goes, and the record forgets it
-    /// (`deleteMemberConnection`); a member nobody is connected with is left alone.
+    /// (`deleteMemberConnection`), and what waited for it; a member nobody is connected with is
+    /// left alone.
     pub(crate) fn drop_member_conn(&mut self, group: i64, member: i64) -> Result<()> {
+        self.drop_pending(group, member)?;
         let mut m = self.member(group, member)?;
         let Some(conn) = m.conn.take() else {
             return Ok(());
@@ -58,15 +60,10 @@ impl<A: AgentPort> Engine<A> {
         Ok(())
     }
 
-    /// `deleteGroupConnections`: every member's.
+    /// `deleteGroupConnections`: every member's, and what waited for any of them.
     pub(crate) fn drop_group_conns(&mut self, group: i64) -> Result<()> {
-        let with_conn: Vec<i64> = self
-            .state
-            .members_of(group)
-            .filter(|m| m.conn.is_some())
-            .map(|m| m.id)
-            .collect();
-        for member in with_conn {
+        let members: Vec<i64> = self.state.members_of(group).map(|m| m.id).collect();
+        for member in members {
             self.drop_member_conn(group, member)?;
         }
         Ok(())

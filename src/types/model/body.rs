@@ -64,6 +64,7 @@ pub enum ChatNotice {
         status: SyncStatus,
         member: Option<String>,
     },
+    BadSignature,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

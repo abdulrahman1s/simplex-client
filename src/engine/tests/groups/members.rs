@@ -6,6 +6,7 @@ use crate::types::{Event, Request};
 use super::members_support::{allowed, conn_info, invitations_made, link, notices, only, sent_on};
 use crate::chat::ChatEvent;
 use crate::chat::group::GroupMemberRole;
+use crate::chat::group_prefs::{FeatureEnabled, GroupFeature, GroupPreferences};
 use crate::chat::ids::MemberId;
 use crate::chat::profile::Profile;
 use crate::chat::version::VersionRange;
@@ -56,8 +57,16 @@ fn a_new_group_has_the_user_as_its_creator_and_owner_and_says_it_was_made() {
         (g.my_role, g.status),
         (GroupMemberRole::Owner, MemberStatus::Creator)
     );
-    // The old glue's profile: no preferences, so history and direct messages are off.
-    assert_eq!(g.profile.group_preferences, None);
+    // What `/g` makes: direct messages and history on, nothing else set.
+    let on = Some(GroupFeature::new(FeatureEnabled::On));
+    assert_eq!(
+        g.profile.group_preferences,
+        Some(GroupPreferences {
+            direct_messages: on.clone(),
+            history: on,
+            ..GroupPreferences::default()
+        })
+    );
     let groups = out.iter().find_map(|e| match e {
         Event::Chats { groups, .. } => Some(groups.clone()),
         _ => None,

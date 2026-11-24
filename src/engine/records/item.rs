@@ -1,9 +1,9 @@
 //! One chat item (Messages.hs `ChatItem`) in the store's items table; its row id is the item number.
 
-use serde::{Deserialize, Serialize};
 use crate::types::model::{
     ChatMessage, ChatRef, Delivery, Mention, MessageAuthor, MessageBody, Quote, Reaction,
 };
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ItemRecord {
@@ -21,6 +21,10 @@ pub struct ItemRecord {
     /// In a group, the author's member number; `None` for the user's own and in a direct chat.
     #[serde(default)]
     pub member: Option<i64>,
+    /// In a group, the author's signature on it verified (`MVSigned MSSVerified`): an edit or
+    /// deletion of it must verify too.
+    #[serde(default)]
+    pub verified: bool,
 }
 
 impl ItemRecord {
@@ -41,6 +45,7 @@ impl ItemRecord {
             mentions: Vec::new(),
             shared_id: None,
             member: None,
+            verified: false,
         }
     }
 

@@ -29,10 +29,16 @@ impl<A: AgentPort> Engine<A> {
             self.on_forwarded(group, sender, fwd, p.signed.as_ref(), p.message)?;
             return Ok(None);
         }
-        self.check_signature(group, sender, p.signed.as_ref())?;
+        // No broker time reaches the engine; a bad signature's item takes the arrival time.
+        let now = self.clock.wall_ms();
+        let signed = self.check_signature(group, sender, p.signed.as_ref(), now)?;
         self.refresh_member_range(group, sender, &p.message)?;
         let relay = self.relay_element(group, sender, &p);
-        self.on_group_event(GroupCtx::direct(group, sender), p.message)?;
+        let ctx = GroupCtx {
+            signed,
+            ..GroupCtx::direct(group, sender)
+        };
+        self.on_group_event(ctx, p.message)?;
         Ok(relay)
     }
 }

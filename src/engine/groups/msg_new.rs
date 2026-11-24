@@ -6,6 +6,7 @@ use crate::types::model::{ChatRef, MessageAuthor, MessageBody};
 use super::inbound::GroupCtx;
 use super::mention::unquote_mentions;
 use super::policy::{Feature, allowed, at_least};
+use super::verify::SigStatus;
 use crate::chat::container::{MsgContainer, MsgScope};
 use crate::chat::content::MsgContent;
 use crate::chat::group::GroupMemberRole;
@@ -96,6 +97,7 @@ impl<A: AgentPort> Engine<A> {
         let mut item = ItemRecord::new(author, body, at);
         item.shared_id = shared;
         item.member = Some(m.id);
+        item.verified = ctx.signed == Some(SigStatus::Verified);
         item.mentions = mentions;
         item.reply = c
             .quote
