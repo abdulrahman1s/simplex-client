@@ -16,7 +16,7 @@ fn to_js(value: &Value) -> Result<JsValue, JsError> {
     js_sys::JSON::parse(&value.to_string()).map_err(|_| JsError::new("not JSON"))
 }
 
-fn alg(name: &str) -> Result<Alg, JsError> {
+fn parse_alg(name: &str) -> Result<Alg, JsError> {
     match name.to_ascii_lowercase().as_str() {
         "ed25519" => Ok(Alg::Ed25519),
         "ed448" => Ok(Alg::Ed448),
@@ -103,8 +103,8 @@ pub struct Keys {
 
 /// A new key pair; `alg` is `ed25519`, `ed448`, `x25519` or `x448`.
 #[wasm_bindgen(js_name = generateKeyPair)]
-pub fn generate_key_pair(alg_name: &str) -> Result<Keys, JsError> {
-    let pair = KeyPair::generate(alg(alg_name)?).map_err(js_err)?;
+pub fn generate_key_pair(alg: &str) -> Result<Keys, JsError> {
+    let pair = KeyPair::generate(parse_alg(alg)?).map_err(js_err)?;
     Ok(Keys {
         public_key: pair.public.to_der(),
         private_key: pair.private.to_der().to_vec(),
@@ -113,16 +113,16 @@ pub fn generate_key_pair(alg_name: &str) -> Result<Keys, JsError> {
 
 /// Signs with an Ed25519 or Ed448 private key in PKCS#8 DER.
 #[wasm_bindgen]
-pub fn sign(private_key: &[u8], message: &[u8]) -> Result<Vec<u8>, JsError> {
-    let key = PrivateKey::from_der(private_key).map_err(js_err)?;
+pub fn sign(key: &[u8], message: &[u8]) -> Result<Vec<u8>, JsError> {
+    let key = PrivateKey::from_der(key).map_err(js_err)?;
     Ok(key.sign(message).map_err(js_err)?.as_bytes().to_vec())
 }
 
 /// Checks a signature against a public key in X.509 DER; false for any malformed input.
 #[wasm_bindgen]
 #[must_use]
-pub fn verify(public_key: &[u8], signature: &[u8], message: &[u8]) -> bool {
-    PublicKey::from_der(public_key).is_ok_and(|key| {
+pub fn verify(key: &[u8], signature: &[u8], message: &[u8]) -> bool {
+    PublicKey::from_der(key).is_ok_and(|key| {
         Signature::from_raw(key.alg(), signature).is_ok_and(|s| key.verify(&s, message))
     })
 }

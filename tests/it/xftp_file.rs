@@ -6,8 +6,9 @@ use std::sync::atomic::AtomicBool;
 use simplex_client::crypto::{CbNonce, SbKey, sha256};
 use simplex_client::xftp::{
     CHUNK_SIZE_0, CHUNK_SIZE_1, CHUNK_SIZE_2, CHUNK_SIZE_3, CancelFlag, EncryptParams,
-    FILE_SIZE_LEN, FileHeader, KB, MB, XftpError, claim_unique, decrypt_chunks, encrypt_file,
-    encrypted_size, prepare_chunk_sizes, prepare_chunk_specs, safe_file_name, single_chunk_size,
+    FILE_SIZE_LEN, FileHeader, KB, MB, XftpError, claim_unique, decrypt_bytes, decrypt_chunks,
+    encrypt_bytes, encrypt_file, encrypted_size, prepare_chunk_sizes, prepare_chunk_specs,
+    safe_file_name, single_chunk_size,
 };
 
 use super::hex::hex;
@@ -103,6 +104,21 @@ fn split_to_chunks(enc: &[u8], sizes: &[u32], work: &Path) -> Vec<PathBuf> {
             p
         })
         .collect()
+}
+
+#[test]
+fn in_memory_encryption_writes_the_same_bytes_as_the_file_path() {
+    let work = dir("bytes");
+    let (hdr, content) = (header(), seq(100_000, 3));
+    let enc_size = encrypted_size((hdr.len() + content.len()) as u64);
+    let enc = encrypt(&content, &work, &hdr, enc_size);
+    assert_eq!(
+        encrypt_bytes(&content, &hdr, &key(), &nonce(), enc_size).unwrap(),
+        enc
+    );
+    let (h, back) = decrypt_bytes(&enc, &key(), &nonce()).unwrap();
+    assert_eq!((h.file_name.as_str(), back), ("a.bin", content));
+    let _ = fs::remove_dir_all(work);
 }
 
 #[test]

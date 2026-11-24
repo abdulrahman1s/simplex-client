@@ -3,7 +3,7 @@
 #![allow(clippy::unwrap_used, reason = "tests")]
 
 use serde_json::{Value, json};
-use simplex_client::crypto::{Alg, KeyPair};
+use simplex_client::crypto::{Alg, CbNonce, KeyPair, SbKey, random_vec};
 use simplex_client::ratchet::{
     CURRENT_E2E_VERSION, ParamsUri, PqSupport, Ratchet, RatchetVersions, compatible_e2e_version,
     generate_rcv_params, generate_snd_params, pq_x3dh_rcv, pq_x3dh_snd, reply_kem,
@@ -11,6 +11,7 @@ use simplex_client::ratchet::{
 };
 use simplex_client::smp::{Clock, SystemClock};
 use simplex_client::wasm;
+use simplex_client::xftp::{FileHeader, decrypt_bytes, encrypt_bytes, encrypted_size};
 use wasm_bindgen::JsValue;
 use wasm_bindgen_test::wasm_bindgen_test as test;
 
@@ -137,4 +138,27 @@ fn links_report_their_kind_and_servers() {
         "group"
     );
     assert!(wasm::parse_link("https://example.com/nothing").is_err());
+}
+
+#[test]
+fn an_xftp_file_encrypts_and_decrypts_in_memory() {
+    let key = SbKey::from_slice(&random_vec(32).unwrap()).unwrap();
+    let nonce = CbNonce::from_slice(&random_vec(24).unwrap()).unwrap();
+    let header = FileHeader {
+        file_name: "photo.jpg".into(),
+        file_extra: None,
+    };
+    let header = header.encode().unwrap();
+    let content = random_vec(70_000).unwrap();
+    let enc_size = encrypted_size((header.len() + content.len()) as u64);
+    let enc = encrypt_bytes(&content, &header, &key, &nonce, enc_size).unwrap();
+    assert_eq!(enc.len() as u64, enc_size);
+    let (back_header, back) = decrypt_bytes(&enc, &key, &nonce).unwrap();
+    assert_eq!(
+        (back_header.file_name.as_str(), back),
+        ("photo.jpg", content)
+    );
+    let mut bad = enc;
+    bad[100] ^= 1;
+    assert!(decrypt_bytes(&bad, &key, &nonce).is_err());
 }

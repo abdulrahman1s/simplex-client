@@ -17,11 +17,9 @@ mod download;
 mod download_fetch;
 mod error;
 mod error_type;
-#[cfg(feature = "native")]
 mod file_decrypt;
 #[cfg(feature = "native")]
 mod file_digest;
-#[cfg(feature = "native")]
 mod file_encrypt;
 mod file_header;
 mod handshake;
@@ -67,8 +65,10 @@ pub use error::{HandshakeError, XftpError};
 pub use error_type::{CommandError, XftpErrorType};
 #[cfg(feature = "native")]
 pub use file_decrypt::decrypt_chunks;
+pub use file_decrypt::decrypt_bytes;
 #[cfg(feature = "native")]
 pub use file_encrypt::{EncryptParams, encrypt_file};
+pub use file_encrypt::encrypt_bytes;
 pub use file_header::FileHeader;
 pub use handshake::{Negotiated, Patience, TlsFacts, client_handshake};
 pub use handshake_msgs::{ServerHandshake, encode_client_handshake};
