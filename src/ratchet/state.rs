@@ -20,7 +20,7 @@ pub(crate) struct RcvRatchet {
     pub hkr: Key32,
 }
 
-/// Persist it after every `encrypt` and `decrypt`, including the ones that fail: some failures still advance it.
+/// Persist it after every `encrypt` and every successful `decrypt`; a failed `decrypt` leaves it unchanged.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Ratchet {
     pub(crate) versions: RatchetVersions,

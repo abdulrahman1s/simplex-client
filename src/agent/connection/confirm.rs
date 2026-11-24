@@ -148,14 +148,8 @@ impl AgentClient {
                 "ratchet params in the inviter's confirmation",
             ));
         }
-        let decrypted = ratchet.decrypt(&conf.enc_conn_info);
+        let plain = ratchet.decrypt(&conf.enc_conn_info)?;
         let id = rec.id;
-        let Ok(plain) = decrypted else {
-            self.save(store, rec, Some(ratchet), Batch::default())?;
-            return Err(decrypted
-                .err()
-                .map_or(AgentError::Prohibited("decrypt"), Into::into));
-        };
         let AgentMessage::ConnInfo(conn_info) = AgentMessage::from_bytes(&plain)? else {
             return Err(AgentError::Prohibited("expected AgentConnInfo"));
         };

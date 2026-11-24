@@ -15,19 +15,22 @@ enum Step {
     Same,
 }
 
-/// The ratchet to keep, and the message or why it failed.
+/// The advanced ratchet, and the message or why its body failed.
 type Outcome = (Ratchet, Result<Vec<u8>>);
 
 impl Ratchet {
-    /// `rcDecrypt`. Errors that mean the message does not belong to this ratchet leave it as it was; a failed body, and a jump over too many messages after a step, still advance it. Persist it after every call.
+    /// `rcDecrypt`, changing the ratchet only when the message decrypts. `rcDecrypt` also returns
+    /// a ratchet advanced past a failed body; the reference agent drops it (`agentRatchetDecrypt'`),
+    /// so a tampered copy cannot burn the key of the genuine message.
     pub fn decrypt(&mut self, wire: &[u8]) -> Result<Vec<u8>> {
         let msg = EncRatchetMessage::from_bytes(wire)
             .map_err(|_| RatchetError::Header("message envelope"))?;
         let hdr = EncMessageHeader::from_bytes(&msg.header)
             .map_err(|_| RatchetError::Header("encrypted header"))?;
         let (rc, body) = self.clone().decrypt_parsed(&hdr, &msg)?;
+        let body = body?;
         *self = rc;
-        body
+        Ok(body)
     }
 
     fn decrypt_parsed(
