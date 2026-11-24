@@ -15,9 +15,7 @@ use crate::engine::error::{Code, Result, fail};
 use crate::engine::files::edit_caption;
 use crate::engine::machine::Engine;
 use crate::engine::records::{ItemRecord, MemberRecord};
-
-/// `rcvItemDeletable`: 78 hours, a margin for delays in sending.
-const AUTHOR_DELETE_MS: i64 = 78 * 3600 * 1000;
+use crate::limits::RCV_DELETE_WINDOW_MS;
 
 fn dropped(why: &str) -> crate::engine::error::EngineError {
     fail(Code::RequestFailed, why.to_owned())
@@ -48,7 +46,7 @@ impl<A: AgentPort> Engine<A> {
         }
         self.require_verified(&ctx, &item, Some(m.id), at)?;
         let g = self.group(ctx.group)?;
-        let found = if m.blocked {
+        let found = if m.hidden() {
             Vec::new()
         } else {
             self.group_incoming_mentions(&g, &mentions, content.text())
@@ -86,7 +84,7 @@ impl<A: AgentPort> Engine<A> {
         }
         let by_author = item.member == Some(sender.id);
         let allowed_now = match of {
-            None => by_author && !only_history && at - item.at < AUTHOR_DELETE_MS,
+            None => by_author && !only_history && at.saturating_sub(item.at) < RCV_DELETE_WINDOW_MS,
             Some(_) if by_author => true,
             Some(_) => self.may_moderate(ctx.group, &sender, &item)?,
         };

@@ -1,10 +1,10 @@
-//! A member's role, restriction or removal (Subscriber.hs `xGrpMemRole`, `xGrpMemRestrict`, `xGrpMemDel`, `xGrpLeave`; codec: a_groups_story_is_told_in_notices_…).
+//! A member's role or removal (Subscriber.hs `xGrpMemRole`, `xGrpMemDel`, `xGrpLeave`; codec: a_groups_story_is_told_in_notices_…).
 
 use crate::types::model::{ChatNotice, ChatRef, Membership, MessageAuthor, MessageBody};
 use crate::types::{Event, Request};
 
 use crate::chat::ChatEvent;
-use crate::chat::group::{GroupMemberRole, MemberRestrictionStatus, MemberRestrictions};
+use crate::chat::group::GroupMemberRole;
 use crate::chat::ids::MemberId;
 use crate::engine::agent_port::ConnId;
 use crate::engine::records::{ItemRecord, MemberStatus};
@@ -239,21 +239,6 @@ fn the_users_own_role_changes_when_an_admin_says_so_and_a_relay_role_is_never_gi
     assert_eq!(x.t.e.group(x.g).unwrap().my_role, GroupMemberRole::Admin);
     x.t.peer_says(&x.bob.1, 2, role(me, GroupMemberRole::Relay));
     assert_eq!(x.t.e.group(x.g).unwrap().my_role, GroupMemberRole::Admin);
-}
-
-#[test]
-fn a_restriction_is_checked_and_never_touches_the_users_local_block() {
-    let mut x = team();
-    let carol = id_of(&x.t, x.g, x.carol.0);
-    let restrict = ChatEvent::GrpMemRestrict {
-        member_id: carol,
-        restrictions: MemberRestrictions {
-            restriction: MemberRestrictionStatus::Blocked,
-        },
-    };
-    let out = x.t.peer_says(&x.bob.1, 1, restrict);
-    assert!(notices(&out).is_empty());
-    assert!(!x.t.e.member(x.g, x.carol.0).unwrap().blocked);
 }
 
 #[test]

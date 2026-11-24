@@ -29,6 +29,10 @@ pub struct MemberRecord {
     pub invited_by: Option<i64>,
     /// Local only (never sent): their messages are hidden.
     pub blocked: bool,
+    /// A moderator blocked them for everyone (`blockedByAdmin`): hidden like `blocked`, and the
+    /// user's own unblock does not undo it.
+    #[serde(default)]
+    pub blocked_by_admin: bool,
     /// Ed25519 member key (X.509 DER, base64url), chat v20; signatures are checked against it.
     pub key: Option<String>,
     /// Their chat version range, once known.
@@ -69,6 +73,12 @@ pub enum MemberCategory {
 }
 
 impl MemberRecord {
+    /// Their messages are collapsed and never unread (Types.hs `memberBlocked`).
+    #[must_use]
+    pub const fn hidden(&self) -> bool {
+        self.blocked || self.blocked_by_admin
+    }
+
     /// A connection that carries messages now.
     #[must_use]
     pub fn reachable(&self) -> Option<ConnId> {

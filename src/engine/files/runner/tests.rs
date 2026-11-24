@@ -152,6 +152,7 @@ impl Rig {
             description,
             work_dir: PathBuf::new(),
             dest_dir: PathBuf::new(),
+            max_size: u64::MAX,
             cancel: Arc::default(),
         };
         self.transfers.download(req, self.tx.clone());

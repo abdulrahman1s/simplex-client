@@ -22,6 +22,9 @@ pub struct DownloadParams<'a> {
     pub work_dir: &'a Path,
     /// The folder the finished file is created in, under its own (made safe) name.
     pub dest_dir: &'a Path,
+    /// The most encrypted bytes to fetch: a description promising more is refused, and a
+    /// download that grows past it stops, so a file offered as small cannot fill the disk.
+    pub max_size: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,6 +51,10 @@ fn decrypt_to_work(
     progress: &mut ProgressFn<'_>,
 ) -> Result<(Partial, super::file_header::FileHeader), XftpError> {
     fd.validate().map_err(XftpError::Description)?;
+    // Internal.hs `receiveViaCompleteFD`: 7.1.4 refuses redirects until it checks their relays.
+    if fd.redirect.is_some() {
+        return Err(XftpError::Description("redirect not allowed".into()));
+    }
     let (key, nonce) = (SbKey::from_slice(&fd.key)?, CbNonce::from_slice(&fd.nonce)?);
     if fd.digest.len() != 64 {
         return Err(XftpError::Description(
@@ -70,26 +77,9 @@ fn decrypt_to_work(
     Ok((out, header))
 }
 
-/// A redirect description is a small file holding the real description; its size and digest are promised by the outer one.
-fn resolve_redirect(
-    fd: &FileDescription,
-    f: &Fetch<'_>,
-    pool: &mut Pool,
-) -> Result<FileDescription, XftpError> {
-    let Some(redirect) = &fd.redirect else {
-        return Ok(fd.clone());
-    };
-    let (part, _) = decrypt_to_work(fd, f, pool, &mut |_, _| {})?;
-    let inner = FileDescription::parse_valid(&fs::read_to_string(&part.0)?)
-        .map_err(XftpError::Description)?;
-    if inner.redirect.is_some() || inner.size != redirect.size || inner.digest != redirect.digest {
-        return Err(XftpError::Mismatch("redirected description"));
-    }
-    Ok(inner)
-}
-
 /// Blocks until the file is complete and verified: every chunk's SHA-256, the SHA-512 of the encrypted file and its tag.
-/// The result is a new file in `dest_dir`; on any failure nothing is left there.
+/// The result is a new file in `dest_dir`; on any failure nothing is left there. A redirect
+/// description is refused.
 pub fn download(
     params: &DownloadParams<'_>,
     cancel: &AtomicBool,
@@ -100,10 +90,10 @@ pub fn download(
         work_dir: params.work_dir,
         cancel,
         clock: &clock as &dyn Clock,
+        max_size: params.max_size,
     };
     let mut pool = Pool::new(ClientConfig::default());
-    let fd = resolve_redirect(params.description, &f, &mut pool)?;
-    let (part, header) = decrypt_to_work(&fd, &f, &mut pool, progress)?;
+    let (part, header) = decrypt_to_work(params.description, &f, &mut pool, progress)?;
     let size = fs::metadata(&part.0)?.len();
     let dest = claim_unique(params.dest_dir, &safe_file_name(&header.file_name))?;
     if let Err(e) = move_file(&part.0, &dest) {

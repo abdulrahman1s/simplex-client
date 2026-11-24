@@ -3,7 +3,9 @@
 use super::batch_out::batch_bodies;
 use super::conn_info::member_info;
 use super::role::at_least;
-use crate::chat::group::{GroupMemberRole, IntroInvitation};
+use crate::chat::group::{
+    GroupMemberRole, IntroInvitation, MemberRestrictionStatus, MemberRestrictions,
+};
 use crate::chat::ids::MemberId;
 use crate::chat::version::GROUP_BINARY_BATCH;
 use crate::chat::{ChatEvent, ChatMessage};
@@ -71,9 +73,13 @@ impl<A: AgentPort> Engine<A> {
         let mut elements = Vec::with_capacity(told.len());
         for r in &told {
             self.relate(m.group, m.id, r.id, MemberRelation::Introduced)?;
+            // Types.hs `memberRestrictions`: a member blocked for everyone is introduced so.
+            let restrictions = r.blocked_by_admin.then_some(MemberRestrictions {
+                restriction: MemberRestrictionStatus::Blocked,
+            });
             let intro = ChatMessage::new(ChatEvent::GrpMemIntro {
                 member_info: member_info(g, r),
-                restrictions: None,
+                restrictions,
             })?;
             elements.push(intro.to_json()?);
         }

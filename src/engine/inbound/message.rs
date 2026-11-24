@@ -1,6 +1,7 @@
 //! A received message: every element's `x.*` event handled, then one ack, whatever happened
 //! (chat's `withAckMessage`), with a receipt when it held an event that asks for one.
 
+use crate::agent::MsgIntegrity;
 use crate::chat::{ChatEvent, ChatMessage, parse_chat_elements};
 use crate::engine::agent_port::{AgentMsgId, AgentPort, ConnId};
 use crate::engine::error::Result;
@@ -16,10 +17,21 @@ pub(crate) fn asks_receipt(e: &ChatEvent) -> bool {
 }
 
 impl<A: AgentPort> Engine<A> {
-    pub(crate) fn on_msg(&mut self, conn: &ConnId, msg_id: AgentMsgId, body: &[u8]) {
+    pub(crate) fn on_msg(
+        &mut self,
+        conn: &ConnId,
+        msg_id: AgentMsgId,
+        body: &[u8],
+        integrity: MsgIntegrity,
+        broker_ts: i64,
+    ) {
+        if let Err(e) = self.on_integrity(conn, integrity) {
+            self.log
+                .line(format_args!("an integrity notice not kept: {}", e.detail));
+        }
         let friend = self.state.friend_of(conn);
         let receipt = match (friend, self.state.member_of(conn)) {
-            (Some(friend), _) => self.on_body(friend, body),
+            (Some(friend), _) => self.on_body(friend, body, broker_ts.saturating_mul(1000)),
             (None, Some((group, member))) => self.on_group_body(group, member, body),
             (None, None) => {
                 self.log
@@ -38,7 +50,8 @@ impl<A: AgentPort> Engine<A> {
         }
     }
 
-    fn on_body(&mut self, friend: i64, body: &[u8]) -> bool {
+    /// `broker_ms`: when the relay took the message.
+    fn on_body(&mut self, friend: i64, body: &[u8], broker_ms: i64) -> bool {
         let mut receipt = false;
         for element in parse_chat_elements(body) {
             let msg = match element {
@@ -54,7 +67,7 @@ impl<A: AgentPort> Engine<A> {
                 self.log
                     .line(format_args!("a friend's range not kept: {}", e.detail));
             }
-            if let Err(e) = self.on_x(friend, msg) {
+            if let Err(e) = self.on_x(friend, msg, broker_ms) {
                 self.log
                     .line(format_args!("a chat event failed: {}", e.detail));
             }
@@ -62,14 +75,14 @@ impl<A: AgentPort> Engine<A> {
         receipt
     }
 
-    fn on_x(&mut self, friend: i64, msg: ChatMessage) -> Result<()> {
+    fn on_x(&mut self, friend: i64, msg: ChatMessage, broker_ms: i64) -> Result<()> {
         let shared = msg.msg_id.map(|m| m.0);
         match msg.event {
             ChatEvent::MsgNew(c) => self.on_msg_new(friend, shared, c),
             ChatEvent::MsgUpdate {
                 msg_id, content, ..
             } => self.on_msg_update(friend, &msg_id.0, &content),
-            ChatEvent::MsgDel { msg_id, .. } => self.on_msg_del(friend, &msg_id.0),
+            ChatEvent::MsgDel { msg_id, .. } => self.on_msg_del(friend, &msg_id.0, broker_ms),
             ChatEvent::MsgReact {
                 msg_id,
                 reaction,

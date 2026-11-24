@@ -62,6 +62,8 @@ fn a_host_and_a_joiner_engine_complete_the_join_and_the_first_introduction_from_
         conn: bob_to_alice,
         msg_id: 1,
         body: inv,
+        integrity: crate::agent::MsgIntegrity::Ok,
+        broker_ts: 0,
     });
     let jg = *joiner.e.state.groups.keys().next().unwrap();
     joiner.req(Request::JoinGroup(jg));
@@ -122,6 +124,8 @@ fn a_host_and_a_joiner_engine_complete_the_join_and_the_first_introduction_from_
         conn: j1,
         msg_id: 2,
         body: intros,
+        integrity: crate::agent::MsgIntegrity::Ok,
+        broker_ts: 0,
     });
     let jc = joiner
         .e
@@ -143,6 +147,8 @@ fn a_host_and_a_joiner_engine_complete_the_join_and_the_first_introduction_from_
         conn: h1,
         msg_id: 1,
         body: mem_inv,
+        integrity: crate::agent::MsgIntegrity::Ok,
+        broker_ts: 0,
     });
     let fwd = events(&last_sent(&host, carol_conn)).pop().unwrap();
     let ChatEvent::GrpMemFwd { member_info, intro } = fwd else {

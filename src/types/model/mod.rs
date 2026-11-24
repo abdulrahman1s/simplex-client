@@ -18,7 +18,7 @@ pub use body::{CallKind, CallRecord, ChatNotice, FileState, Media, MessageBody, 
 pub use call::{CallKey, CallRequest, CallSignal};
 pub use chat_features::ChatFeatures;
 pub use chat_ref::ChatRef;
-pub use conn_event::{SwitchPhase, SyncStatus};
+pub use conn_event::{DecryptError, IntegrityError, SwitchPhase, SyncStatus};
 pub use friend::{Friend, FriendRequest};
 pub use group::{ChatGroup, GroupMember, Membership};
 pub use message::{ChatMessage, Delivery, Mention, MessageAuthor, Quote, Reaction};

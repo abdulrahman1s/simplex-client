@@ -3,8 +3,10 @@
 mod agent;
 mod conn_event;
 mod contact;
+mod decrypt_error;
 mod delivery;
 mod handshake;
+mod integrity;
 mod message;
 mod net;
 mod peer_range;

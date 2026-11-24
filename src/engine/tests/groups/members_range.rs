@@ -50,6 +50,8 @@ fn a_file_chunk_leaves_the_range_alone() {
         conn,
         msg_id: 1,
         body,
+        integrity: crate::agent::MsgIntegrity::Ok,
+        broker_ts: 0,
     });
     assert_eq!(chat_v(&t, g, bob), Some(OLD));
 }

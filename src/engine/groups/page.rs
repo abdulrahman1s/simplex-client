@@ -6,14 +6,14 @@ use crate::types::model::{ChatMessage, ChatRef};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::Result;
 use crate::engine::machine::Engine;
-use crate::engine::records::{ItemRecord, decode, keys};
+use crate::engine::records::{ItemRecord, MemberRecord, decode, keys};
 
 impl<A: AgentPort> Engine<A> {
     pub(crate) fn member_blocked(&self, group: i64, member: i64) -> bool {
         self.state
             .members
             .get(&(group, member))
-            .is_some_and(|m| m.blocked)
+            .is_some_and(MemberRecord::hidden)
     }
 
     /// `m` as the page sees it: unread only if its author is not blocked.

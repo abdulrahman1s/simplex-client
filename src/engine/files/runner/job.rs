@@ -64,13 +64,15 @@ impl Job {
                     ));
                 }
             },
-            FileJob::Download(req) => match MemDownload::new(&req.description, mem.limit()) {
-                Ok(m) => (req.key, req.job, req.cancel, Work::Download(Box::new(m))),
-                Err(e) => {
-                    let (key, job, result) = (req.key, req.job, Err(e.to_string()));
-                    return Err(FileDone::Downloaded { key, job, result });
+            FileJob::Download(req) => {
+                match MemDownload::new(&req.description, mem.limit().min(req.max_size)) {
+                    Ok(m) => (req.key, req.job, req.cancel, Work::Download(Box::new(m))),
+                    Err(e) => {
+                        let (key, job, result) = (req.key, req.job, Err(e.to_string()));
+                        return Err(FileDone::Downloaded { key, job, result });
+                    }
                 }
-            },
+            }
         };
         Ok(Self {
             key,

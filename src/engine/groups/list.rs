@@ -36,7 +36,7 @@ pub(crate) fn member_wire(m: &MemberRecord) -> GroupMember {
         friend: m.friend,
         me: false,
         owner: m.role == GroupMemberRole::Owner,
-        blocked: m.blocked,
+        blocked: m.hidden(),
         picture: m.profile.image.as_ref().and_then(|i| picture_of(&i.0)),
         ..GroupMember::default()
     }

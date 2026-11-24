@@ -1,4 +1,4 @@
-//! Whole in-memory transfers run over sessions to the in-process server: chunks, retries, extra recipients, a redirect.
+//! Whole in-memory transfers run over sessions to the in-process server: chunks, retries, extra recipients, a refused redirect.
 use super::fake_server::Fake;
 use super::rig::{Rig, T0};
 use crate::crypto::{random_vec, sha512};
@@ -112,29 +112,52 @@ fn recipients_past_two_hundred_are_added_with_fadd() {
     assert!(fake.store.lock().unwrap().seen.contains(&"FADD".to_owned()));
 }
 
+/// Internal.hs `receiveViaCompleteFD` refuses redirects ("TODO re-enable redirects with relay
+/// checks"): the inner description could name servers the user never approved.
 #[test]
-fn a_redirect_is_followed_to_the_real_description() {
-    let fake = Fake::new();
+fn a_redirect_description_is_refused_before_any_server_is_asked() {
+    let known = Fake::new();
+    let unknown = Fake::new();
     let content = random_vec(30_000).unwrap();
-    let servers = [fake.address.clone()];
-    let mut up = MemUpload::new(&content, "big.bin", &servers, 1, None).unwrap();
-    let inner = run(&fake, &mut up).unwrap().recipients.remove(0);
+    let mut up = MemUpload::new(
+        &content,
+        "big.bin",
+        std::slice::from_ref(&unknown.address),
+        1,
+        None,
+    )
+    .unwrap();
+    let inner = run(&unknown, &mut up).unwrap().recipients.remove(0);
     let text = encode_description(&inner);
-    let mut up = MemUpload::new(text.as_bytes(), "", &servers, 1, None).unwrap();
-    let mut outer: FileDescription = run(&fake, &mut up).unwrap().recipients.remove(0);
+    let mut up = MemUpload::new(
+        text.as_bytes(),
+        "",
+        std::slice::from_ref(&known.address),
+        1,
+        None,
+    )
+    .unwrap();
+    let mut outer: FileDescription = run(&known, &mut up).unwrap().recipients.remove(0);
     outer.redirect = Some(Redirect {
         size: inner.size,
         digest: inner.digest.clone(),
     });
-    let mut down = MemDownload::new(&outer, 1 << 20).unwrap();
-    assert_eq!(
-        down.progress(),
-        None,
-        "the redirect's own file does not count"
+    let seen = (
+        known.store.lock().unwrap().seen.len(),
+        unknown.store.lock().unwrap().seen.len(),
     );
-    let got = run(&fake, &mut down).unwrap();
-    assert_eq!((got.file_name.as_str(), got.bytes), ("big.bin", content));
-    assert_eq!(down.progress(), Some((0, inner.size)));
+    let e = MemDownload::new(&outer, 1 << 20).err().unwrap();
+    assert!(
+        matches!(&e, XftpError::Description(d) if d.contains("redirect")),
+        "{e:?}"
+    );
+    assert_eq!(
+        (
+            known.store.lock().unwrap().seen.len(),
+            unknown.store.lock().unwrap().seen.len()
+        ),
+        seen
+    );
 }
 
 #[test]

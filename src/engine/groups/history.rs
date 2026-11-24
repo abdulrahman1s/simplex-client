@@ -76,7 +76,15 @@ impl<A: AgentPort> Engine<A> {
             before = Some(first);
             for (id, bytes) in page.into_iter().rev() {
                 let it: ItemRecord = decode(&bytes)?;
-                if in_history(&it) && !exclude.contains(&id) && out.len() < HISTORY_ITEMS {
+                // Internal.hs `itemForwardMsgs`: a member blocked for everyone is not passed on.
+                let blocked = (it.member)
+                    .and_then(|m| self.state.members.get(&(group, m)))
+                    .is_some_and(|m| m.blocked_by_admin);
+                if in_history(&it)
+                    && !blocked
+                    && !exclude.contains(&id)
+                    && out.len() < HISTORY_ITEMS
+                {
                     out.push((id, it));
                 }
             }

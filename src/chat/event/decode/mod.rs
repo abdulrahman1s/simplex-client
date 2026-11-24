@@ -93,10 +93,12 @@ fn decode_forward(o: &Obj, depth: usize) -> Result<E> {
         None => FwdSender::Channel,
     };
     let msg: Value = req(o, "msg")?;
-    let fwd = GrpMsgForward {
-        sender,
-        broker_ts: req(o, "msgTs")?,
-    };
+    let broker_ts: String = req(o, "msgTs")?;
+    // Aeson's `UTCTime` refuses a date it cannot read; so does this.
+    if crate::chat::iso::iso_to_secs(&broker_ts).is_none() {
+        return parse_err("bad msgTs");
+    }
+    let fwd = GrpMsgForward { sender, broker_ts };
     Ok(E::GrpMsgForward {
         fwd,
         msg: Box::new(ChatMessage::from_value(&msg, depth + 1)?),

@@ -16,11 +16,7 @@ pub struct Fetched {
 
 pub struct MemDownload {
     pub(super) fd: FileDescription,
-    /// `fd` is a redirect: what it holds is the real description.
-    pub(super) outer: bool,
-    /// The largest encrypted size taken into memory.
-    pub(super) limit: u64,
-    /// The encrypted chunks fetched so far, in order; bounded by `fd.size`, at most `limit`.
+    /// The encrypted chunks fetched so far, in order; bounded by `fd.size`, which `new` checked.
     pub(super) fetched: Vec<u8>,
     pub(super) chunk: usize,
     pub(super) replica: usize,
@@ -31,13 +27,11 @@ pub struct MemDownload {
 }
 
 impl MemDownload {
-    /// Refuses a description that is not a recipient's, is malformed, or promises more than `limit` bytes.
+    /// Refuses a description that is not a recipient's, is malformed, is a redirect, or promises more than `limit` bytes.
     pub fn new(fd: &FileDescription, limit: u64) -> Result<Self, XftpError> {
         super::download_finish::check(fd, limit)?;
         Ok(Self {
             fd: fd.clone(),
-            outer: fd.redirect.is_some(),
-            limit,
             fetched: Vec::new(),
             chunk: 0,
             replica: 0,
@@ -47,11 +41,10 @@ impl MemDownload {
         })
     }
 
-    /// Encrypted bytes fetched and the total, of the file itself: a redirect's own small file
-    /// does not count.
+    /// Encrypted bytes fetched and the total.
     #[must_use]
-    pub fn progress(&self) -> Option<(u64, u64)> {
-        (!self.outer).then_some((self.fetched.len() as u64, self.fd.size))
+    pub fn progress(&self) -> (u64, u64) {
+        (self.fetched.len() as u64, self.fd.size)
     }
 
     /// The next FGET, or the file once every chunk is here and checked.

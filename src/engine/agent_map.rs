@@ -4,7 +4,10 @@ use super::agent_port::{AgentEvent, AgentFailure, AgentMsgId, ConnId};
 use super::log::Log;
 use crate::agent::AgentError;
 use crate::agent::client::{self, AgentEvent as Native};
+use crate::agent::resync::crypto_sync_state;
+use crate::ratchet::RatchetError;
 use crate::smp::SmpServer;
+use crate::types::model::DecryptError;
 
 pub(super) const fn conn_id(c: client::ConnId) -> ConnId {
     ConnId(c.0)
@@ -46,6 +49,33 @@ pub(super) fn failure(e: &AgentError) -> AgentFailure {
     }
 }
 
+/// Subscriber.hs `agentMsgDecryptError`: the `A_CRYPTO` errors a message that did not decrypt
+/// gives, which the agent reports once per message.
+fn decrypt_error(e: &AgentError) -> Option<(DecryptError, u32)> {
+    let AgentError::Ratchet(e) = e else {
+        return None;
+    };
+    // The errors that move the ratchet-sync state are exactly `A_CRYPTO`'s.
+    crypto_sync_state(e)?;
+    Some(match e {
+        RatchetError::HeaderKey => (DecryptError::Header, 1),
+        RatchetError::TooManySkipped(n) => (DecryptError::TooManySkipped, *n),
+        RatchetError::EarlierMessage(_) => (DecryptError::Earlier, 1),
+        RatchetError::AesDecrypt
+        | RatchetError::Crypto(_)
+        | RatchetError::LargeMsg
+        | RatchetError::Header(_)
+        | RatchetError::State
+        | RatchetError::KemState
+        | RatchetError::DuplicateMessage
+        | RatchetError::Kem(_)
+        | RatchetError::Version
+        | RatchetError::BadState(_)
+        | RatchetError::Decode(_)
+        | RatchetError::Encode(_) => (DecryptError::Other, 1),
+    })
+}
+
 /// `None` for what the engine does not act on (logged where it says something).
 pub(super) fn event(e: Native, log: &Log) -> Option<AgentEvent> {
     Some(match e {
@@ -65,13 +95,18 @@ pub(super) fn event(e: Native, log: &Log) -> Option<AgentEvent> {
         Native::Con { conn } => AgentEvent::Con {
             conn: conn_id(conn),
         },
-        // The port carries neither the integrity verdict nor the broker time yet.
         Native::Msg {
-            conn, msg_id, body, ..
+            conn,
+            msg_id,
+            body,
+            integrity,
+            broker_ts,
         } => AgentEvent::Msg {
             conn: conn_id(conn),
             msg_id: msg_id.0,
             body,
+            integrity,
+            broker_ts,
         },
         Native::Sent { conn, msg_id } => AgentEvent::Sent {
             conn: conn_id(conn),
@@ -82,9 +117,14 @@ pub(super) fn event(e: Native, log: &Log) -> Option<AgentEvent> {
             msg_id: msg_id.0,
             err: failure(&err),
         },
-        Native::Rcvd { conn, msg_id, .. } => AgentEvent::Rcvd {
+        Native::Rcvd {
+            conn,
+            msg_id,
+            receipt,
+        } => AgentEvent::Rcvd {
             conn: conn_id(conn),
             msg_id: msg_id.0,
+            status: receipt.status,
         },
         Native::Up { server } => AgentEvent::Up {
             server: host(&server),
@@ -92,9 +132,16 @@ pub(super) fn event(e: Native, log: &Log) -> Option<AgentEvent> {
         Native::Down { server } => AgentEvent::Down {
             server: host(&server),
         },
-        Native::Err { conn, err } => AgentEvent::Err {
-            conn: conn_id(conn),
-            err: failure(&err),
+        Native::Err { conn, err } => match decrypt_error(&err) {
+            Some((error, count)) => AgentEvent::DecryptError {
+                conn: conn_id(conn),
+                error,
+                count,
+            },
+            None => AgentEvent::Err {
+                conn: conn_id(conn),
+                err: failure(&err),
+            },
         },
         Native::Mwarn { conn, msg_id, err } => {
             log.line(format_args!(
@@ -171,6 +218,60 @@ mod tests {
         assert!(matches!(failure(&lost), AgentFailure::Network(_)));
         let auth = proxied(ProxyError::BasicAuth);
         assert!(matches!(failure(&auth), AgentFailure::Other(_)));
+    }
+
+    #[test]
+    fn the_integrity_verdict_and_the_receipts_hash_status_reach_the_engine() {
+        use crate::agent::client::{AgentMsgId, RcptStatus, Receipt};
+        use crate::agent::{MsgErrorType, MsgIntegrity};
+        let skipped = MsgIntegrity::Error(MsgErrorType::Skipped { from: 2, to: 4 });
+        let msg = Native::Msg {
+            conn: client::ConnId(1),
+            msg_id: AgentMsgId(5),
+            body: b"x".to_vec(),
+            integrity: skipped,
+            broker_ts: 1_795_000_000,
+        };
+        assert!(matches!(
+            event(msg, &Log::discard()),
+            Some(AgentEvent::Msg { integrity, broker_ts: 1_795_000_000, .. }) if integrity == skipped
+        ));
+        let rcvd = Native::Rcvd {
+            conn: client::ConnId(1),
+            msg_id: AgentMsgId(5),
+            receipt: Receipt {
+                status: RcptStatus::BadMsgHash,
+                info: Vec::new(),
+            },
+        };
+        assert!(matches!(
+            event(rcvd, &Log::discard()),
+            Some(AgentEvent::Rcvd {
+                status: RcptStatus::BadMsgHash,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn a_message_that_did_not_decrypt_is_a_decryption_error_and_others_stay_errors() {
+        use crate::ratchet::RatchetError as E;
+        let err = |e| Native::Err {
+            conn: client::ConnId(1),
+            err: AgentError::Ratchet(e),
+        };
+        let got = |e| match event(err(e), &Log::discard()) {
+            Some(AgentEvent::DecryptError { error, count, .. }) => Some((error, count)),
+            _ => None,
+        };
+        assert_eq!(got(E::HeaderKey), Some((DecryptError::Header, 1)));
+        assert_eq!(
+            got(E::TooManySkipped(700)),
+            Some((DecryptError::TooManySkipped, 700))
+        );
+        assert_eq!(got(E::EarlierMessage(3)), Some((DecryptError::Earlier, 1)));
+        assert_eq!(got(E::AesDecrypt), Some((DecryptError::Other, 1)));
+        assert_eq!(got(E::Version), None);
     }
 
     #[test]

@@ -7,12 +7,14 @@ mod change;
 mod codes;
 mod conn_events;
 mod contact;
+mod decrypt_error;
 mod fake_agent;
 mod files;
 mod friend_pq;
 mod groups;
 mod handshake;
 mod inbound;
+mod integrity;
 mod limits;
 mod live_address;
 mod live_call;
@@ -21,6 +23,7 @@ mod live_group;
 mod live_offline;
 mod live_repair;
 mod local;
+mod msg_delete;
 mod prefs;
 mod profile;
 mod relays;
@@ -179,6 +182,8 @@ impl T {
             conn: *conn,
             msg_id,
             body,
+            integrity: crate::agent::MsgIntegrity::Ok,
+            broker_ts: crate::engine::clock::Clock::wall_ms(&self.clock) / 1000,
         })
     }
 

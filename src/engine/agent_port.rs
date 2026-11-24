@@ -54,11 +54,15 @@ pub enum AgentEvent {
     Con {
         conn: ConnId,
     },
-    /// `MSG`: must be acknowledged with `ack`, whatever the engine makes of it.
+    /// `MSG`: must be acknowledged with `ack`, whatever the engine makes of it. `integrity`
+    /// says how it followed the message before it (`MsgMeta.integrity`); `broker_ts` is when
+    /// the relay took it, in seconds.
     Msg {
         conn: ConnId,
         msg_id: AgentMsgId,
         body: Vec<u8>,
+        integrity: crate::agent::MsgIntegrity,
+        broker_ts: i64,
     },
     Sent {
         conn: ConnId,
@@ -69,10 +73,11 @@ pub enum AgentEvent {
         msg_id: AgentMsgId,
         err: AgentFailure,
     },
-    /// `RCVD`: the peer's receipt for a message we sent.
+    /// `RCVD`: the peer's receipt for a message we sent, and whether the hash it got matched.
     Rcvd {
         conn: ConnId,
         msg_id: AgentMsgId,
+        status: crate::agent::client::RcptStatus,
     },
     /// A relay host connected (`UP`) or went away (`DOWN`).
     Up {
@@ -84,6 +89,13 @@ pub enum AgentEvent {
     Err {
         conn: ConnId,
         err: AgentFailure,
+    },
+    /// A message on `conn` did not decrypt (`RSYNC` with `A_CRYPTO`); `count` is 1, or the
+    /// messages skipped for `TooManySkipped`.
+    DecryptError {
+        conn: ConnId,
+        error: crate::types::model::DecryptError,
+        count: u32,
     },
     /// The links of a `create_address`: the full one and the short one when the relay stores it.
     Address {

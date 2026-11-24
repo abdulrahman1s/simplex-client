@@ -6,6 +6,7 @@ mod fake;
 mod limits;
 mod locate;
 mod receive;
+mod redirect;
 mod send;
 
 use std::path::PathBuf;

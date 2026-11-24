@@ -45,7 +45,7 @@ impl<A: AgentPort> Engine<A> {
                 "x.grp.direct.inv: direct messages not allowed",
             ));
         }
-        if m.blocked {
+        if m.hidden() {
             self.log.line(format_args!(
                 "x.grp.direct.inv: member is blocked (ignoring)"
             ));

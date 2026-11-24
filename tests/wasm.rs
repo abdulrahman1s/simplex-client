@@ -162,3 +162,10 @@ fn an_xftp_file_encrypts_and_decrypts_in_memory() {
     bad[100] ^= 1;
     assert!(decrypt_bytes(&bad, &key, &nonce).is_err());
 }
+
+#[test]
+fn a_deeply_nested_file_description_is_refused_without_trapping() {
+    let text = format!("{}x", "- ".repeat(10_000));
+    let e = simplex_client::xftp::description::FileDescription::parse(&text).unwrap_err();
+    assert!(e.contains("nested too deeply"), "{e}");
+}

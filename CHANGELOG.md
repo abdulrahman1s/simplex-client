@@ -154,6 +154,46 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- A repeated `x.grp.inv` with the same link updates the group only while the user has not
+  joined yet, and only from the friend who invited. 7.1.4 rewrites the user's member id, role
+  and the group profile even after joining.
+- At most 50 joins through a group's link wait for their connection; past that the oldest is
+  dropped with its connection. 7.1.4 accepts group link requests without limit, each with a
+  member, a connection and server queues.
+- `x.grp.link.acpt` acts only on a member waiting for approval or review. 7.1.4 takes any
+  member, so a moderator could demote an owner or bring a removed member back; such a message
+  is now ignored.
+- A moderator's "block for all" (`x.grp.mem.restrict`) is applied, as `xGrpMemRestrict` does:
+  the member is kept as `blocked_by_admin`, shown as `blocked` in the member list, their
+  messages are collapsed and never unread, their mentions are dropped, their pictures are not
+  fetched by themselves and their items stay out of the history a host sends. A
+  `ChatNotice::MemberBlocked` item tells it, and an unblock undoes it. The user's own unblock
+  does not. `x.grp.mem.intro` carries the block both ways (`memberRestrictions`), so a member
+  who joins later learns of it.
+- A friend's deletion of its own message is taken only if the relay took it within 78 hours
+  of the message (`limits::RCV_DELETE_WINDOW_MS`, Subscriber.hs `rcvItemDeletable`); a later
+  one is ignored. `AgentEvent::Msg` carries the relay's time (`broker_ts`) for it.
+- A message that skips, repeats or breaks the chain before it (`MsgIntegrity`) now shows a
+  `ChatNotice::Integrity` item before it, as simplex-chat's `CIRcvIntegrityError` does: "skipped
+  message ID", "unexpected message ID", "incorrect message hash", "duplicate message ID". A
+  receipt whose hash differs shows the message as `Delivery::DeliveredBadHash`; in a group, one
+  such receipt wins over the good ones. A message that does not decrypt shows a
+  `ChatNotice::DecryptionError` (header, too many skipped, earlier message, other), and the
+  same error again counts on that notice, as `CIRcvDecryptionError` does. A blocked friend's
+  chat gets neither. Engine records are format 2 now; format 1 still reads.
+- A forward's time with a year past 9999, or a date out of range, no longer overflows (a
+  panic in debug builds, a wrapped time in release): the JSON `x.grp.msg.forward` is refused,
+  as Aeson refuses it, and a binary forward takes the time it arrived.
+- A received file description that is a redirect is refused, on native and in memory, as
+  simplex-chat 7.1.4 does ("redirect not allowed"): its inner description could send the
+  download to servers the user never approved. The file shows as failed. This client never
+  sends redirects in chat, as 7.1.4 does not.
+- `DownloadParams::max_size` (breaking): a native download fetches no more encrypted bytes than
+  the offer allows (`min(size, 5 GiB) + 10 MiB`), so a file offered as small cannot fill the
+  disk. `MemDownload::progress` now returns the pair itself.
+- A file description nested more than eight levels deep, or longer than its replica limit
+  allows, is refused before parsing recurses. A line of dashes in a description used to
+  overflow the stack and abort the process, with no click needed for pictures.
 - Connections agreed at agent version 7 move to version 8 once both sides speak it: every
   message offers the highest agent version (`AgentConfig::agent_versions`), and a higher one
   from the peer raises the stored version, as simplexmq's `updateConnVersion` does. A queue

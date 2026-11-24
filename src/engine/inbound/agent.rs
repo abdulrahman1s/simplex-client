@@ -2,6 +2,7 @@
 
 use crate::types::model::Delivery;
 
+use crate::agent::client::RcptStatus;
 use crate::engine::agent_port::{AgentEvent, AgentPort};
 use crate::engine::machine::Engine;
 use crate::engine::records::ConnKind;
@@ -13,13 +14,27 @@ impl<A: AgentPort> Engine<A> {
             AgentEvent::Conf { conn, conn_info } => self.on_conf(&conn, &conn_info),
             AgentEvent::Info { conn, conn_info } => self.on_info(&conn, &conn_info),
             AgentEvent::Con { conn } => self.on_con(&conn),
-            AgentEvent::Msg { conn, msg_id, body } => {
-                self.on_msg(&conn, msg_id, &body);
+            AgentEvent::Msg {
+                conn,
+                msg_id,
+                body,
+                integrity,
+                broker_ts,
+            } => {
+                self.on_msg(&conn, msg_id, &body, integrity, broker_ts);
                 Ok(())
             }
             AgentEvent::Sent { conn, msg_id } => self.on_delivery(&conn, msg_id, Delivery::Sent),
-            AgentEvent::Rcvd { conn, msg_id } => {
-                self.on_delivery(&conn, msg_id, Delivery::Delivered)
+            AgentEvent::Rcvd {
+                conn,
+                msg_id,
+                status,
+            } => {
+                let to = match status {
+                    RcptStatus::Ok => Delivery::Delivered,
+                    RcptStatus::BadMsgHash => Delivery::DeliveredBadHash,
+                };
+                self.on_delivery(&conn, msg_id, to)
             }
             AgentEvent::Merr { conn, msg_id, err } => {
                 self.log.line(format_args!(
@@ -37,6 +52,9 @@ impl<A: AgentPort> Engine<A> {
                 Ok(())
             }
             AgentEvent::Err { conn, err } => self.on_conn_error(&conn, &err),
+            AgentEvent::DecryptError { conn, error, count } => {
+                self.on_decrypt_error(&conn, error, count)
+            }
             AgentEvent::RatchetSync { conn, state } => self.on_ratchet_sync(&conn, state),
             AgentEvent::Switch { conn, phase } => self.on_switch(&conn, phase),
             e @ (AgentEvent::Address { conn, .. } | AgentEvent::Req { conn, .. }) => {

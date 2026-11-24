@@ -11,12 +11,14 @@ use crate::engine::machine::Engine;
 use crate::engine::records::{NS, keys};
 
 /// How far a group item got with any member: `membersGroupItemStatus` shows the furthest
-/// (partial counts as reached), and a member's error never changes the item.
+/// (partial counts as reached), a bad hash from any member wins over the good receipts, and a
+/// member's error never changes the item.
 fn rank(d: Delivery) -> u8 {
     match d {
         Delivery::Sending | Delivery::Received | Delivery::Failed => 0,
         Delivery::Sent => 1,
         Delivery::Delivered => 2,
+        Delivery::DeliveredBadHash => 3,
     }
 }
 
@@ -92,7 +94,10 @@ impl<A: AgentPort> Engine<A> {
         let Some(id) = self.get_index(&key)? else {
             return Ok(());
         };
-        if matches!(to, Delivery::Delivered | Delivery::Failed) {
+        if matches!(
+            to,
+            Delivery::Delivered | Delivery::DeliveredBadHash | Delivery::Failed
+        ) {
             self.store.delete(NS, &key)?;
         }
         let chat = ChatRef::Group(group);
