@@ -158,6 +158,22 @@ mod tests {
     }
 
     #[test]
+    fn a_proxy_that_lost_its_session_is_a_network_failure_and_one_refusing_auth_is_not() {
+        use crate::smp::{ErrorType, ProxyClientError, ProxyError};
+        let proxied = |e| {
+            AgentError::Smp(SmpError::Proxy {
+                proxy: "smp://p".into(),
+                relay: "smp://r".into(),
+                err: ProxyClientError::Protocol(ErrorType::Proxy(e)),
+            })
+        };
+        let lost = proxied(ProxyError::NoSession);
+        assert!(matches!(failure(&lost), AgentFailure::Network(_)));
+        let auth = proxied(ProxyError::BasicAuth);
+        assert!(matches!(failure(&auth), AgentFailure::Other(_)));
+    }
+
+    #[test]
     fn a_bad_link_is_a_bad_link_failure() {
         assert!(matches!(
             failure(&AgentError::Parse("x")),

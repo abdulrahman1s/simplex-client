@@ -1,5 +1,6 @@
 //! What the engine needs from the agent layer, mirroring simplexmq's Agent API (Agent.hs, AGPL-3.0-only).
 
+use crate::types::{ProxyFallback, ProxyMode};
 use serde::{Deserialize, Serialize};
 
 use crate::agent::links::ConnectionLink;
@@ -211,4 +212,8 @@ pub trait AgentPort {
     /// Keeps new queues off the relays in `disabled` (addresses as the config gave them) while
     /// any other relay is configured; queues already on them stay. An empty list enables all.
     fn set_disabled_relays(&mut self, disabled: &[String]);
+
+    /// Private message routing: when sends go through a relay of ours, and when they may go
+    /// directly after all. Fakes that do not route ignore it.
+    fn set_routing(&mut self, _mode: ProxyMode, _fallback: ProxyFallback) {}
 }

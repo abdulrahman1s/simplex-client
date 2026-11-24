@@ -34,6 +34,8 @@ impl ClientBuilder {
                 key: String::new(),
                 name: "SimpleX bot".into(),
                 relays: Vec::new(),
+                proxy_mode: crate::types::ProxyMode::default(),
+                proxy_fallback: crate::types::ProxyFallback::default(),
             },
             log: None,
             timeout: Duration::from_secs(60),

@@ -81,7 +81,7 @@ impl AgentClient {
     }
 
     fn switch_request(&mut self, id: ConnId, sq: &SndQueue, request: Request) {
-        let sent = self.request(id, OpKind::Switch(switch_tag(sq)), &sq.server, request);
+        let sent = self.request_to_peer(id, OpKind::Switch(switch_tag(sq)), &sq.server, request);
         let retry_at = self.step_retry_after();
         if let Ok(c) = self.conn_mut(id) {
             c.step.in_flight = sent;

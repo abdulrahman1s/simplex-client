@@ -1,7 +1,9 @@
 //! The ERR payload: `ErrorType` and `CommandError` (Protocol.hs `instance Encoding ErrorType`).
 use std::fmt;
 
-use crate::encoding::DecodeError;
+use crate::encoding::{DecodeError, EncodeError};
+
+use super::proxy::ProxyError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommandError {
@@ -38,13 +40,13 @@ impl CommandError {
     }
 }
 
-/// Free-text payloads (`PROXY`, `BLOCKED`, `STORE`, `NAME`) are kept as the server wrote them.
+/// Free-text payloads (`BLOCKED`, `STORE`, `NAME`) are kept as the server wrote them.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ErrorType {
     Block,
     Session,
     Cmd(CommandError),
-    Proxy(String),
+    Proxy(ProxyError),
     Auth,
     Blocked(String),
     Service,
@@ -60,29 +62,64 @@ pub enum ErrorType {
 }
 
 impl ErrorType {
+    /// `smpP`: the ERR payload, all of `bytes`.
     pub fn parse(bytes: &[u8]) -> Result<Self, DecodeError> {
-        let text = std::str::from_utf8(bytes).map_err(|_| DecodeError::Utf8)?;
-        let (tag, rest) = text.split_once(' ').unwrap_or((text, ""));
+        let at = bytes.iter().position(|b| *b == b' ').unwrap_or(bytes.len());
+        let (tag, rest) = bytes.split_at(at);
+        let rest = rest.get(1..).unwrap_or_default();
+        let text = || {
+            std::str::from_utf8(rest)
+                .map(str::to_owned)
+                .map_err(|_| DecodeError::Utf8)
+        };
         let bad = DecodeError::Invalid("ERR type");
         Ok(match tag {
-            "BLOCK" => Self::Block,
-            "SESSION" => Self::Session,
-            "CMD" => Self::Cmd(CommandError::parse(rest).ok_or(bad)?),
-            "PROXY" => Self::Proxy(rest.to_owned()),
-            "AUTH" => Self::Auth,
-            "BLOCKED" => Self::Blocked(rest.to_owned()),
-            "SERVICE" => Self::Service,
-            "CRYPTO" => Self::Crypto,
-            "QUOTA" => Self::Quota,
-            "STORE" => Self::Store(rest.to_owned()),
-            "EXPIRED" => Self::Expired,
-            "NO_MSG" => Self::NoMsg,
-            "LARGE_MSG" => Self::LargeMsg,
-            "INTERNAL" => Self::Internal,
-            "NAME" => Self::Name(rest.to_owned()),
-            "DUPLICATE_" => Self::Duplicate,
+            b"BLOCK" => Self::Block,
+            b"SESSION" => Self::Session,
+            b"CMD" => Self::Cmd(CommandError::parse(&text()?).ok_or(bad)?),
+            b"PROXY" => Self::Proxy(ProxyError::parse(rest)?),
+            b"AUTH" => Self::Auth,
+            b"BLOCKED" => Self::Blocked(text()?),
+            b"SERVICE" => Self::Service,
+            b"CRYPTO" => Self::Crypto,
+            b"QUOTA" => Self::Quota,
+            b"STORE" => Self::Store(text()?),
+            b"EXPIRED" => Self::Expired,
+            b"NO_MSG" => Self::NoMsg,
+            b"LARGE_MSG" => Self::LargeMsg,
+            b"INTERNAL" => Self::Internal,
+            b"NAME" => Self::Name(text()?),
+            b"DUPLICATE_" => Self::Duplicate,
             _ => return Err(bad),
         })
+    }
+
+    /// `smpEncode`: the wire form, where a proxy's strings are length-prefixed.
+    pub fn encode(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
+        match self {
+            Self::Proxy(e) => {
+                out.extend_from_slice(b"PROXY ");
+                e.encode(out)
+            }
+            Self::Block
+            | Self::Session
+            | Self::Cmd(_)
+            | Self::Auth
+            | Self::Blocked(_)
+            | Self::Service
+            | Self::Crypto
+            | Self::Quota
+            | Self::Store(_)
+            | Self::Expired
+            | Self::NoMsg
+            | Self::LargeMsg
+            | Self::Internal
+            | Self::Name(_)
+            | Self::Duplicate => {
+                out.extend_from_slice(self.to_string().as_bytes());
+                Ok(())
+            }
+        }
     }
 }
 

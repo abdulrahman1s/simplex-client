@@ -5,8 +5,13 @@ pub const MAX_VERSION: u16 = 23;
 pub const SERVICE_CERTS: u16 = 16;
 pub const NEW_NTF_CREDS: u16 = 17;
 pub const SERVER_INFO: u16 = 21;
+/// `fwdNoncesSMPVersion`: the version goes into the forwarded command's nonce, and the relay
+/// answers under a random nonce it names.
+pub const FWD_NONCES: u16 = 23;
 
 /// `smpBlockSize`.
 pub const BLOCK_SIZE: usize = 16384;
+/// `paddedProxiedTLength`: what a forwarded transmission is padded to before sealing.
+pub const PADDED_PROXIED_LENGTH: usize = 16226;
 /// The secretbox tag a block-encrypted block carries on top of its padded plaintext.
 pub const BOX_OVERHEAD: usize = 16;

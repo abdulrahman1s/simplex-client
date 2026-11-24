@@ -1,7 +1,8 @@
 //! Server responses and pushes with their versioned encodings (Protocol.hs `instance ProtocolEncoding BrokerMsg`, simplexmq 7.1.4).
-use crate::crypto::PublicKey;
-use crate::encoding::{Decode, DecodeError, Decoder, Encode, EncodeError, Tail};
+use crate::crypto::{CbNonce, PublicKey};
+use crate::encoding::{Decode, DecodeError, Decoder, Encode, EncodeError, Tail, VersionRange};
 
+use super::proxy::wire::{decode_pkey, decode_pres, encode_pkey, encode_pres};
 use super::queue_data::{QueueLinkData, QueueMode};
 use super::server_error::ErrorType;
 use super::version::{NEW_NTF_CREDS, SERVICE_CERTS};
@@ -47,6 +48,19 @@ pub enum Response {
     End,
     Deld,
     Info(Vec<u8>),
+    /// A proxy's session with a destination relay: the relay's session id, its versions, and its
+    /// certificate chain with the signed key that forwarded commands are encrypted to.
+    Pkey {
+        session_id: Vec<u8>,
+        range: VersionRange,
+        chain: Vec<Vec<u8>>,
+        signed_key: Vec<u8>,
+    },
+    /// The destination's answer to a forwarded command, still sealed for the sender.
+    Pres {
+        nonce: Option<CbNonce>,
+        body: Vec<u8>,
+    },
     Err(ErrorType),
     Pong,
 }
@@ -64,6 +78,8 @@ impl Response {
             Self::End => "END",
             Self::Deld => "DELD",
             Self::Info(_) => "INFO",
+            Self::Pkey { .. } => "PKEY",
+            Self::Pres { .. } => "PRES",
             Self::Err(_) => "ERR",
             Self::Pong => "PONG",
         }
@@ -91,6 +107,8 @@ impl Response {
                 dh_key: PublicKey::decode(&mut d)?,
             },
             b"INFO" => Self::Info(Tail::decode(&mut d)?.0),
+            b"PKEY" => decode_pkey(&mut d)?,
+            b"PRES" => decode_pres(v, &mut d)?,
             b"ERR" => Self::Err(ErrorType::parse(d.take_all())?),
             b"OK" => Self::Ok,
             b"END" => Self::End,
@@ -141,7 +159,14 @@ impl Response {
                 dh_key.encode(&mut out)?;
             }
             Self::Info(b) => out.extend_from_slice(b),
-            Self::Err(e) => out.extend_from_slice(e.to_string().as_bytes()),
+            Self::Pkey {
+                session_id,
+                range,
+                chain,
+                signed_key,
+            } => encode_pkey(&mut out, session_id, range, chain, signed_key)?,
+            Self::Pres { nonce, body } => encode_pres(v, &mut out, nonce.as_ref(), body),
+            Self::Err(e) => e.encode(&mut out)?,
             Self::Ok | Self::End | Self::Deld | Self::Pong => {
                 out.pop();
             }

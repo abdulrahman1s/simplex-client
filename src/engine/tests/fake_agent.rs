@@ -3,6 +3,7 @@
 use crate::agent::links::ConnectionLink;
 use crate::engine::agent_port::{AgentEvent, AgentFailure, AgentMsgId, AgentPort, ConnId};
 use crate::store::Store;
+use crate::types::{ProxyFallback, ProxyMode};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Call {
@@ -65,6 +66,8 @@ pub struct FakeAgent {
     pub pq_seen: Vec<(&'static str, bool)>,
     /// The PQ flag of each `send`, in order.
     pub pq_sent: Vec<(ConnId, bool)>,
+    /// The last routing settings given.
+    pub routing: Option<(ProxyMode, ProxyFallback)>,
     conns: i64,
     msgs: AgentMsgId,
 }
@@ -250,6 +253,10 @@ impl AgentPort for FakeAgent {
 
     fn set_disabled_relays(&mut self, disabled: &[String]) {
         self.calls.push(Call::SetDisabledRelays(disabled.to_vec()));
+    }
+
+    fn set_routing(&mut self, mode: ProxyMode, fallback: ProxyFallback) {
+        self.routing = Some((mode, fallback));
     }
 
     fn drain_events(&mut self) -> Vec<AgentEvent> {

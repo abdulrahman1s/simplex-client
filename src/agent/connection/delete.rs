@@ -40,6 +40,8 @@ impl AgentClient {
             }
         }
         used.extend(self.ops.servers());
+        self.proxies.retain(|s| used.contains(s));
+        used.extend(self.proxies.servers());
         self.servers.retain(|s| used.contains(s));
     }
 }

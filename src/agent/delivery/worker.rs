@@ -3,7 +3,9 @@ use crate::smp::{Command, ErrorType, Request, Response, SmpError};
 use crate::store::Store;
 
 use super::retry::RetryMode;
-use crate::agent::client::{AgentClient, AgentEvent, AgentMsgId, ConnId, OpKind, is_temporary};
+use crate::agent::client::{
+    AgentClient, AgentEvent, AgentMsgId, ConnId, OpKind, is_host_error, is_temporary,
+};
 use crate::agent::error::{AgentError, Result};
 use crate::agent::records::{self, PendingSend, SendKind};
 
@@ -41,7 +43,7 @@ impl AgentClient {
             body: p.body,
         };
         let request = Request::new(cmd, sq.snd_id.clone(), Some(sq.auth.clone()));
-        if self.request(id, OpKind::Send(head), &sq.server, request) {
+        if self.request_to_peer(id, OpKind::Send(head), &sq.server, request) {
             if let Some(c) = self.conns.get_mut(&id) {
                 c.send.in_flight = true;
             }
@@ -82,7 +84,18 @@ impl AgentClient {
             Err(e) if is_temporary(&e) && self.expired(id, &p, self.now()) => {
                 self.drop_send(store, id, &p, AgentError::Expired)?;
             }
-            Err(e) if is_temporary(&e) => self.schedule_retry(id, RetryMode::Fast),
+            Err(e) if is_temporary(&e) => {
+                // A relay that cannot be reached this way may never be; the sender is told each time.
+                if is_host_error(&e) && p.kind == SendKind::Msg {
+                    let err = e.into();
+                    self.emit(AgentEvent::Mwarn {
+                        conn: id,
+                        msg_id: p.id,
+                        err,
+                    });
+                }
+                self.schedule_retry(id, RetryMode::Fast);
+            }
             // AUTH and the other refusals: the queue will not take this message.
             Err(e) => self.drop_send(store, id, &p, e.into())?,
         }

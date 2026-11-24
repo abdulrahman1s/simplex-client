@@ -68,6 +68,8 @@ impl Dir {
             key: KEY.into(),
             name: name.into(),
             relays: Vec::new(),
+            proxy_mode: crate::types::ProxyMode::default(),
+            proxy_fallback: crate::types::ProxyFallback::default(),
         }
     }
 }

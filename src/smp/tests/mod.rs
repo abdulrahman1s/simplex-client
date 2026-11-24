@@ -1,6 +1,6 @@
 //! SMP client tests: golden encodings from the Haskell `ServerTests.hs` syntax tests, then the connection against an in-memory server.
 mod auth;
-mod certs;
+pub(crate) mod certs;
 mod commands;
 mod connection;
 mod fake;
@@ -9,6 +9,10 @@ mod keepalive;
 mod live;
 mod pool;
 mod pool_rig;
+mod proxy_codec;
+mod proxy_pkey;
+mod proxy_relay;
+mod proxy_session;
 mod responses;
 mod session;
 mod session_keepalive;

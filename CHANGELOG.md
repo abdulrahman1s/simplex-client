@@ -28,6 +28,12 @@ All notable changes to this project are documented here. The format follows
 - CI for formatting, clippy, tests, wasm, MSRV 1.95, cargo-deny and docs.
 - `Event::Offline(true)` at a start without a network, from the first relay check, and
   `Offline(false)` once a relay answers again.
+- Private message routing: messages, confirmations, SKEY, LKEY and LGET for someone else's
+  relay go through one of our own relays (`PRXY`/`PFWD`), so that relay never sees our IP
+  address. `Config::proxy_mode` and `Config::proxy_fallback` choose when; they default to the
+  chat's `unknown` (proxy unless the relay is one of ours) and `protected` (never fall back to
+  a direct connection, as this client has no SOCKS or onion transport). `AgentConfig` has the
+  same settings, defaulting to the agent's `never`.
 - The preset relays in use are checked like own relays when the config names none.
 - Chat notices for a peer's address switch and for ratchet re-syncs
   (`ChatNotice::AddressSwitch`, `ChatNotice::RatchetSync`).

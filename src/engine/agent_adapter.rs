@@ -14,6 +14,7 @@ use crate::agent::links::ConnectionLink;
 use crate::ratchet::PqEncryption;
 use crate::smp::{SmpEvent, SmpServer};
 use crate::store::Store;
+use crate::types::{ProxyFallback, ProxyMode};
 
 pub struct NativeAgent {
     client: AgentClient,
@@ -237,7 +238,13 @@ impl AgentPort for NativeAgent {
             .partition(|s| down.contains(s));
         // Queues go on the first server: the working ones lead, and every server stays listed
         // for its password and so its connection is kept.
-        self.client.cfg.servers = on.into_iter().chain(off).collect();
+        self.client.cfg.servers = on.into_iter().chain(off.iter().cloned()).collect();
+        self.client.cfg.disabled = off;
+    }
+
+    fn set_routing(&mut self, mode: ProxyMode, fallback: ProxyFallback) {
+        self.client.cfg.proxy_mode = mode;
+        self.client.cfg.proxy_fallback = fallback;
     }
 
     fn drain_events(&mut self) -> Vec<AgentEvent> {
@@ -288,6 +295,26 @@ mod tests {
     fn rejected_custom_relays_never_fall_back_to_the_presets() {
         let a = agent(&["smp://bad"]);
         assert!(a.client.cfg.servers.is_empty());
+    }
+
+    #[test]
+    fn routing_settings_and_disabled_relays_reach_the_agents_config() {
+        let mut a = agent(&[A, B]);
+        assert_eq!(
+            a.client.cfg.proxy_mode,
+            ProxyMode::Never,
+            "the agent's own default"
+        );
+        a.set_routing(ProxyMode::Always, ProxyFallback::Prohibit);
+        let cfg = &a.client.cfg;
+        assert_eq!(
+            (cfg.proxy_mode, cfg.proxy_fallback),
+            (ProxyMode::Always, ProxyFallback::Prohibit)
+        );
+        a.set_disabled_relays(&[A.to_owned()]);
+        assert_eq!(a.client.cfg.disabled, vec![A.parse::<SmpServer>().unwrap()]);
+        a.set_disabled_relays(&[]);
+        assert!(a.client.cfg.disabled.is_empty());
     }
 
     #[test]

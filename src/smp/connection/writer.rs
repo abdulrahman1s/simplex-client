@@ -165,7 +165,7 @@ fn prepare(sh: &Shared, out: &Out, p: &Prepared) -> Result<(Vec<u8>, Vec<u8>), S
         reply: p.reply.clone(),
         entity_id: r.entity_id.clone(),
         sent_at: now,
-        deadline: now + ms(sh.cfg.command_timeout),
+        deadline: now + ms(r.timeout.unwrap_or(sh.cfg.command_timeout)),
         is_ping: p.is_ping,
     };
     lock(&sh.pending).insert(corr.clone(), entry)?;

@@ -25,53 +25,76 @@ impl Connector for FakeConnector {
         _: &ConnConfig,
         slot: &dyn Fn(Arc<dyn Closer>),
     ) -> Result<Wire, SmpError> {
-        let (to_client, client_rx) = unbounded();
-        let (client_tx, from_client) = unbounded();
-        let closed = Arc::new(AtomicBool::new(false));
-        let session_id = random_vec(32).unwrap();
-        let (sid, server_key) = {
-            let mut i = self.0.lock();
-            if i.refuse {
-                return Err(SmpError::Io("refused".into()));
-            }
-            i.next_session += 1;
-            let sid = i.next_session;
-            let s = Session {
-                tx: to_client,
-                closed: Arc::clone(&closed),
-                session_id: session_id.clone(),
-            };
-            i.sessions.insert(sid, s);
-            (sid, i.server_key.public.clone())
-        };
-        let closer: Arc<dyn Closer> = Arc::new(PipeCloser(Arc::clone(&closed)));
-        slot(Arc::clone(&closer));
-        let (srv, flag) = (Arc::clone(&self.0), Arc::clone(&closed));
-        thread::spawn(move || serve(&srv, sid, &from_client, &flag));
-        let session = Established {
-            version: self.0.version,
-            session_id,
-            server_key,
-            server_info: None,
-            snd: SndBlocks::plain(),
-            rcv: RcvBlocks::plain(),
-        };
-        Ok(Wire {
-            reader: Box::new(PipeReader {
-                rx: client_rx,
-                closed: Arc::clone(&closed),
-            }),
-            writer: Box::new(PipeWriter {
-                tx: client_tx,
-                closed,
-            }),
-            closer,
-            session,
-        })
+        open(&self.0, slot)
     }
 }
 
-fn serve(srv: &FakeSmp, sid: u64, from_client: &Receiver<Vec<u8>>, closed: &AtomicBool) {
+/// Several servers, each reached at its own address; anything else does not answer.
+pub struct NetConnector(pub Vec<Arc<FakeSmp>>);
+
+impl Connector for NetConnector {
+    fn connect(
+        &self,
+        server: &SmpServer,
+        _: &str,
+        _: &ConnConfig,
+        slot: &dyn Fn(Arc<dyn Closer>),
+    ) -> Result<Wire, SmpError> {
+        match self.0.iter().find(|s| s.address() == *server) {
+            Some(s) => open(s, slot),
+            None => Err(SmpError::Io("no such host".into())),
+        }
+    }
+}
+
+fn open(srv: &Arc<FakeSmp>, slot: &dyn Fn(Arc<dyn Closer>)) -> Result<Wire, SmpError> {
+    let (to_client, client_rx) = unbounded();
+    let (client_tx, from_client) = unbounded();
+    let closed = Arc::new(AtomicBool::new(false));
+    let session_id = random_vec(32).unwrap();
+    let (sid, server_key) = {
+        let mut i = srv.lock();
+        if i.refuse {
+            return Err(SmpError::Io("refused".into()));
+        }
+        i.connects += 1;
+        i.next_session += 1;
+        let sid = i.next_session;
+        let s = Session {
+            tx: to_client,
+            closed: Arc::clone(&closed),
+            session_id: session_id.clone(),
+        };
+        i.sessions.insert(sid, s);
+        (sid, i.server_key.public.clone())
+    };
+    let closer: Arc<dyn Closer> = Arc::new(PipeCloser(Arc::clone(&closed)));
+    slot(Arc::clone(&closer));
+    let (srv2, flag) = (Arc::clone(srv), Arc::clone(&closed));
+    thread::spawn(move || serve(&srv2, sid, &from_client, &flag));
+    let session = Established {
+        version: srv.version,
+        session_id,
+        server_key,
+        server_info: None,
+        snd: SndBlocks::plain(),
+        rcv: RcvBlocks::plain(),
+    };
+    Ok(Wire {
+        reader: Box::new(PipeReader {
+            rx: client_rx,
+            closed: Arc::clone(&closed),
+        }),
+        writer: Box::new(PipeWriter {
+            tx: client_tx,
+            closed,
+        }),
+        closer,
+        session,
+    })
+}
+
+fn serve(srv: &Arc<FakeSmp>, sid: u64, from_client: &Receiver<Vec<u8>>, closed: &AtomicBool) {
     let v = srv.version;
     while !closed.load(Ordering::Acquire) {
         let block = match from_client.recv_timeout(Duration::from_millis(5)) {
@@ -84,10 +107,12 @@ fn serve(srv: &FakeSmp, sid: u64, from_client: &Receiver<Vec<u8>>, closed: &Atom
         };
         let mut pushes: Vec<Push> = Vec::new();
         let mut out = Vec::new();
+        // A proxy's commands reach other servers' locks, so they run outside this one's.
+        let proxied: Vec<Option<Response>> = ts.iter().map(|t| srv.proxy_command(t)).collect();
         let txs = {
             let mut i = srv.lock();
-            for t in &ts {
-                let r = i.handle(v, sid, t, &mut pushes);
+            for (t, p) in ts.iter().zip(proxied) {
+                let r = p.unwrap_or_else(|| i.handle(v, sid, t, &mut pushes));
                 out.push((sid, t.corr_id.clone(), t.entity_id.clone(), r));
             }
             out.extend(pushes.into_iter().map(|(s, e, r)| (s, Vec::new(), e, r)));
@@ -106,7 +131,7 @@ fn serve(srv: &FakeSmp, sid: u64, from_client: &Receiver<Vec<u8>>, closed: &Atom
     srv.lock().end_session(sid);
 }
 
-fn write(tx: &Sender<Vec<u8>>, v: u16, corr: &[u8], entity: &[u8], r: &Response) {
+pub fn write(tx: &Sender<Vec<u8>>, v: u16, corr: &[u8], entity: &[u8], r: &Response) {
     let t = encode_transmission(v, &[], corr, entity, &r.encode(v).unwrap()).unwrap();
     let (payloads, _) = pack(&[t], BLOCK_SIZE - 2);
     for p in payloads {

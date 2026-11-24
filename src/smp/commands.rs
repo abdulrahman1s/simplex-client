@@ -2,6 +2,7 @@
 use crate::crypto::PublicKey;
 use crate::encoding::{Encode, EncodeError};
 
+use super::address::SmpServer;
 use super::queue_data::{NewNtfCreds, QueueLinkData, QueueReqData, SubscriptionMode};
 use super::version::NEW_NTF_CREDS;
 
@@ -61,6 +62,17 @@ pub enum Command {
         body: Vec<u8>,
     },
     Ping,
+    /// Asks a proxy for a session with `server`; answered with PKEY.
+    Prxy {
+        server: SmpServer,
+        basic_auth: Option<String>,
+    },
+    /// A sealed transmission for the destination of the session named by the entity id.
+    Pfwd {
+        version: u16,
+        key: PublicKey,
+        body: Vec<u8>,
+    },
 }
 
 impl Command {
@@ -83,6 +95,8 @@ impl Command {
             Self::Que => "QUE",
             Self::Send { .. } => "SEND",
             Self::Ping => "PING",
+            Self::Prxy { .. } => "PRXY",
+            Self::Pfwd { .. } => "PFWD",
         }
     }
 
@@ -118,6 +132,17 @@ impl Command {
                 out.push(b' ');
                 notification.encode(&mut out)?;
                 out.push(b' ');
+                out.extend_from_slice(body);
+            }
+            Self::Prxy { server, basic_auth } => {
+                out.push(b' ');
+                server.encode(&mut out)?;
+                basic_auth.encode(&mut out)?;
+            }
+            Self::Pfwd { version, key, body } => {
+                out.push(b' ');
+                version.encode(&mut out)?;
+                key.encode(&mut out)?;
                 out.extend_from_slice(body);
             }
             Self::Sub
