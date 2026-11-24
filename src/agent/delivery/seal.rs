@@ -31,22 +31,36 @@ pub fn seal(sq: &SndQueue, envelope: &[u8], confirmation: bool) -> Result<Vec<u8
     .to_bytes()?)
 }
 
-/// What one queue message held: the agent envelope and, for a confirmation, the sender's e2e key.
+/// The public header's key, read against the queue's state (Agent.hs `processClientMsg`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HeaderKey {
+    /// No key: the stored secret of a confirmed queue opened it.
+    None,
+    /// The sender's key on a queue not yet confirmed: a confirmation or a request.
+    First(PublicKey),
+    /// A key on a confirmed queue. The stored secret still opened it, so only a confirmation
+    /// sent again after a lost ACK may carry one; a relay that knows the queue's `dh=` key
+    /// must not get to pick the secret.
+    Repeated,
+}
+
+/// What one queue message held.
 pub struct Opened {
     pub version: Version,
-    pub sender_e2e: Option<PublicKey>,
+    pub header: HeaderKey,
     pub envelope: Vec<u8>,
 }
 
 /// Opens a message on `rq`; sender-secured queues only take `PHEmpty`.
 pub fn open(rq: &RcvQueue, body: &[u8]) -> Result<Opened> {
     let env = ClientMsgEnvelope::from_bytes(body)?;
-    let peer = match (&env.e2e_pub, &rq.peer_e2e) {
-        (Some(k), _) => k,
-        (None, Some(k)) => k,
+    let (peer, header) = match (&rq.peer_e2e, env.e2e_pub) {
+        (Some(k), None) => (k.clone(), HeaderKey::None),
+        (Some(k), Some(_)) => (k.clone(), HeaderKey::Repeated),
+        (None, Some(k)) => (k.clone(), HeaderKey::First(k)),
         (None, None) => return Err(AgentError::Prohibited("message before confirmation")),
     };
-    let plain = cb_decrypt(&dh(peer, &rq.e2e_priv)?, &env.nonce, &env.enc_body)?;
+    let plain = cb_decrypt(&dh(&peer, &rq.e2e_priv)?, &env.nonce, &env.enc_body)?;
     let msg = ClientMessage::from_bytes(&plain)?;
     if msg.header != PrivHeader::Empty {
         return Err(AgentError::Prohibited(
@@ -55,7 +69,7 @@ pub fn open(rq: &RcvQueue, body: &[u8]) -> Result<Opened> {
     }
     Ok(Opened {
         version: env.version,
-        sender_e2e: env.e2e_pub,
+        header,
         envelope: msg.body,
     })
 }

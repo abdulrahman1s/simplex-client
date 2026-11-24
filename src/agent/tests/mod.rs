@@ -12,6 +12,7 @@ mod pq_upgrade;
 mod proxy;
 mod proxy_fallback;
 mod proxy_rig;
+mod relay_header_key;
 mod restart;
 pub(crate) mod resync;
 mod resync_rules;

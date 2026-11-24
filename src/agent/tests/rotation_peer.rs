@@ -2,7 +2,7 @@
 use super::rotation_support::{addr, create_queue};
 use super::support::{Rig, WAIT};
 use crate::agent::client::ConnId;
-use crate::agent::delivery::open;
+use crate::agent::delivery::{HeaderKey, open};
 use crate::agent::envelope::AgentMsgEnvelope;
 use crate::agent::message::{AMessage, AgentMessage, SndQAddr};
 use crate::agent::records::{Batch, RcvQueue, SendKind};
@@ -120,7 +120,9 @@ impl Peer {
                     ..
                 } => {
                     assert!(enc_conn_info.is_empty());
-                    let key = o.sender_e2e.unwrap();
+                    let HeaderKey::First(key) = o.header else {
+                        panic!("a first confirmation")
+                    };
                     self.new.peer_e2e = Some(key.clone());
                     self.confs.push(key);
                 }

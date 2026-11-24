@@ -6,7 +6,7 @@ use crate::store::Store;
 
 use super::params::from_wire;
 use crate::agent::client::{AgentClient, AgentEvent, ConnId};
-use crate::agent::delivery::Opened;
+use crate::agent::delivery::{HeaderKey, Opened};
 use crate::agent::e2e::E2eParams as WireParams;
 use crate::agent::error::{AgentError, Result};
 use crate::agent::message::AgentMessage;
@@ -30,10 +30,9 @@ impl AgentClient {
         conf: Confirmation,
     ) -> Result<()> {
         let (rec, ratchet) = self.editable(id)?;
-        let sender = opened
-            .sender_e2e
-            .clone()
-            .ok_or(AgentError::Prohibited("no e2e key"))?;
+        let HeaderKey::First(sender) = opened.header.clone() else {
+            return Err(AgentError::Prohibited("no e2e key"));
+        };
         match rec.status {
             ConnStatus::Invited => {
                 self.joiner_confirmed(store, rec, ratchet, opened.version, sender, conf)
@@ -53,15 +52,7 @@ impl AgentClient {
             | ConnStatus::Resolving
             | ConnStatus::Securing
             | ConnStatus::Replying
-            | ConnStatus::Active => {
-                // The server sends a confirmation again when our ACK was lost.
-                let peer = rec.rcv.as_ref().and_then(|r| r.peer_e2e.as_ref());
-                if peer == Some(&sender) {
-                    Ok(())
-                } else {
-                    Err(AgentError::Prohibited("confirmation in this state"))
-                }
-            }
+            | ConnStatus::Active => Err(AgentError::Prohibited("confirmation in this state")),
         }
     }
 
