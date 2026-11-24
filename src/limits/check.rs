@@ -100,6 +100,7 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::SetAlias { .. }
         | Request::SetMessageTtl { .. }
         | Request::Forward { .. }
+        | Request::ContactMember { .. }
         | Request::SetBlocked { .. }
         | Request::SetMemberBlocked { .. }
         | Request::ShowCode(_)

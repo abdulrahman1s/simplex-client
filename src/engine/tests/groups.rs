@@ -21,6 +21,7 @@ mod links_host;
 mod links_join;
 mod manage;
 mod manage_group;
+mod member_contact;
 mod members;
 mod members_intro;
 mod members_join;

@@ -92,6 +92,18 @@ impl Member {
         })
     }
 
+    /// Asks the member to talk directly, with `text` if given; they show as a friend,
+    /// connecting, until they accept.
+    pub fn contact(&self, text: Option<&str>) -> Result<()> {
+        let member = self.listed_id()?;
+        let group = self.group;
+        self.client.request(Request::ContactMember {
+            group,
+            member,
+            text: text.map(str::to_owned),
+        })
+    }
+
     /// Only a member from the group's list has a number to act on.
     fn listed_id(&self) -> Result<i64> {
         self.id().ok_or_else(|| Error::Failed {

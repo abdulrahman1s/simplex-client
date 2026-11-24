@@ -44,6 +44,17 @@ impl Member {
         })
     }
 
+    /// Asks the member to talk directly, with `text` if given; they show as a friend,
+    /// connecting, until they accept.
+    #[wasm_bindgen(unchecked_return_type = "Promise<void>")]
+    pub fn contact(&self, text: Option<String>) -> js_sys::Promise {
+        listed(self, |group, member| Request::ContactMember {
+            group,
+            member,
+            text,
+        })
+    }
+
     /// Removes the member; with `messages`, what they wrote shows deleted for all. Admins only.
     #[wasm_bindgen(unchecked_return_type = "Promise<void>")]
     pub fn remove(&self, messages: Option<bool>) -> js_sys::Promise {

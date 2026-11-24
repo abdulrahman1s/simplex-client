@@ -339,6 +339,7 @@ const [member] = (await group.members()).filter((m) => m.name === "bob");
 await member.setRole("moderator");  // "observer" | "author" | "member" | "moderator" | "admin" | "owner"
 await member.blockForAll(true);     // hides their messages for every member
 await member.remove(true);          // true: what they wrote shows deleted for everyone
+await member.contact("hi!");        // a direct chat, where the group allows direct messages
 await message.moderate();           // a member's message, deleted for everyone
 await group.setProfile("crew", "Welcome!");
 await group.setPrefs({ voice: { on: false }, files: { on: true, role: "moderator" } });

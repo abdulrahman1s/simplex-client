@@ -121,6 +121,11 @@ impl<A: AgentPort> Engine<A> {
             Request::Moderate { group, item } => self.moderate(group, item),
             Request::DeleteForMe { chat, item } => self.delete_for_me(chat, item),
             Request::Forward { from, item, to } => self.forward(from, item, to),
+            Request::ContactMember {
+                group,
+                member,
+                text,
+            } => self.contact_member(group, member, text),
             Request::SendLive { chat, text } => {
                 let live = Outgoing {
                     live: true,

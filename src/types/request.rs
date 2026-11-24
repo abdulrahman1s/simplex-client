@@ -163,6 +163,14 @@ pub enum Request {
         group: i64,
         prefs: GroupPrefs,
     },
+    /// Asks a group member to talk directly: a one-time link goes over the group connection,
+    /// with `text` if given (`APICreateMemberContact`, `APISendMemberContactInvitation`). The
+    /// member shows as a friend, connecting, until they accept.
+    ContactMember {
+        group: i64,
+        member: i64,
+        text: Option<String>,
+    },
     /// A moderator deletes a member's message for everyone (`APIDeleteMemberChatItem`).
     Moderate {
         group: i64,

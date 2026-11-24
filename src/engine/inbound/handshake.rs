@@ -25,6 +25,11 @@ impl<A: AgentPort> Engine<A> {
         if let Some((group, member)) = self.state.member_of(conn) {
             return self.on_member_invitation(group, member, conn, full, short);
         }
+        if let Some(friend) = self.state.friend_of(conn)
+            && self.send_member_contact(friend, full.clone())?
+        {
+            return Ok(());
+        }
         let mut rec = self.state.conns.get(conn).cloned().ok_or_else(unknown)?;
         let ConnKind::Invitation { created, .. } = rec.kind else {
             return Err(unknown());

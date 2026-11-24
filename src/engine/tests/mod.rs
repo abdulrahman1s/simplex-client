@@ -26,6 +26,7 @@ mod live_group;
 mod live_link;
 mod live_livemsg;
 mod live_manage;
+mod live_member_contact;
 mod live_msg;
 mod live_offline;
 mod live_prefs;

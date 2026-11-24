@@ -98,6 +98,12 @@ All notable changes to this project are documented here. The format follows
   message's timer, as upstream's does. **Breaking:** `Request` has new variants and
   `ChatMessage` a new field.
 
+- Direct chats with group members: `Request::ContactMember { group, member, text }`
+  (`member.contact`; JS the same) makes a one-time invitation and sends it with `text` over the
+  member's group connection in `x.grp.direct.inv` (`APICreateMemberContact`,
+  `APISendMemberContactInvitation`), where the group allows the user direct messages. The member
+  shows as a friend, connecting, until they accept. **Breaking:** `Request` has a new variant.
+
 ### Fixed
 
 - The profile sent to friends said disappearing messages were allowed, so an official app
