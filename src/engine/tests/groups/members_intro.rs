@@ -86,15 +86,26 @@ fn on_con_the_invitee_is_announced_to_every_member_and_each_is_introduced_to_it(
 }
 
 #[test]
-fn a_member_not_reachable_now_is_not_introduced_and_stays_new() {
+fn a_member_still_connecting_is_introduced_and_its_announcement_waits_for_its_con() {
     let mut t = T::started();
     let (g, members, dave, conn) = dave_joins(&mut t);
     let (carol, carol_conn) = members[1];
-    t.e.state.members.get_mut(&(g, carol)).unwrap().status = MemberStatus::Announced;
+    t.e.state.members.get_mut(&(g, carol)).unwrap().status = MemberStatus::Accepted;
     t.agent(AgentEvent::Con { conn });
     assert!(sent_on(&t, carol_conn).is_empty());
-    assert_eq!(sent_on(&t, conn).len(), 1);
-    assert!(!t.e.state.members[&(g, dave)].relations.contains_key(&carol));
+    assert_eq!(sent_on(&t, conn).len(), 2, "carol is introduced too");
+    assert_eq!(
+        t.e.state.members[&(g, dave)].relations[&carol],
+        MemberRelation::Introduced
+    );
+    t.agent(AgentEvent::Con { conn: carol_conn });
+    let ChatEvent::GrpMemNew { member_info, .. } = sent_on(&t, carol_conn).remove(0) else {
+        panic!()
+    };
+    assert_eq!(
+        member_info.member_id,
+        t.e.state.members[&(g, dave)].member_id
+    );
 }
 
 #[test]

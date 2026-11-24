@@ -102,11 +102,16 @@ impl<A: AgentPort> Engine<A> {
         Ok(())
     }
 
-    /// `CON`; one for a member already connected is a repeat.
-    pub(crate) fn on_member_con(&mut self, group: i64, member: i64, _conn: &ConnId) -> Result<()> {
+    /// `CON`; one for a member already connected is a repeat. What waited for the
+    /// connection goes first (`sendPendingGroupMessages`).
+    pub(crate) fn on_member_con(&mut self, group: i64, member: i64, conn: &ConnId) -> Result<()> {
         let m = self.member(group, member)?;
         if m.reachable().is_some() {
             return Ok(());
+        }
+        let rejected = m.status.gone() || self.group(group)?.status == MemberStatus::Rejected;
+        if !rejected {
+            self.send_pending(group, member, *conn)?;
         }
         match m.category {
             MemberCategory::Host => self.on_host_con(group, m),

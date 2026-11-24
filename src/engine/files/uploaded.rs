@@ -80,7 +80,7 @@ impl<A: AgentPort> Engine<A> {
     }
 
     /// An event about the user's file to whoever has it: the friend when connected, or every
-    /// member reachable now.
+    /// current member (kept for those still connecting).
     pub(super) fn tell_file_event(&mut self, chat: ChatRef, event: ChatEvent) -> Result<()> {
         let msg = ChatMessage::new(event)?;
         match chat {

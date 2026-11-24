@@ -1,4 +1,4 @@
-//! The host introduces a new member: `x.grp.mem.new` to all, the `x.grp.mem.intro`s batched to it, and its `x.grp.mem.inv` passed on as `x.grp.mem.fwd` (Internal.hs `introduceToAll`, `introduceMember`; Subscriber.hs `xGrpMemInv`).
+//! The host introduces a new member: `x.grp.mem.new` to all, kept for those still connecting, the `x.grp.mem.intro`s batched to it, and its `x.grp.mem.inv` passed on as `x.grp.mem.fwd` (Internal.hs `introduceToAll`, `introduceMember`; Subscriber.hs `xGrpMemInv`).
 
 use super::batch_out::batch_bodies;
 use super::conn_info::member_info;
@@ -36,35 +36,28 @@ fn intro_order(members: Vec<MemberRecord>) -> Result<Vec<MemberRecord>> {
 }
 
 impl<A: AgentPort> Engine<A> {
-    /// Called once the host's connection with `member` works.
+    /// Called once the host's connection with `member` works. `shouldIntroduce`: every
+    /// current member it has no relation with yet; one still connecting gets its
+    /// `x.grp.mem.new` once it connects, or from its inviter.
     pub(crate) fn introduce_to_all(&mut self, group: i64, member: i64) -> Result<()> {
         let m = self.member(group, member)?;
         let conn = m
             .reachable()
             .ok_or_else(|| fail(Code::RequestFailed, "member connection not active"))?;
-        // `shouldIntroduce`, and only members a message reaches now: there is no queue for the
-        // rest, so they stay New and are introduced when they connect.
-        let recipients: Vec<i64> = self
+        let recipients: Vec<MemberRecord> = self
             .state
             .members_of(group)
-            .filter(|r| r.id != member && r.status.current() && r.reachable().is_some())
+            .filter(|r| r.id != member && r.status.current())
             .filter(|r| !m.relations.contains_key(&r.id))
-            .map(|r| r.id)
+            .cloned()
             .collect();
         let new = ChatMessage::new(ChatEvent::GrpMemNew {
             member_info: member_info(&m),
             scope: None,
         })?;
-        let mut told = Vec::with_capacity(recipients.len());
-        for r in recipients {
-            match self.send_to_member(group, r, &new) {
-                Ok(_) => told.push(self.member(group, r)?),
-                Err(e) => self
-                    .log
-                    .line(format_args!("x.grp.mem.new not sent: {}", e.detail)),
-            }
-        }
-        self.send_intros(&m, conn, intro_order(told)?)
+        let ids: Vec<i64> = recipients.iter().map(|r| r.id).collect();
+        self.send_to_members(group, &ids, &new)?;
+        self.send_intros(&m, conn, intro_order(recipients)?)
     }
 
     fn send_intros(
@@ -94,7 +87,8 @@ impl<A: AgentPort> Engine<A> {
         Ok(())
     }
 
-    /// `xGrpMemInv`: only from a member the user invited, about a member it was introduced to.
+    /// `xGrpMemInv`: only from a member the user invited, about a member it was introduced to;
+    /// one still connecting gets it once it connects (`sendGroupMemberMessage`).
     pub(crate) fn on_mem_inv(
         &mut self,
         group: i64,
@@ -119,7 +113,7 @@ impl<A: AgentPort> Engine<A> {
             member_info: member_info(&from),
             intro,
         })?;
-        self.send_to_member(group, to, &fwd)?;
+        self.send_to_members(group, &[to], &fwd)?;
         Ok(())
     }
 }

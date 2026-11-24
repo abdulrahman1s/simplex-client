@@ -33,6 +33,13 @@ pub fn member(group: i64, member: i64) -> Vec<u8> {
     format!("member/{group}/{member}").into_bytes()
 }
 
+/// The messages waiting for a member's connection (`records::pending`). Eviction: on its CON,
+/// with its connection.
+#[must_use]
+pub fn pending(group: i64, member: i64) -> Vec<u8> {
+    format!("pend/{group}/{member}").into_bytes()
+}
+
 #[must_use]
 pub fn member_prefix(group: i64) -> Vec<u8> {
     format!("member/{group}/").into_bytes()

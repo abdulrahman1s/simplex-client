@@ -66,7 +66,7 @@ impl<A: AgentPort> Engine<A> {
         Ok(())
     }
 
-    /// To the friend, or to every member of the group reachable now.
+    /// To the friend, or to every current member of the group (kept for those still connecting).
     pub(super) fn send_to_chat(&mut self, chat: ChatRef, event: ChatEvent) -> Result<()> {
         match chat {
             ChatRef::Direct(friend) => self.send_event(friend, event),

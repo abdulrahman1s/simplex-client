@@ -1,4 +1,4 @@
-//! Send in a group: one item, the message to every member reachable now, with its quote and mentions (Commands.hs `sendGroupContentMessages_`; Internal.hs `prepareGroupMsg`, `getCIMentions`).
+//! Send in a group: one item, the message to every current member (kept for those still connecting), with its quote and mentions (Commands.hs `sendGroupContentMessages_`; Internal.hs `prepareGroupMsg`, `getCIMentions`).
 
 use crate::types::Event;
 use crate::types::model::{ChatRef, Mention, MessageAuthor, MessageBody, Quote};

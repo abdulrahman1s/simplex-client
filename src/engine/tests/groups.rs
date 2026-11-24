@@ -19,6 +19,7 @@ mod members_pipe;
 mod members_support;
 mod messages;
 mod messages_change;
+mod pending;
 mod picture;
 mod seed;
 

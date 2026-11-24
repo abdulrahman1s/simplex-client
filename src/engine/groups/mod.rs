@@ -41,6 +41,7 @@ mod msg_change;
 mod msg_new;
 mod notice;
 mod page;
+mod pending;
 pub(crate) mod policy;
 mod profile_update;
 mod rank;
@@ -49,6 +50,7 @@ mod relations;
 pub(crate) mod relay;
 mod role;
 mod send;
+mod send_action;
 mod unknown;
 pub(crate) mod verify;
 
