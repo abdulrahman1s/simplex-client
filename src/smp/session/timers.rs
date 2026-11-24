@@ -53,7 +53,8 @@ fn tick_up(
     now: u64,
     events: &mut Vec<SmpEventKind>,
 ) -> Result<(), SmpError> {
-    let mut probe = false;
+    let (mut probe, mut dead) = (false, false);
+    // Every expired command is answered, even after a verdict of dead: each tag gets exactly one reply.
     for e in outbox.pending.expire(now) {
         if let Waiter::Tagged(tag) = e.reply {
             events.push(SmpEventKind::Reply {
@@ -62,10 +63,13 @@ fn tick_up(
             });
         }
         match live.liveness.on_timeout(e.sent_at, e.deadline, now) {
-            Verdict::Dead => return Err(SmpError::Unresponsive),
+            Verdict::Dead => dead = true,
             Verdict::Probe => probe = true,
             Verdict::Alive => {}
         }
+    }
+    if dead {
+        return Err(SmpError::Unresponsive);
     }
     let ping_due = live.next_ping.is_some_and(|t| now >= t);
     if (ping_due || probe) && !outbox.pending.has_ping() {

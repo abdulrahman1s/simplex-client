@@ -69,6 +69,35 @@ fn two_unanswered_pings_end_the_session_as_unresponsive() {
 }
 
 #[test]
+fn every_timed_out_command_is_answered_before_the_session_goes_down() {
+    let mut c = Client::start(&keepalive(), serve(0, Box::new(|_| Vec::new())), usize::MAX);
+    c.up();
+    for tag in 1..=3 {
+        c.s.send(sub(b"q"), tag, T0 + 10).unwrap();
+    }
+    c.flush();
+    let events = c.s.tick(T0 + 10 + TIMEOUT);
+    let mut tags: Vec<u64> = events
+        .iter()
+        .filter_map(|e| match e {
+            SmpEventKind::Reply {
+                tag,
+                answer: Err(SmpError::Timeout),
+            } => Some(*tag),
+            _ => None,
+        })
+        .collect();
+    tags.sort_unstable();
+    assert_eq!(tags, [1, 2, 3]);
+    assert_eq!(
+        events.last(),
+        Some(&SmpEventKind::Down(SmpError::Unresponsive))
+    );
+    assert_eq!(events.len(), 4);
+    assert_eq!(c.served.finish(), None);
+}
+
+#[test]
 fn the_handshake_must_finish_by_the_connect_deadline() {
     let cfg = ConnConfig {
         queue_capacity: 1,
