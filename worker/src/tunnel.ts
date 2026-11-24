@@ -5,6 +5,7 @@ import { checkClientHello, MAX_HELLO_BYTES } from "./clienthello";
 import type { Env } from "./env";
 import { Meter, type Limits } from "./limits";
 import { resolve } from "./dns";
+import type { Admission } from "./leases";
 import {
   checkAddress,
   checkTarget,
@@ -98,7 +99,8 @@ class Tunnel {
     if (this.closed()) return;
     if (address === null) return this.fail("connect_failed");
     if (checkAddress(address)) return this.fail("forbidden_host");
-    if (!(await this.acquire())) return this.fail("too_many_tunnels");
+    const admission = await this.admit();
+    if (admission !== "ok") return this.fail(admission);
     if (this.closed()) return;
 
     const socket = connect(
@@ -120,24 +122,26 @@ class Tunnel {
     void this.pump(socket);
   }
 
-  /** Takes a lease on the client's counter. Fails open: an unreachable counter must not stop chat. */
-  private async acquire(): Promise<boolean> {
+  /** Asks the client's counter to admit this tunnel. Fails open: an unreachable counter must not stop chat. */
+  private async admit(): Promise<Admission> {
     const ns = this.cx.env.TUNNELS;
-    if (!ns) return true;
+    if (!ns) return "ok";
     const stub = ns.getByName(this.cx.clientKey);
     const id = crypto.randomUUID();
     this.release = () => stub.release(id);
+    const { maxTunnelsPerIp, maxNewTunnelsPerMinute } = this.cx.limits;
+    let admission: Admission;
     try {
-      const ok = await stub.acquire(id, this.cx.limits.maxTunnelsPerIp, LEASE_MS);
-      if (!ok) {
-        this.release = undefined;
-        return false;
-      }
+      admission = await stub.admit(id, { maxOpen: maxTunnelsPerIp, maxStarts: maxNewTunnelsPerMinute, leaseMs: LEASE_MS });
     } catch {
-      return true;
+      return "ok";
+    }
+    if (admission !== "ok") {
+      this.release = undefined;
+      return admission;
     }
     this.renewer = setInterval(() => void stub.renew(id, LEASE_MS).catch(() => undefined), LEASE_RENEW_MS);
-    return true;
+    return "ok";
   }
 
   private async forward(bytes: Uint8Array): Promise<void> {

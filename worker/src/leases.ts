@@ -1,36 +1,56 @@
-// Open-tunnel leases for one client: the counting rule behind the per-IP Durable Object.
-// A lease is removed when its tunnel closes. Open tunnels renew theirs, so a lost release frees
-// the slot within one lease period.
+// The admission rule behind the per-IP Durable Object: open tunnels hold leases, and recent
+// starts are counted in a sliding window. Open tunnels renew their lease, so a lost release
+// frees its slot within one lease period.
 
-export interface LeaseStore {
-  entries(): Iterable<[string, number]>;
-  put(id: string, expiresAt: number): void;
-  delete(id: string): void;
+export interface CounterState {
+  /** Tunnel id to lease expiry. */
+  leases: Record<string, number>;
+  /** When recent tunnels were started, oldest first. */
+  starts: number[];
 }
 
-/** Drops expired leases and returns the earliest remaining expiry, if any. */
-export function prune(store: LeaseStore, now: number): number | null {
-  let next: number | null = null;
-  for (const [id, expiresAt] of [...store.entries()]) {
-    if (expiresAt <= now) store.delete(id);
-    else next = next === null ? expiresAt : Math.min(next, expiresAt);
-  }
-  return next;
+export interface CounterRules {
+  maxOpen: number;
+  /** Starts allowed per START_WINDOW_MS. */
+  maxStarts: number;
+  leaseMs: number;
 }
 
-export function count(store: LeaseStore): number {
-  return [...store.entries()].length;
+export const START_WINDOW_MS = 60_000;
+
+export type Admission = "ok" | "too_many_tunnels" | "rate_limited";
+
+export function emptyState(): CounterState {
+  return { leases: {}, starts: [] };
 }
 
-/** Takes a lease unless `max` are already held. */
-export function acquire(store: LeaseStore, id: string, max: number, expiresAt: number, now: number): boolean {
-  prune(store, now);
-  if (count(store) >= max) return false;
-  store.put(id, expiresAt);
-  return true;
+/** Drops expired leases and starts older than the window. */
+export function prune(s: CounterState, now: number): void {
+  for (const [id, expiresAt] of Object.entries(s.leases)) if (expiresAt <= now) delete s.leases[id];
+  s.starts = s.starts.filter((t) => t > now - START_WINDOW_MS);
 }
 
-/** Extends a live tunnel's lease, or takes it again if it lapsed; renewal never hits the cap. */
-export function renew(store: LeaseStore, id: string, expiresAt: number): void {
-  store.put(id, expiresAt);
+/** Counts a start, then takes a lease unless the client is over either limit. */
+export function admit(s: CounterState, id: string, rules: CounterRules, now: number): Admission {
+  prune(s, now);
+  if (s.starts.length >= rules.maxStarts) return "rate_limited";
+  s.starts.push(now);
+  if (Object.keys(s.leases).length >= rules.maxOpen) return "too_many_tunnels";
+  s.leases[id] = now + rules.leaseMs;
+  return "ok";
+}
+
+/** Extends a live tunnel's lease, or takes it again if it lapsed; renewal never hits a limit. */
+export function renew(s: CounterState, id: string, now: number, leaseMs: number): void {
+  s.leases[id] = now + leaseMs;
+}
+
+export function release(s: CounterState, id: string): void {
+  delete s.leases[id];
+}
+
+/** When the state next changes on its own, or null when it holds nothing. */
+export function nextExpiry(s: CounterState): number | null {
+  const times = [...Object.values(s.leases), ...s.starts.map((t) => t + START_WINDOW_MS)];
+  return times.length === 0 ? null : Math.min(...times);
 }

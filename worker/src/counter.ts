@@ -1,47 +1,52 @@
-// Counts one client's open tunnels. One SQLite-backed Durable Object per hashed IP; its storage
-// is deleted when the last tunnel closes, and an alarm clears leases that were not renewed.
+// Admits one client's tunnels: open-tunnel cap and an exact new-tunnel rate. One SQLite-backed
+// Durable Object per hashed IP; its storage is deleted once it holds nothing, and an alarm
+// clears leases that were not renewed and starts that left the window.
 import { DurableObject } from "cloudflare:workers";
-import { acquire, prune, renew, type LeaseStore } from "./leases";
+import {
+  admit,
+  emptyState,
+  nextExpiry,
+  prune,
+  release,
+  renew,
+  type Admission,
+  type CounterRules,
+  type CounterState,
+} from "./leases";
+
+const KEY = "state";
 
 export class TunnelCounter extends DurableObject {
-  async acquire(id: string, max: number, ttlMs: number): Promise<boolean> {
-    const now = Date.now();
-    const ok = acquire(this.leases(), id, max, now + ttlMs, now);
-    await this.tidy(now);
-    return ok;
+  async admit(id: string, rules: CounterRules): Promise<Admission> {
+    return this.update((s, now) => admit(s, id, rules, now));
   }
 
-  async renew(id: string, ttlMs: number): Promise<void> {
-    const now = Date.now();
-    renew(this.leases(), id, now + ttlMs);
-    await this.tidy(now);
+  async renew(id: string, leaseMs: number): Promise<void> {
+    await this.update((s, now) => renew(s, id, now, leaseMs));
   }
 
   async release(id: string): Promise<void> {
-    this.ctx.storage.kv.delete(id);
-    await this.tidy(Date.now());
+    await this.update((s) => release(s, id));
   }
 
   async alarm(): Promise<void> {
-    await this.tidy(Date.now());
+    await this.update(() => undefined);
   }
 
-  private async tidy(now: number): Promise<void> {
-    const next = prune(this.leases(), now);
+  private async update<T>(change: (s: CounterState, now: number) => T): Promise<T> {
+    const kv = this.ctx.storage.kv;
+    const now = Date.now();
+    const state = kv.get<CounterState>(KEY) ?? emptyState();
+    prune(state, now);
+    const result = change(state, now);
+    const next = nextExpiry(state);
     if (next === null) {
       await this.ctx.storage.deleteAlarm();
       await this.ctx.storage.deleteAll();
     } else {
+      kv.put(KEY, state);
       await this.ctx.storage.setAlarm(next);
     }
-  }
-
-  private leases(): LeaseStore {
-    const kv = this.ctx.storage.kv;
-    return {
-      entries: () => kv.list<number>(),
-      put: (id, expiresAt) => kv.put(id, expiresAt),
-      delete: (id) => void kv.delete(id),
-    };
+    return result;
   }
 }

@@ -73,7 +73,7 @@ One tunnel is one TCP socket.
 | `idle` | 1008 | No bytes either way for `IDLE_TIMEOUT_SECONDS` |
 | `too_many_tunnels` | 1008 | This IP already has `MAX_TUNNELS_PER_IP` tunnels open |
 | `quota` | 1008 | The tunnel used up `MAX_BYTES_PER_TUNNEL` |
-| `rate_limited` | HTTP 429 | Too many new tunnels from this IP. The upgrade is refused before any WebSocket exists, so the browser only sees a failed connection |
+| `rate_limited` | 1008, or HTTP 429 | More than `MAX_NEW_TUNNELS_PER_MINUTE` new tunnels from this IP. The fast first gate answers the upgrade with HTTP 429 before any WebSocket exists, so the browser only sees a failed connection |
 
 ## Not an open proxy
 
@@ -106,7 +106,8 @@ One tunnel is one TCP socket.
 
 | Limit | Setting | Default |
 |---|---|---|
-| New tunnels per IP | `[[ratelimits]]` `TUNNEL_RL` in `wrangler.toml`: `simple = { limit, period }` (period is 10 or 60 s) | 30 per 60 s |
+| New tunnels per IP, exact | `MAX_NEW_TUNNELS_PER_MINUTE` | 30 |
+| New tunnels per IP, fast first gate | `[[ratelimits]]` `TUNNEL_RL` in `wrangler.toml`: `simple = { limit, period }`, where period is 10 or 60 s | 30 per 60 s |
 | Open tunnels per IP | `MAX_TUNNELS_PER_IP` | 8 |
 | Time to send the first frame, and the ClientHello after `{"ok":true}` | `HELLO_TIMEOUT_SECONDS` | 10 |
 | Idle time with no bytes either way | `IDLE_TIMEOUT_SECONDS` | 900 (15 min). SMP pings every ~30 s keep a live tunnel open |
@@ -118,19 +119,26 @@ One tunnel is one TCP socket.
 | Relay connect time | fixed | 10 s |
 
 - **How IPs are used.** The client IP is hashed: SHA-256 over the `IP_SALT` secret and the IP,
-  or over the IP alone if no salt is set. The hash is the key for both the rate limit and the
-  open-tunnel counter.
-- **The open-tunnel counter.** It is a SQLite-backed Durable Object (works on the Free plan),
-  named by that hash. It holds one lease per open tunnel and deletes all of its storage when
-  the last one closes. Each open tunnel renews its lease every 10 minutes, and a lease lasts
-  30 minutes. If a release is lost, for example because the Worker was evicted, the slot frees
-  itself within 30 minutes, and so does the stored hash.
+  or over the IP alone if no salt is set. The hash is the key for both the rate-limit binding
+  and the per-IP counter.
+- **The fast first gate.** The Workers Rate Limiting binding refuses an upgrade before the
+  WebSocket opens. Its counters live on each Cloudflare machine and are synced loosely, so a
+  client spread over many machines can get past it. Measured on the deployment, 90 upgrades in
+  under a minute all passed it.
+- **The per-IP counter.** This enforces both per-IP limits exactly.
+  - It is a SQLite-backed Durable Object (works on the Free plan), named by the hash.
+  - It counts the tunnels started in the last minute, and holds one lease per open tunnel.
+  - Each open tunnel renews its lease every 10 minutes, and a lease lasts 30 minutes. If a
+    release is lost, for example because the Worker was evicted, the slot frees itself within
+    30 minutes.
+  - The counter deletes all of its storage, the hash included, once it has no open tunnels
+    and no starts in the last minute.
 - **Failing open.** If the counter or the rate limiter cannot be reached, the tunnel is
   allowed, so an outage there does not cut people off from their chats.
 
 Values that are missing, malformed or not positive fall back to the default. On the Workers
 Free plan, each tunnel costs one request against the daily request allowance and one DNS
-lookup subrequest. It also makes Durable Object calls: one to acquire, one to release, and six
+lookup subrequest. It also makes Durable Object calls: one to admit, one to release, and six
 renewals per hour while it stays open.
 
 ## Configuration
@@ -142,7 +150,7 @@ renewals per hour while it stays open.
 | `ALLOWED_PORTS` | `5223,443` | Ports a tunnel may connect to |
 | `ALLOWED_HOSTS` | empty (any public host) | Comma list of exact names or `*.example.com` patterns |
 | `ALLOWED_ORIGINS` | empty (any) | Comma list of allowed `Origin` values, such as `https://chat.example.org` |
-| `MAX_TUNNELS_PER_IP`, `HELLO_TIMEOUT_SECONDS`, `IDLE_TIMEOUT_SECONDS`, `MAX_LIFETIME_SECONDS`, `MAX_BYTES_PER_TUNNEL`, `MAX_FRAME_BYTES` | see [Limits](#limits) | |
+| `MAX_TUNNELS_PER_IP`, `MAX_NEW_TUNNELS_PER_MINUTE`, `HELLO_TIMEOUT_SECONDS`, `IDLE_TIMEOUT_SECONDS`, `MAX_LIFETIME_SECONDS`, `MAX_BYTES_PER_TUNNEL`, `MAX_FRAME_BYTES` | see [Limits](#limits) | |
 
 Secrets, set with `npx wrangler secret put <NAME>`:
 

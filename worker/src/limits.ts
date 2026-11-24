@@ -2,6 +2,7 @@
 
 export interface Limits {
   maxTunnelsPerIp: number;
+  maxNewTunnelsPerMinute: number;
   helloTimeoutMs: number;
   idleTimeoutMs: number;
   maxLifetimeMs: number;
@@ -13,6 +14,7 @@ export interface Limits {
 
 export interface LimitVars {
   MAX_TUNNELS_PER_IP?: string;
+  MAX_NEW_TUNNELS_PER_MINUTE?: string;
   HELLO_TIMEOUT_SECONDS?: string;
   IDLE_TIMEOUT_SECONDS?: string;
   MAX_LIFETIME_SECONDS?: string;
@@ -22,6 +24,7 @@ export interface LimitVars {
 
 export const DEFAULT_LIMITS: Limits = {
   maxTunnelsPerIp: 8,
+  maxNewTunnelsPerMinute: 30,
   helloTimeoutMs: 10_000,
   idleTimeoutMs: 15 * 60_000,
   maxLifetimeMs: 24 * 3_600_000,
@@ -39,6 +42,7 @@ export function readLimits(vars: LimitVars): Limits {
   const d = DEFAULT_LIMITS;
   return {
     maxTunnelsPerIp: Math.floor(num(vars.MAX_TUNNELS_PER_IP, d.maxTunnelsPerIp)),
+    maxNewTunnelsPerMinute: Math.floor(num(vars.MAX_NEW_TUNNELS_PER_MINUTE, d.maxNewTunnelsPerMinute)),
     helloTimeoutMs: num(vars.HELLO_TIMEOUT_SECONDS, d.helloTimeoutMs, 1000),
     idleTimeoutMs: num(vars.IDLE_TIMEOUT_SECONDS, d.idleTimeoutMs, 1000),
     maxLifetimeMs: num(vars.MAX_LIFETIME_SECONDS, d.maxLifetimeMs, 1000),

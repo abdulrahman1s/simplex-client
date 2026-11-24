@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ipKey } from "../src/ipkey";
-import { acquire, count, prune, renew, type LeaseStore } from "../src/leases";
+import { admit, emptyState, nextExpiry, prune, release, renew, START_WINDOW_MS } from "../src/leases";
 import { DEFAULT_LIMITS, Meter, readLimits } from "../src/limits";
 
 describe("readLimits", () => {
   it("defaults to 8 tunnels, 10 s hello, 15 min idle, 24 h lifetime, 1 GiB and 64 KiB frames", () => {
     expect(readLimits({})).toEqual({
       maxTunnelsPerIp: 8,
+      maxNewTunnelsPerMinute: 30,
       helloTimeoutMs: 10_000,
       idleTimeoutMs: 900_000,
       maxLifetimeMs: 86_400_000,
@@ -19,13 +20,14 @@ describe("readLimits", () => {
   it("reads the vars as seconds and bytes", () => {
     const l = readLimits({
       MAX_TUNNELS_PER_IP: "3",
+      MAX_NEW_TUNNELS_PER_MINUTE: "12",
       HELLO_TIMEOUT_SECONDS: "5",
       IDLE_TIMEOUT_SECONDS: "60",
       MAX_LIFETIME_SECONDS: "3600",
       MAX_BYTES_PER_TUNNEL: "1000",
       MAX_FRAME_BYTES: "16384",
     });
-    expect(l).toMatchObject({ maxTunnelsPerIp: 3, helloTimeoutMs: 5000, idleTimeoutMs: 60_000, maxLifetimeMs: 3_600_000, maxBytes: 1000, maxFrameBytes: 16384 });
+    expect(l).toMatchObject({ maxTunnelsPerIp: 3, maxNewTunnelsPerMinute: 12, helloTimeoutMs: 5000, idleTimeoutMs: 60_000, maxLifetimeMs: 3_600_000, maxBytes: 1000, maxFrameBytes: 16384 });
   });
 
   it("falls back to the default for empty, malformed or non-positive values", () => {
@@ -62,41 +64,48 @@ describe("Meter", () => {
   });
 });
 
-function memStore(): LeaseStore & { map: Map<string, number> } {
-  const map = new Map<string, number>();
-  return { map, entries: () => map.entries(), put: (id, t) => void map.set(id, t), delete: (id) => void map.delete(id) };
-}
+describe("counter admission", () => {
+  const rules = { maxOpen: 8, maxStarts: 30, leaseMs: 1000 };
 
-describe("leases", () => {
   it("caps open tunnels per client and frees a slot on release", () => {
-    const s = memStore();
-    for (let i = 0; i < 8; i++) expect(acquire(s, `t${i}`, 8, 1000, 0)).toBe(true);
-    expect(acquire(s, "t8", 8, 1000, 0)).toBe(false);
-    s.delete("t3");
-    expect(acquire(s, "t8", 8, 1000, 0)).toBe(true);
-    expect(count(s)).toBe(8);
+    const s = emptyState();
+    for (let i = 0; i < 8; i++) expect(admit(s, `t${i}`, rules, 0)).toBe("ok");
+    expect(admit(s, "t8", rules, 0)).toBe("too_many_tunnels");
+    release(s, "t3");
+    expect(admit(s, "t8", rules, 0)).toBe("ok");
+    expect(Object.keys(s.leases)).toHaveLength(8);
   });
 
-  it("drops leases whose release was lost once they expire", () => {
-    const s = memStore();
-    acquire(s, "a", 2, 100, 0);
-    acquire(s, "b", 2, 200, 0);
-    expect(acquire(s, "c", 2, 300, 50)).toBe(false);
-    expect(acquire(s, "c", 2, 300, 100)).toBe(true);
-    expect(prune(s, 150)).toBe(200);
-    expect(prune(s, 400)).toBeNull();
-    expect(count(s)).toBe(0);
+  it("limits new tunnels per minute, counting refused ones, and forgets starts after the window", () => {
+    const s = emptyState();
+    const tight = { ...rules, maxOpen: 1, maxStarts: 3 };
+    expect(admit(s, "a", tight, 0)).toBe("ok");
+    expect(admit(s, "b", tight, 1)).toBe("too_many_tunnels");
+    release(s, "a");
+    expect(admit(s, "c", tight, 2)).toBe("ok");
+    release(s, "c");
+    expect(admit(s, "d", tight, 3)).toBe("rate_limited");
+    expect(admit(s, "d", tight, START_WINDOW_MS)).toBe("ok");
   });
-});
 
-describe("lease renewal", () => {
-  it("keeps a renewed lease past its first expiry and lets an unrenewed one lapse", () => {
-    const s = memStore();
-    acquire(s, "live", 2, 100, 0);
-    acquire(s, "lost", 2, 100, 0);
-    renew(s, "live", 200);
-    expect(prune(s, 150)).toBe(200);
-    expect([...s.map.keys()]).toEqual(["live"]);
+  it("lets an unrenewed lease lapse and keeps a renewed one", () => {
+    const s = emptyState();
+    admit(s, "live", rules, 0);
+    admit(s, "lost", rules, 0);
+    renew(s, "live", 900, 1000);
+    prune(s, 1500);
+    expect(Object.keys(s.leases)).toEqual(["live"]);
+  });
+
+  it("reports when it next changes, and nothing once empty", () => {
+    const s = emptyState();
+    expect(nextExpiry(s)).toBeNull();
+    admit(s, "a", rules, 0);
+    expect(nextExpiry(s)).toBe(1000);
+    release(s, "a");
+    expect(nextExpiry(s)).toBe(START_WINDOW_MS);
+    prune(s, START_WINDOW_MS);
+    expect(nextExpiry(s)).toBeNull();
   });
 });
 
