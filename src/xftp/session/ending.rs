@@ -35,6 +35,13 @@ impl XftpSession {
         events
     }
 
+    /// The byte pipe under the session ended: the command in flight, if any, hears `why`.
+    pub fn end(&mut self, why: XftpError) -> Vec<SessionEvent> {
+        let mut events = Vec::new();
+        self.fail(why, &mut events);
+        events
+    }
+
     /// The session is down; the command in flight, if any, hears why.
     pub(super) fn fail(&mut self, why: XftpError, events: &mut Vec<SessionEvent>) {
         if self.is_down() {

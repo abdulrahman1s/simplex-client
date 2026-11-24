@@ -9,7 +9,7 @@ mod calls;
 mod chats;
 pub mod clock;
 pub mod error;
-mod files;
+pub(crate) mod files;
 mod groups;
 mod inbound;
 mod items;

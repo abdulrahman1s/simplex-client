@@ -42,7 +42,7 @@ mod session;
 mod signed_key;
 #[cfg(test)]
 #[cfg(feature = "native")]
-mod tests;
+pub(crate) mod tests;
 mod transmission;
 #[cfg(feature = "native")]
 mod upload;

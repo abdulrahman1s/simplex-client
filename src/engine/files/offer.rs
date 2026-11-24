@@ -1,8 +1,5 @@
 //! Whether a file may go and to whom its offer goes: the user's own file, a connected friend, or a group that allows files (Commands.hs `checkSndFile`; Internal.hs `prohibitedGroupContent` when sending).
 
-use std::fs;
-use std::path::{Path, PathBuf};
-
 use crate::types::model::ChatRef;
 
 use super::send::PQ;
@@ -12,22 +9,6 @@ use crate::engine::agent_port::{AgentMsgId, AgentPort, ConnId};
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::groups::policy;
 use crate::engine::machine::Engine;
-use crate::xftp::MAX_FILE_SIZE;
-
-/// The file as the engine may send it: inside its own data folder (a path from outside is
-/// never read), a regular file, not empty, within the size limit (`checkSndFile`).
-pub(super) fn checked(dir: &Path, path: &Path) -> Result<(PathBuf, u64)> {
-    let own = fs::canonicalize(dir).map_err(|_| fail(Code::RequestFailed, "no data folder"))?;
-    let file = fs::canonicalize(path).map_err(|_| fail(Code::RequestFailed, "file not found"))?;
-    if !file.starts_with(&own) {
-        return Err(fail(Code::RequestFailed, "file is outside the data folder"));
-    }
-    let meta = fs::metadata(&file).map_err(|_| fail(Code::RequestFailed, "file not found"))?;
-    if !meta.is_file() || meta.len() == 0 || meta.len() > MAX_FILE_SIZE {
-        return Err(fail(Code::RequestFailed, "file size is not allowed"));
-    }
-    Ok((file, meta.len()))
-}
 
 impl<A: AgentPort> Engine<A> {
     /// A friend must be connected; in a group the user must be an author and files allowed

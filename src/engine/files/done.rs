@@ -79,8 +79,11 @@ impl<A: AgentPort> Engine<A> {
     ) -> Result<()> {
         if !self.files.finish(key, job) {
             // Cancelled, or an older run: the copy it made is not wanted.
-            if let Ok(p) = result {
-                let _ = std::fs::remove_file(p); // already gone is fine
+            if let Ok(p) = result
+                && let Err(e) = self.files.store.remove(&self.files.dir, &p)
+            {
+                self.log
+                    .line(format_args!("an unwanted copy was not deleted: {e}"));
             }
             return Ok(());
         }
