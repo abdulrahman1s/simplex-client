@@ -93,6 +93,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- A friend's deletion of its own message is taken only within 78 hours of the message's
+  arrival (`limits::RCV_DELETE_WINDOW_MS`, Subscriber.hs `rcvItemDeletable`), as in groups; an
+  older one is ignored.
 - A message that skips, repeats or breaks the chain before it (`MsgIntegrity`) now shows a
   `ChatNotice::Integrity` item before it, as simplex-chat's `CIRcvIntegrityError` does: "skipped
   message ID", "unexpected message ID", "incorrect message hash", "duplicate message ID". A

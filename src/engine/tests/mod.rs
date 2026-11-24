@@ -22,6 +22,7 @@ mod live_group;
 mod live_offline;
 mod live_repair;
 mod local;
+mod msg_delete;
 mod prefs;
 mod profile;
 mod relays;

@@ -27,6 +27,10 @@ pub const EDIT_WINDOW_MS: i64 = DAY_MS;
 /// `APIDeleteChatItem`: `nominalDay + 6 * 3600`).
 pub const DELETE_WINDOW_MS: i64 = DAY_MS + 6 * 3600 * 1000;
 
+/// A peer's deletion of its own message is taken for 78 hours after the message arrived
+/// (Subscriber.hs `rcvItemDeletable`: the sender's window with a margin for delays).
+pub const RCV_DELETE_WINDOW_MS: i64 = 78 * 3600 * 1000;
+
 /// The bytes `s` takes inside a JSON message, quotes left out (the apps' `chatJsonLength`).
 #[must_use]
 pub fn json_len(s: &str) -> usize {
