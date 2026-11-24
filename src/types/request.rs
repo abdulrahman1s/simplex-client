@@ -87,6 +87,19 @@ pub enum Request {
         item: i64,
         to: ChatRef,
     },
+    /// A live message: the friend or group sees it as it is written (`APISendMessages` live);
+    /// `UpdateLive` sends the rest.
+    SendLive {
+        chat: ChatRef,
+        text: String,
+    },
+    /// The live message's text so far; `done` finishes it (`APIUpdateChatItem` live).
+    UpdateLive {
+        chat: ChatRef,
+        item: i64,
+        text: String,
+        done: bool,
+    },
     /// A text with a link, and the link's preview (`MCLink`); the page makes the preview.
     SendLink {
         chat: ChatRef,

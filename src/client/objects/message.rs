@@ -99,6 +99,17 @@ impl Message {
         self.client.delete(&self.info)
     }
 
+    /// Still being written by its author.
+    #[must_use]
+    pub const fn live(&self) -> bool {
+        self.info.live
+    }
+
+    /// The user's live message, its text so far; `done` finishes it.
+    pub fn update_live(&self, text: &str, done: bool) -> Result<()> {
+        self.client.update_live(&self.info, text, done)
+    }
+
     /// Forwarded from another chat.
     #[must_use]
     pub const fn forwarded(&self) -> bool {

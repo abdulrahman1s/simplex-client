@@ -70,6 +70,9 @@ pub struct ChatMessage {
     /// Forwarded from another chat (`CIForwardedFrom`).
     #[serde(default)]
     pub forwarded: bool,
+    /// Still being written by its author (`itemLive`); its text changes until it is done.
+    #[serde(default)]
+    pub live: bool,
 }
 
 /// A disappearing message (Messages.hs `CITimed`). The user's own count from sending; a

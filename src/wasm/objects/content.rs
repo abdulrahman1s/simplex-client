@@ -1,4 +1,4 @@
-//! Links and forwarding from JS: `sendLink` and `forward` on a friend or group, and a message's `link` and `forwarded`.
+//! Message content from JS: `sendLink`, `sendLive` and `forward` on a friend or group; a message's `link`, `forwarded`, `live` and `updateLive`.
 
 use wasm_bindgen::prelude::*;
 
@@ -54,6 +54,13 @@ macro_rules! send_link {
                 self.shared().queue(Request::Forward { from, item, to })
             }
 
+            /// Starts a live message here, seen as it is written; `message.updateLive` sends the rest.
+            #[wasm_bindgen(js_name = sendLive, unchecked_return_type = "Promise<void>")]
+            pub fn send_live(&self, text: &str) -> js_sys::Promise {
+                let (chat, text) = (self.chat(), text.to_owned());
+                self.shared().queue(Request::SendLive { chat, text })
+            }
+
             /// Sends `text` with the preview of the link it has: `{ uri, title, description, image? }`.
             #[wasm_bindgen(js_name = sendLink, unchecked_return_type = "Promise<void>")]
             pub fn send_link(
@@ -85,6 +92,25 @@ impl Message {
     #[wasm_bindgen(getter)]
     pub fn forwarded(&self) -> bool {
         self.info().forwarded
+    }
+
+    /// Still being written by its author.
+    #[wasm_bindgen(getter)]
+    pub fn live(&self) -> bool {
+        self.info().live
+    }
+
+    /// The user's live message, its text so far; `done` finishes it.
+    #[wasm_bindgen(js_name = updateLive, unchecked_return_type = "Promise<void>")]
+    pub fn update_live(&self, text: &str, done: bool) -> js_sys::Promise {
+        let (chat, item) = (self.info().chat, self.info().id);
+        let text = text.to_owned();
+        self.shared().queue(Request::UpdateLive {
+            chat,
+            item,
+            text,
+            done,
+        })
     }
 
     /// The preview of the link the text has: `{ uri, title, description, image }`, or `undefined`.

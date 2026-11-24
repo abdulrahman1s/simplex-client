@@ -1,10 +1,10 @@
 //! The objects JS handlers and promises get; each acts through the client it came from.
 
 mod admin;
+mod content;
 mod friend;
 mod group;
 mod invite;
-mod link;
 pub(in crate::wasm) mod local;
 mod member;
 mod message;

@@ -101,6 +101,24 @@ impl Client {
         })
     }
 
+    /// Starts a live message, seen as it is written; `update_live` sends the rest.
+    pub fn send_live(&self, chat: ChatRef, text: &str) -> Result<()> {
+        self.request(Request::SendLive {
+            chat,
+            text: text.to_owned(),
+        })
+    }
+
+    /// The live message's text so far; `done` finishes it.
+    pub fn update_live(&self, msg: &ChatMessage, text: &str, done: bool) -> Result<()> {
+        self.request(Request::UpdateLive {
+            chat: msg.chat,
+            item: msg.id,
+            text: text.to_owned(),
+            done,
+        })
+    }
+
     /// `text` with the preview of the link it has.
     pub fn send_link(&self, chat: ChatRef, text: &str, preview: LinkInfo) -> Result<()> {
         self.request(Request::SendLink {

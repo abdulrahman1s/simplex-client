@@ -80,7 +80,7 @@ impl<A: AgentPort> Engine<A> {
             } => {
                 let out = Outgoing {
                     link: Some(&preview),
-                    forward: false,
+                    ..Outgoing::default()
                 };
                 self.send_text(chat, &text, reply_to, &[], out)
             }
@@ -121,6 +121,19 @@ impl<A: AgentPort> Engine<A> {
             Request::Moderate { group, item } => self.moderate(group, item),
             Request::DeleteForMe { chat, item } => self.delete_for_me(chat, item),
             Request::Forward { from, item, to } => self.forward(from, item, to),
+            Request::SendLive { chat, text } => {
+                let live = Outgoing {
+                    live: true,
+                    ..Outgoing::default()
+                };
+                self.send_text(chat, &text, None, &[], live)
+            }
+            Request::UpdateLive {
+                chat,
+                item,
+                text,
+                done,
+            } => self.update_live(chat, item, &text, done),
             Request::ClearChat(chat) => self.clear_chat(chat),
             Request::MarkReadUpTo { chat, item } => self.read_to(chat, Some(item)),
             Request::SetUnreadMark { chat, on } => self.set_unread_mark(chat, on),

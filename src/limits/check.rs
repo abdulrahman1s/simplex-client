@@ -56,7 +56,9 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         }
         Request::Edit { text, .. }
         | Request::SendFile { text, .. }
-        | Request::SendLink { text, .. } => text_fits(text),
+        | Request::SendLink { text, .. }
+        | Request::SendLive { text, .. }
+        | Request::UpdateLive { text, .. } => text_fits(text),
         Request::NewGroup(name) | Request::SetGroupProfile { name, .. } => {
             if !is_valid_name(name.trim()) {
                 return refuse(

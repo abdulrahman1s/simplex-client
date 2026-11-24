@@ -35,6 +35,7 @@ fn photo(state: FileState) -> ChatMessage {
         timed: None,
         link: None,
         forwarded: false,
+        live: false,
     }
 }
 

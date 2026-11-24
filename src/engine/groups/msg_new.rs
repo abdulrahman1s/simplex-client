@@ -98,6 +98,7 @@ impl<A: AgentPort> Engine<A> {
         item.timed = self.incoming_timed(chat, c.ttl, ctx.forwarded)?;
         item.link = crate::engine::link::of(&c.content);
         item.forwarded = c.forward == Some(true);
+        item.live = c.live == Some(true);
         item.shared_id = shared;
         item.member = Some(m.id);
         item.verified = ctx.signed == Some(SigStatus::Verified);

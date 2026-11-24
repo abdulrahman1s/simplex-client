@@ -119,4 +119,9 @@ impl Friend {
     pub fn forward(&self, msg: &Message) -> Result<()> {
         self.client.forward(msg.info(), self.chat())
     }
+
+    /// Starts a live message here, seen as it is written.
+    pub fn send_live(&self, text: &str) -> Result<()> {
+        self.client.send_live(self.chat(), text)
+    }
 }

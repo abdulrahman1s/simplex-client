@@ -90,6 +90,14 @@ All notable changes to this project are documented here. The format follows
   `ChatMessage.forwarded` (JS `message.forwarded`). **Breaking:** `Request` has a new variant,
   `ChatMessage` a new field, and the engine's `send_file` takes a `FileMeta`.
 
+- Live messages, written as the other side watches: `Request::SendLive` and `UpdateLive { done }`
+  (`friend.send_live`, `message.update_live`; JS `sendLive`, `updateLive`) send `live: true`
+  until done (`APISendMessages` live, `APIUpdateChatItem`). Received ones show in
+  `ChatMessage.live`, and their updates are not marked edited (`edited = itemLive /= Just
+  True`). A disappearing live message counts from when it is done. An edit now carries the
+  message's timer, as upstream's does. **Breaking:** `Request` has new variants and
+  `ChatMessage` a new field.
+
 ### Fixed
 
 - The profile sent to friends said disappearing messages were allowed, so an official app

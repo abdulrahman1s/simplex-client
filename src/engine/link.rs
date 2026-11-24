@@ -59,10 +59,12 @@ pub fn content_of(text: String, link: Option<&LinkInfo>) -> MsgContent {
     }
 }
 
-/// What a sent text carries besides itself: its link's preview, and whether it is forwarded
-/// (`mcForward`).
+/// What a sent text carries besides itself: its link's preview, whether it is forwarded
+/// (`mcForward`), and whether it is live.
 #[derive(Clone, Copy, Default)]
 pub struct Outgoing<'a> {
     pub link: Option<&'a LinkInfo>,
     pub forward: bool,
+    /// A live message (`live`): its timer waits until it is done.
+    pub live: bool,
 }

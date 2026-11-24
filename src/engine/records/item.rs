@@ -35,6 +35,9 @@ pub struct ItemRecord {
     /// Forwarded from another chat (`CIForwardedFrom`).
     #[serde(default)]
     pub forwarded: bool,
+    /// Still being written (`itemLive`).
+    #[serde(default)]
+    pub live: bool,
 }
 
 impl ItemRecord {
@@ -59,6 +62,7 @@ impl ItemRecord {
             timed: None,
             link: None,
             forwarded: false,
+            live: false,
         }
     }
 
@@ -81,6 +85,7 @@ impl ItemRecord {
             timed: self.timed,
             link: self.link.clone(),
             forwarded: self.forwarded,
+            live: self.live,
         }
     }
 }

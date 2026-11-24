@@ -9,6 +9,7 @@ mod forward;
 mod history;
 mod invite;
 mod kind;
+mod live;
 mod local;
 mod picture;
 mod profile;

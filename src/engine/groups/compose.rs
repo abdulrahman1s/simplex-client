@@ -1,7 +1,7 @@
 //! Send in a group: one item, the message to every current member (kept for those still connecting), with its quote and mentions (Commands.hs `sendGroupContentMessages_`; Internal.hs `prepareGroupMsg`, `getCIMentions`).
 
 use crate::types::Event;
-use crate::types::model::{ChatRef, Mention, MessageAuthor, MessageBody, Quote};
+use crate::types::model::{ChatRef, Mention, MessageAuthor, MessageBody, Quote, Timed};
 
 use super::mention::{mentioned_names, quote_mentions};
 use super::policy::at_least;
@@ -64,8 +64,13 @@ impl<A: AgentPort> Engine<A> {
         };
         container.mentions = msg_mentions;
         let timed = self.outgoing_timed(ChatRef::Group(group))?;
+        let timed = timed.map(|t| Timed {
+            delete_at: t.delete_at.filter(|_| !out.live),
+            ..t
+        });
         container.ttl = timed.map(|t| t.ttl);
         container.forward = out.forward.then_some(true);
+        container.live = out.live.then_some(true);
         let msg = ChatMessage::new(ChatEvent::MsgNew(container))?;
         sized(&msg)?;
         let sent = self.send_to_group(group, &msg, None)?;
@@ -75,6 +80,7 @@ impl<A: AgentPort> Engine<A> {
         item.timed = timed;
         item.link = out.link.cloned();
         item.forwarded = out.forward;
+        item.live = out.live;
         item.shared_id = msg.msg_id.map(|m| m.0);
         item.mentions = mentions
             .iter()

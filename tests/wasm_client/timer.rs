@@ -77,6 +77,7 @@ async fn set_timer_takes_whole_seconds_or_null_and_a_message_shows_its_timer() {
         mentions: Vec::new(),
         link: None,
         forwarded: false,
+        live: false,
         timed: Some(Timed {
             ttl: 30,
             delete_at: None,

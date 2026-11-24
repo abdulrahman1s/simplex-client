@@ -52,6 +52,7 @@ impl<A: AgentPort> Engine<A> {
         item.timed = self.incoming_timed(ChatRef::Direct(friend), c.ttl, false)?;
         item.link = crate::engine::link::of(&c.content);
         item.forwarded = c.forward == Some(true);
+        item.live = c.live == Some(true);
         item.shared_id = shared;
         item.reply = c
             .quote
@@ -109,13 +110,16 @@ impl<A: AgentPort> Engine<A> {
         friend: i64,
         shared: &[u8],
         content: &MsgContent,
+        live: bool,
     ) -> Result<()> {
         let text = content.text().to_owned();
         let link = crate::engine::link::of(content);
+        // A live message's updates are its writing, not edits (`edited = itemLive /= Just True`).
         self.change_theirs(friend, shared, |i| {
             crate::engine::files::edit_caption(&mut i.body, text);
             i.link = link;
-            i.edited = true;
+            i.edited |= !i.live;
+            i.live = i.live && live;
         })
     }
 

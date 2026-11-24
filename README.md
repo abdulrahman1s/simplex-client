@@ -15,7 +15,7 @@ small, plain API.
 - Private message routing: messages reach other people's relays through one of yours, so
   their relay never sees your IP address
 - Chat messages, contacts, groups, replies, edits, deletes and reactions, link previews,
-  forwarding
+  forwarding, live messages
 - Disappearing messages, for a friend or a group
 - Chat preferences (full delete, reactions, voice, files, calls), your own and per friend
 - Group admin: roles, blocking for everyone, removing members, moderation, the group's name,
@@ -357,6 +357,10 @@ await friend.sendLink("see https://simplex.chat", {
 client.on("message", (m) => m.link && console.log(m.link.title));
 
 await carol.forward(message); // as yours, marked forwarded; message.forwarded on arrival
+
+// A live message: your friend sees it as you type, then you finish it.
+await friend.sendLive("Hel");
+client.once("message").then((m) => m.updateLive("Hello!", true)); // m.live until done
 ```
 
 A forwarded file goes again only when it is here (sent from here, or downloaded and still in

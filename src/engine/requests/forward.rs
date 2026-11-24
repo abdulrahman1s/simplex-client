@@ -20,6 +20,7 @@ impl<A: AgentPort> Engine<A> {
         let forwarded = Outgoing {
             link: it.link.as_ref(),
             forward: true,
+            live: false,
         };
         let (kind, media) = match &it.body {
             MessageBody::Text(t) => return self.send_text(to, t, None, &[], forwarded),

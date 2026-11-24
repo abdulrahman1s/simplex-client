@@ -109,7 +109,7 @@ impl<A: AgentPort> Engine<A> {
                     text: text.to_owned(),
                 },
                 mentions: MsgMentions::new(),
-                ttl: None,
+                ttl: it.timed.map(|t| t.ttl),
                 live: None,
                 scope: None,
                 as_group: in_group.then_some(false),

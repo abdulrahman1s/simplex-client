@@ -1,7 +1,7 @@
 //! Send: a text message to a friend or a group, maybe replying to one of theirs or the user's.
 
 use crate::types::Event;
-use crate::types::model::{ChatRef, MessageAuthor, MessageBody};
+use crate::types::model::{ChatRef, MessageAuthor, MessageBody, Timed};
 
 use crate::chat::container::MsgContainer;
 use crate::chat::{ChatEvent, ChatMessage};
@@ -46,8 +46,13 @@ impl<A: AgentPort> Engine<A> {
             None => (MsgContainer::simple(content), None),
         };
         let timed = self.outgoing_timed(ChatRef::Direct(id))?;
+        let timed = timed.map(|t| Timed {
+            delete_at: t.delete_at.filter(|_| !out.live),
+            ..t
+        });
         container.ttl = timed.map(|t| t.ttl);
         container.forward = out.forward.then_some(true);
+        container.live = out.live.then_some(true);
         let msg = ChatMessage::new(ChatEvent::MsgNew(container))?;
         let body = encode_sized(&msg, PQ)?;
         let agent_id = self.agent.send(&mut self.store, &f.conn, f.pq, body)?;
@@ -57,6 +62,7 @@ impl<A: AgentPort> Engine<A> {
         item.timed = timed;
         item.link = out.link.cloned();
         item.forwarded = out.forward;
+        item.live = out.live;
         item.shared_id = msg.msg_id.map(|m| m.0);
         let m = self.add_item(ChatRef::Direct(id), &item)?;
         self.put_index(&keys::sent(&f.conn, agent_id), m.id)?;
