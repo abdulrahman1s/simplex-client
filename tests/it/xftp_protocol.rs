@@ -400,7 +400,7 @@ fn a_server_that_never_answers_makes_connect_fail_instead_of_hang() {
         connect_timeout: Duration::from_millis(300),
         ..ClientConfig::default()
     };
-    assert!(matches!(connect(&server, &cfg), Err(XftpError::Connect(_))));
+    assert!(matches!(connect(&server, &cfg), Err(XftpError::TimedOut)));
     done.send(()).unwrap();
     holder.join().unwrap();
 }

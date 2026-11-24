@@ -1,7 +1,10 @@
-//! The pinned identity: CA fingerprint and chain signatures for chains of two to four certificates.
+//! The pinned identity: CA fingerprint, chain signatures and validity dates for chains of two to four certificates.
 use crate::crypto::{Alg, KeyPair, key_hash};
-use crate::tls::testing::make_cert;
+use crate::tls::testing::{make_cert, make_cert_valid};
 use crate::tls::{ChainCertificates, IdentityError, chain_id_ca_certs, verify_server_chain};
+
+/// 2026-11-24, inside every test certificate's dates.
+const NOW: i64 = 1_795_478_400;
 
 struct Pki {
     ca: KeyPair,
@@ -32,7 +35,7 @@ fn ca_hash(p: &Pki) -> [u8; 32] {
 #[test]
 fn chain_of_two_with_a_self_signed_ca_is_accepted() {
     let p = pki(0, Alg::Ed25519);
-    verify_server_chain(&p.chain, &ca_hash(&p)).unwrap();
+    verify_server_chain(&p.chain, &ca_hash(&p), NOW).unwrap();
     assert!(p.ca.public.alg() == Alg::Ed448);
 }
 
@@ -41,7 +44,7 @@ fn chains_of_three_and_four_are_accepted_by_their_signatures() {
     for extra in [1, 2] {
         let p = pki(extra, Alg::Ed448);
         assert_eq!(p.chain.len(), 2 + extra);
-        verify_server_chain(&p.chain, &ca_hash(&p)).unwrap();
+        verify_server_chain(&p.chain, &ca_hash(&p), NOW).unwrap();
     }
 }
 
@@ -49,7 +52,7 @@ fn chains_of_three_and_four_are_accepted_by_their_signatures() {
 fn wrong_ca_fingerprint_is_rejected() {
     let p = pki(0, Alg::Ed25519);
     assert_eq!(
-        verify_server_chain(&p.chain, &[0u8; 32]),
+        verify_server_chain(&p.chain, &[0u8; 32], NOW),
         Err(IdentityError::Fingerprint)
     );
 }
@@ -58,13 +61,13 @@ fn wrong_ca_fingerprint_is_rejected() {
 fn chain_of_one_or_five_is_rejected_by_shape() {
     let p = pki(2, Alg::Ed25519);
     assert_eq!(
-        verify_server_chain(&p.chain[..1], &ca_hash(&p)),
+        verify_server_chain(&p.chain[..1], &ca_hash(&p), NOW),
         Err(IdentityError::ChainShape(1))
     );
     let mut five = p.chain.clone();
     five.push(p.chain[3].clone());
     assert_eq!(
-        verify_server_chain(&five, &ca_hash(&p)),
+        verify_server_chain(&five, &ca_hash(&p), NOW),
         Err(IdentityError::ChainShape(5))
     );
 }
@@ -75,7 +78,7 @@ fn leaf_not_signed_by_the_ca_is_rejected() {
     let other = KeyPair::generate(Alg::Ed25519).unwrap();
     p.chain[0] = make_cert(&other.public, &other, 9);
     assert_eq!(
-        verify_server_chain(&p.chain, &ca_hash(&p)),
+        verify_server_chain(&p.chain, &ca_hash(&p), NOW),
         Err(IdentityError::Signature(0))
     );
 }
@@ -87,7 +90,7 @@ fn ca_of_a_two_chain_that_does_not_sign_itself_is_rejected() {
     p.chain[1] = make_cert(&p.ca.public, &other, 9);
     let h = ca_hash(&p);
     assert_eq!(
-        verify_server_chain(&p.chain, &h),
+        verify_server_chain(&p.chain, &h, NOW),
         Err(IdentityError::NotSelfSigned)
     );
 }
@@ -110,4 +113,51 @@ fn chain_roles_follow_simplexmq_chain_id_ca_certs() {
         );
     }
     assert_eq!(chain_id_ca_certs(&c), ChainCertificates::Long);
+}
+
+#[test]
+fn expired_or_not_yet_valid_leaf_is_rejected() {
+    let mut p = pki(0, Alg::Ed25519);
+    let leaf = KeyPair::generate(Alg::Ed25519).unwrap();
+    for dates in [
+        ("20200101000000Z", "20251231235959Z"),
+        ("20300101000000Z", "20401231235959Z"),
+    ] {
+        p.chain[0] = make_cert_valid(&leaf.public, &p.ca, 1, dates);
+        assert_eq!(
+            verify_server_chain(&p.chain, &ca_hash(&p), NOW),
+            Err(IdentityError::Validity(0))
+        );
+    }
+}
+
+#[test]
+fn expired_identity_certificate_is_rejected() {
+    let mut p = pki(0, Alg::Ed25519);
+    p.chain[1] = make_cert_valid(
+        &p.ca.public,
+        &p.ca,
+        2,
+        ("20200101000000Z", "20210101000000Z"),
+    );
+    let h = ca_hash(&p);
+    assert_eq!(
+        verify_server_chain(&p.chain, &h, NOW),
+        Err(IdentityError::Validity(1))
+    );
+}
+
+#[test]
+fn validity_bounds_are_inclusive() {
+    let mut p = pki(0, Alg::Ed25519);
+    let leaf = KeyPair::generate(Alg::Ed25519).unwrap();
+    p.chain[0] = make_cert_valid(
+        &leaf.public,
+        &p.ca,
+        1,
+        ("20261124000000Z", "20261124000000Z"),
+    );
+    verify_server_chain(&p.chain, &ca_hash(&p), NOW).unwrap();
+    assert!(verify_server_chain(&p.chain, &ca_hash(&p), NOW + 1).is_err());
+    assert!(verify_server_chain(&p.chain, &ca_hash(&p), NOW - 1).is_err());
 }

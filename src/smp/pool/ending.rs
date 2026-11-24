@@ -5,7 +5,7 @@ use crate::smp::error::SmpError;
 use crate::smp::events::SmpEventKind;
 
 use super::slot::Slot;
-use super::why::{RATE_LIMIT_WAIT, Why, ms};
+use super::why::{MIN_LIFETIME, RATE_LIMIT_WAIT, Why, ms};
 
 impl Slot {
     /// Ends the link for a reason the session did not see itself: every waiting command is
@@ -16,6 +16,7 @@ impl Slot {
         };
         link.carrier.pipe.close();
         let was_up = link.session.is_up();
+        let lived = now.saturating_sub(link.started) >= ms(MIN_LIFETIME);
         out.extend(link.session.close());
         let err = match &why {
             Why::Failed(e) | Why::Limited(e) => e.clone(),
@@ -29,9 +30,9 @@ impl Slot {
             self.tell_down(err, out);
         }
         let wait = match why {
-            Why::Lifetime => Duration::ZERO,
+            Why::Lifetime if was_up && lived => Duration::ZERO,
             Why::Limited(_) => self.backoff.next_delay().max(RATE_LIMIT_WAIT),
-            Why::Failed(_) => self.backoff.next_delay(),
+            Why::Lifetime | Why::Failed(_) => self.backoff.next_delay(),
         };
         self.retry_at = now.saturating_add(ms(wait));
     }

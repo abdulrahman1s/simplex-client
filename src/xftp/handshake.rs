@@ -33,9 +33,9 @@ pub struct Patience<'a> {
     pub timeout: Duration,
 }
 
-/// The pinned identity must be the CA of the chain TLS saw.
-pub fn verify_identity(tls: &TlsFacts<'_>, key_hash: &[u8]) -> Result<(), XftpError> {
-    verify_server_chain(tls.peer_chain, key_hash).map_err(|_| HandshakeError::Identity.into())
+/// The pinned identity must be the CA of the chain TLS saw, and the chain valid at `now`.
+pub fn verify_identity(tls: &TlsFacts<'_>, key_hash: &[u8], now: i64) -> Result<(), XftpError> {
+    verify_server_chain(tls.peer_chain, key_hash, now).map_err(|_| HandshakeError::Identity.into())
 }
 
 /// The server's block, checked against TLS: the channel binding, the chain, the signed key; the
@@ -102,8 +102,9 @@ pub fn client_handshake<T: Read + Write>(
     key_hash: &[u8],
     tls: &TlsFacts<'_>,
     patience: &Patience<'_>,
+    now: i64,
 ) -> Result<Negotiated, XftpError> {
-    verify_identity(tls, key_hash)?;
+    verify_identity(tls, key_hash, now)?;
     let hello = exchange(conn, authority, &[], patience)?;
     let negotiated = accept_server_hello(&hello, tls)?;
     let ours = encode_client_handshake(negotiated.version, key_hash)?;

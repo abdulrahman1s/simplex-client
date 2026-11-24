@@ -2,11 +2,11 @@
 use std::collections::VecDeque;
 
 use crate::h2::{self, H2Client, Progress};
-use crate::tls::TlsClient;
+use crate::tls::{Pin, TlsClient};
 
 use super::super::address::{XftpServer, authority};
 use super::super::config::ClientConfig;
-use super::super::error::XftpError;
+use super::super::error::{XftpError, tls_error};
 use super::super::handshake::Negotiated;
 use super::super::responses::Response;
 use super::super::version::ALPN;
@@ -65,8 +65,11 @@ impl XftpSession {
         h2_opts: h2::Options,
         now: u64,
     ) -> Result<(Self, Vec<u8>), XftpError> {
-        let (tls, hello) =
-            TlsClient::start(&[ALPN]).map_err(|e| XftpError::Connect(e.to_string()))?;
+        let pin = Pin {
+            key_hash: server.key_hash.clone(),
+            now: (cfg.wall_clock)(),
+        };
+        let (tls, hello) = TlsClient::start_pinned(&[ALPN], pin).map_err(tls_error)?;
         let session = Self {
             tls,
             h2: None,

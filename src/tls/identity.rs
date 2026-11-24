@@ -1,7 +1,8 @@
-//! The pinned server identity: CA fingerprint and chain signatures (simplexmq Transport/Shared.hs `chainIdCaCerts`, `x509validate`).
+//! The pinned server identity: CA fingerprint, chain signatures and validity dates (simplexmq Transport/Shared.hs `chainIdCaCerts`, `x509validate`).
 use thiserror::Error;
 
 use super::der::CertError;
+use super::validity::valid_at;
 use super::verify::certificate_signed_by;
 use crate::crypto::key_hash;
 
@@ -38,16 +39,29 @@ pub enum IdentityError {
     Signature(usize),
     #[error("the top certificate of a short chain is not self-signed")]
     NotSelfSigned,
+    #[error("certificate {0} is expired or not yet valid")]
+    Validity(usize),
     #[error(transparent)]
     Certificate(#[from] CertError),
 }
 
+/// The identity a server must prove inside the TLS handshake: its chain is checked on receipt,
+/// before our Finished goes out, as Transport/Client.hs `onServerCertificate` does.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Pin {
+    /// The CA fingerprint from the server's address.
+    pub key_hash: Vec<u8>,
+    /// Seconds since the Unix epoch, which the chain must be valid at.
+    pub now: i64,
+}
+
 /// Checks a server chain against the key hash from its address: the identity certificate must
-/// hash to `key_hash`, every certificate must be signed by the next, and the top of a chain of
-/// two must sign itself. Validity dates are not checked.
+/// hash to `key_hash`, every certificate must be signed by the next and be valid at `now`
+/// (seconds since the Unix epoch), and the top of a chain of two must sign itself.
 pub fn verify_server_chain<C: AsRef<[u8]>>(
     chain: &[C],
     expected_key_hash: &[u8],
+    now: i64,
 ) -> Result<(), IdentityError> {
     let ChainCertificates::Valid { id, .. } = chain_id_ca_certs(chain) else {
         return Err(IdentityError::ChainShape(chain.len()));
@@ -58,6 +72,11 @@ pub fn verify_server_chain<C: AsRef<[u8]>>(
     for (i, pair) in chain.windows(2).enumerate() {
         if !certificate_signed_by(pair[0].as_ref(), pair[1].as_ref()) {
             return Err(IdentityError::Signature(i));
+        }
+    }
+    for (i, cert) in chain.iter().enumerate() {
+        if !valid_at(cert.as_ref(), now)? {
+            return Err(IdentityError::Validity(i));
         }
     }
     let top = chain[chain.len() - 1].as_ref();

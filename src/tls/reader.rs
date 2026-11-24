@@ -12,7 +12,8 @@ use super::shared::Shared;
 use crate::net::Socket;
 
 /// Reads application data. `Ok(0)` means the server sent close_notify. A read timeout leaves
-/// the connection usable: call `read` again.
+/// the connection usable: call `read` again. Any other error is final: the failed record has
+/// used up its sequence number, so reading on would silently skip it.
 pub struct TlsReader<S: Socket> {
     sock: S,
     inbound: Inbound,
@@ -24,17 +25,8 @@ pub struct TlsReader<S: Socket> {
 }
 
 impl<S: Socket> TlsReader<S> {
-    pub(super) fn new(
-        sock: S,
-        inbound: Inbound,
-        mut rx: AppReceiver,
-        handshake_buf: &[u8],
-        shared: Arc<Shared>,
-    ) -> Result<Self, TlsError> {
-        if rx.handshake(handshake_buf)? {
-            shared.key_update_requested.store(true, Ordering::Release);
-        }
-        Ok(Self {
+    pub(super) fn new(sock: S, inbound: Inbound, rx: AppReceiver, shared: Arc<Shared>) -> Self {
+        Self {
             sock,
             inbound,
             rx,
@@ -42,7 +34,7 @@ impl<S: Socket> TlsReader<S> {
             app_pos: 0,
             closed: false,
             shared,
-        })
+        }
     }
 
     #[must_use]
@@ -55,6 +47,7 @@ impl<S: Socket> TlsReader<S> {
     }
 
     fn pump(&mut self) -> Result<(), TlsError> {
+        self.shared.check()?;
         let record = self.inbound.next_record(&mut self.sock)?;
         match self.rx.open(&record)? {
             Received::Data(content) => {
@@ -90,7 +83,10 @@ impl<S: Socket> Read for TlsReader<S> {
             if self.closed {
                 return Ok(0);
             }
-            self.pump()?;
+            if let Err(e) = self.pump() {
+                self.shared.note(&e);
+                return Err(e.into());
+            }
         }
     }
 }

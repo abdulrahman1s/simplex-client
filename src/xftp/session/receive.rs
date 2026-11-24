@@ -2,7 +2,7 @@
 use crate::h2::H2Client;
 
 use super::super::call::{decode_answer, post};
-use super::super::error::{HandshakeError, XftpError};
+use super::super::error::{HandshakeError, XftpError, tls_error};
 use super::super::handshake::{
     Negotiated, TlsFacts, accept_ack, accept_server_hello, handshake_body, verify_identity,
 };
@@ -33,7 +33,7 @@ impl XftpSession {
         while let Some(record) = self.tls.take_outgoing() {
             self.out.push_back(record);
         }
-        fed.map_err(|e| XftpError::Connect(e.to_string()))?;
+        fed.map_err(tls_error)?;
         if matches!(self.phase, Phase::Tls) && self.tls.is_ready() {
             self.tls_ready(now, events)?;
         }
@@ -64,7 +64,7 @@ impl XftpSession {
             tls_unique: &tls_unique,
             peer_chain: self.tls.peer_cert_chain(),
         };
-        verify_identity(&facts, &self.key_hash)?;
+        verify_identity(&facts, &self.key_hash, (self.cfg.wall_clock)())?;
         if alpn {
             h2.start(&post(&self.authority, &[]), BLOCK_SIZE)?;
             self.phase = Phase::Hello;

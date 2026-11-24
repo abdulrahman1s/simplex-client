@@ -5,18 +5,20 @@ use std::time::Duration;
 
 use crate::crypto::key_hash;
 use crate::encoding::b64_decode;
-use crate::net::connect_tcp;
+use crate::net::{Deadline, connect_tcp};
+use crate::smp::SystemClock;
 use crate::tls::{TlsStream, verify_server_chain};
 
 fn check_server(host: &str, port: u16, fingerprint: &str) {
     let key_hash_bytes = b64_decode(fingerprint).unwrap();
-    let sock = connect_tcp(host, port, Duration::from_secs(10)).unwrap();
+    let clock = SystemClock::new();
+    let sock = connect_tcp(host, port, &Deadline::new(&clock, Duration::from_secs(10))).unwrap();
     sock.set_read_timeout(Some(Duration::from_secs(15)))
         .unwrap();
     let mut tls: TlsStream<TcpStream> = TlsStream::connect(sock, &["smp/1"]).unwrap();
     assert_eq!(tls.info().alpn(), Some("smp/1"));
     let chain = tls.peer_cert_chain().to_vec();
-    verify_server_chain(&chain, &key_hash_bytes).unwrap();
+    verify_server_chain(&chain, &key_hash_bytes, crate::smp::system_wall_clock()).unwrap();
     assert_eq!(key_hash(&chain[1]).to_vec(), key_hash_bytes);
 
     let mut block = vec![0u8; 16384];

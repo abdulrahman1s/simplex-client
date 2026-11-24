@@ -7,6 +7,7 @@ use super::cert::make_cert;
 use super::client_hello::client_key_share;
 use super::conn::ServerConn;
 use super::flight::server_flight;
+use super::hello::{plain_record, server_hello};
 use super::options::{MockOpts, MockResult};
 use super::pipe::Pipe;
 use crate::crypto::{Alg, KeyPair, PublicKey, dh, fill_random};
@@ -16,12 +17,7 @@ use crate::tls::key_schedule::{
     Transcript, derive_secret, finished_verify_data, handshake_secrets,
 };
 use crate::tls::record::{ALERT, HANDSHAKE, Inbound, Protection};
-use crate::tls::wire::{extension, handshake_message, put_u16};
-
-const HELLO_RETRY_REQUEST_RANDOM: [u8; 32] = [
-    0xcf, 0x21, 0xad, 0x74, 0xe5, 0x9a, 0x61, 0x11, 0xbe, 0x1d, 0x8c, 0x02, 0x1e, 0x65, 0xb8, 0x91,
-    0xc2, 0xa2, 0x11, 0x16, 0x7a, 0xbb, 0x8c, 0x5e, 0x07, 0x9e, 0x09, 0xe2, 0xc8, 0xa8, 0x33, 0x9c,
-];
+use crate::tls::wire::handshake_message;
 
 pub(crate) fn spawn_server(mut sock: Pipe, mut o: MockOpts) -> JoinHandle<MockResult> {
     thread::spawn(move || {
@@ -44,23 +40,11 @@ fn serve(sock: &mut Pipe, o: &mut MockOpts, res: &mut MockResult) -> Result<(), 
     let eph = KeyPair::generate(Alg::X25519)?;
     let mut random = [0u8; 32];
     fill_random(&mut random)?;
-    if o.hrr {
-        random = HELLO_RETRY_REQUEST_RANDOM;
-    }
-    let mut share = 0x001du16.to_be_bytes().to_vec();
-    put_u16(&mut share, 32);
-    share.extend_from_slice(eph.public.as_bytes());
-    let exts = [extension(43, &[3, 4]), extension(51, &share)].concat();
-    let mut body = vec![3, 3];
-    body.extend_from_slice(&random);
-    body.extend_from_slice(&[0, 0x13, 0x03, 0]);
-    put_u16(&mut body, exts.len());
-    body.extend(exts);
-    let server_hello = handshake_message(2, &body);
+    let server_hello = server_hello(o, &eph, random);
     transcript.add(&server_hello);
-    let mut record = vec![HANDSHAKE, 3, 3];
-    put_u16(&mut record, server_hello.len());
-    sock.write_all(&[record, server_hello].concat())?;
+    if !o.plaintext_flight {
+        sock.write_all(&plain_record(&server_hello))?;
+    }
     if o.hrr {
         return Ok(());
     }
@@ -88,7 +72,11 @@ fn serve(sock: &mut Pipe, o: &mut MockOpts, res: &mut MockResult) -> Result<(), 
         }
     };
     let msgs = server_flight(o, &leaf, &chain, &server_hs, &mut transcript)?;
-    send_flight(sock, &mut tx, &msgs, o)?;
+    if o.plaintext_flight {
+        sock.write_all(&plain_record(&[server_hello, msgs.concat()].concat()))?;
+    } else {
+        send_flight(sock, &mut tx, &msgs, o)?;
+    }
 
     let done = transcript.hash();
     let client_ap = derive_secret(&secrets.master, "c ap traffic", &done);
@@ -116,7 +104,10 @@ fn send_flight(
     msgs: &[Vec<u8>],
     o: &MockOpts,
 ) -> Result<(), TlsError> {
-    let flight = msgs.concat();
+    let mut flight = msgs.concat();
+    if o.ticket_after_finished {
+        flight.extend(handshake_message(4, &[0; 8]));
+    }
     let step = if o.coalesce { flight.len() } else { o.fragment };
     let mut records = Vec::new();
     if step > 0 {

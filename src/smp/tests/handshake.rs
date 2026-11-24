@@ -74,7 +74,7 @@ impl Server {
 }
 
 fn cfg() -> HandshakeConfig {
-    HandshakeConfig::standard(Duration::from_secs(1))
+    HandshakeConfig::standard(Duration::from_secs(1), 1_795_478_400)
 }
 
 fn run(

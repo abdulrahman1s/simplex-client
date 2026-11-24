@@ -8,6 +8,55 @@ All notable changes to this project are documented here. The format follows
 
 ### Security
 
+- The HPACK integer decoder refuses a sixth continuation byte before shifting, so a 32-bit
+  (wasm) build no longer shifts past its word size on a hostile header block.
+- The HTTP/2 frame reader drops taken bytes once per read instead of once per frame, so a
+  server that sends many tiny frames costs linear time, not quadratic.
+- Tunnel Worker: a lease renewal that reaches the per-IP counter after the tunnel's release no
+  longer takes the slot back for up to 30 minutes.
+- A snapshot whose item or id counter is at its maximum is refused as damaged when the counter
+  would move, instead of panicking (debug) or wrapping to a negative id (release).
+- **Breaking:** the store key is required: `ClientBuilder::start` fails without `.key(…)`
+  (it used to default to an empty key that anyone could open), and JS `Client.start` refuses
+  an empty `key`. A new store derives its key with Argon2id (19 MiB, 2 passes, 1 lane) over
+  the passphrase and a random per-store salt kept in its `kdf` meta row, instead of one
+  unsalted HKDF. Stores made before still open with their old key and are not upgraded.
+- Snapshots are authenticated as a whole: format 2 ends with an HMAC over every byte, so a
+  changed, deleted or rolled-back row or a rewound counter is refused on open. The id counters
+  are checked against a sealed copy in both backends, which a store from before gets on its
+  first open, and SQLite overwrites deleted rows (`secure_delete`). In SQLite, putting back an
+  older sealed row is still not detected.
+- **Breaking (tunnel Worker):** it is no longer an open TCP proxy by default. Without
+  `ALLOWED_HOSTS` it reaches only the preset SimpleX SMP and XFTP relays; `ALLOWED_HOSTS` adds
+  hosts and `ALLOWED_HOSTS=*` allows any public host. Every record the client sends before the
+  relay's first encrypted record is checked (a second ClientHello after a HelloRetryRequest
+  too), the relay must answer in TLS records, and the per-IP limits fail closed when the
+  counter or the rate limiter errors.
+- A blocking TLS read that fails for any reason but a timeout now fails every later read and
+  write too, as the sans-I/O client already did; a retry could otherwise skip a forged record.
+- TLS refuses handshake messages that span a key change (RFC 8446 section 5.1): the encrypted
+  server flight sent unencrypted in the ServerHello record, anything after the server Finished
+  in its record, and anything after a KeyUpdate in its record.
+- Stricter TLS 1.3 checks: the ServerHello must carry `supported_versions` = TLS 1.3, an
+  extension type may appear once, EncryptedExtensions may only answer what the ClientHello
+  offered, a CertificateRequest must carry `signature_algorithms`, records over the plaintext
+  limit are refused with `record_overflow`, and a record sequence number never wraps.
+- The blocking SMP connect (TCP, TLS and the SMP handshake) ends with `SmpError::Timeout` at
+  `ConnConfig::connect_timeout`, then the next host is tried; the timeout used to bound each
+  socket read, so a server dripping a byte now and then held a connect forever. Blocking XFTP
+  connects bound TCP and TLS by the connect timeout and the handshake by one per request.
+- Server certificates must be valid now: `verify_server_chain` checks every certificate's
+  notBefore and notAfter (no skew allowance, as upstream), in SMP connects, PKEY and XFTP. The
+  time comes from the new `ConnConfig::wall_clock` and `xftp::ClientConfig::wall_clock`
+  (default `smp::system_wall_clock`); `verify_server_chain` and `HandshakeConfig` take it too.
+- SMP and XFTP connects check the server's pinned identity inside the TLS handshake, before the
+  client Finished, as upstream does; new `TlsStream::connect_pinned`, `TlsClient::start_pinned`,
+  `tls::Pin` and `TlsError::Identity`.
+- The tunnel pool redials at once after a `1000 lifetime` close only when the session was up
+  and the tunnel lived an hour; earlier ones wait out the back-off, so a hostile tunnel cannot
+  force a reconnect loop.
+- A forwarded command's answer (PRES) under the command's own nonce is refused as the proxy's
+  error before it is opened; it could only be the proxy reflecting the client's own PFWD body.
 - A relay can no longer replace a connection's per-queue key through a message header to force
   a ratchet re-sync: once set, the stored key is always used, as simplexmq does.
 - A message that fails to decrypt no longer advances or saves the ratchet, so a tampered copy
@@ -111,30 +160,3 @@ All notable changes to this project are documented here. The format follows
   switch started the v7 way still ends the v7 way.
 - A group member's chat version range follows each JSON message they send, not only the
   handshake (`updateMemberChatVRange`).
-
-### Security
-
-- The HPACK integer decoder refuses a sixth continuation byte before shifting, so a 32-bit
-  (wasm) build no longer shifts past its word size on a hostile header block.
-- The HTTP/2 frame reader drops taken bytes once per read instead of once per frame, so a
-  server that sends many tiny frames costs linear time, not quadratic.
-- Tunnel Worker: a lease renewal that reaches the per-IP counter after the tunnel's release no
-  longer takes the slot back for up to 30 minutes.
-- A snapshot whose item or id counter is at its maximum is refused as damaged when the counter
-  would move, instead of panicking (debug) or wrapping to a negative id (release).
-- **Breaking:** the store key is required: `ClientBuilder::start` fails without `.key(…)`
-  (it used to default to an empty key that anyone could open), and JS `Client.start` refuses
-  an empty `key`. A new store derives its key with Argon2id (19 MiB, 2 passes, 1 lane) over
-  the passphrase and a random per-store salt kept in its `kdf` meta row, instead of one
-  unsalted HKDF. Stores made before still open with their old key and are not upgraded.
-- Snapshots are authenticated as a whole: format 2 ends with an HMAC over every byte, so a
-  changed, deleted or rolled-back row or a rewound counter is refused on open. The id counters
-  are checked against a sealed copy in both backends, which a store from before gets on its
-  first open, and SQLite overwrites deleted rows (`secure_delete`). In SQLite, putting back an
-  older sealed row is still not detected.
-- **Breaking (tunnel Worker):** it is no longer an open TCP proxy by default. Without
-  `ALLOWED_HOSTS` it reaches only the preset SimpleX SMP and XFTP relays; `ALLOWED_HOSTS` adds
-  hosts and `ALLOWED_HOSTS=*` allows any public host. Every record the client sends before the
-  relay's first encrypted record is checked (a second ClientHello after a HelloRetryRequest
-  too), the relay must answer in TLS records, and the per-IP limits fail closed when the
-  counter or the rate limiter errors.

@@ -10,6 +10,8 @@ use super::pipe::{Pipe, PipeId};
 pub(super) struct Link {
     pub(super) carrier: Carrier,
     pub(super) session: SmpSession,
+    /// When it was dialled.
+    pub(super) started: u64,
 }
 
 /// Where a pipe goes: the relay's first host that is not an onion one, and its port.
@@ -36,6 +38,7 @@ impl Link {
         Ok(Self {
             carrier: Carrier::new(id, pipe, tunnel, hello),
             session,
+            started: now,
         })
     }
 

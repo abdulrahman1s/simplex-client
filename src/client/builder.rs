@@ -144,10 +144,7 @@ mod tests {
     fn start_without_a_key_fails_before_touching_the_folder() {
         let dir = std::env::temp_dir().join("sxc-builder-no-key-never-made");
         let started = ClientBuilder::new(dir.clone()).start();
-        assert!(matches!(
-            started,
-            Err(Error::Store(StoreError::Invalid(_)))
-        ));
+        assert!(matches!(started, Err(Error::Store(StoreError::Invalid(_)))));
         assert!(!dir.exists());
     }
 }

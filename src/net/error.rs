@@ -9,6 +9,8 @@ pub enum NetError {
     OnionUnsupported(String),
     #[error("cannot resolve {host}: {source}")]
     Resolve { host: String, source: io::Error },
+    #[error("connecting to {host}:{port} timed out")]
+    TimedOut { host: String, port: u16 },
     #[error("cannot connect to {host}:{port}: {source}")]
     Connect {
         host: String,

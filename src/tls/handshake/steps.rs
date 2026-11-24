@@ -1,5 +1,6 @@
 //! One handler per server handshake message, in the order RFC 8446 section 4.4.1 fixes.
 use super::super::error::TlsError;
+use super::super::identity::verify_server_chain;
 use super::super::info::TlsInfo;
 use super::super::key_schedule::{certificate_verify_input, derive_secret, handshake_secrets};
 use super::super::record::Protection;
@@ -23,6 +24,16 @@ fn expect(m: &Message, ty: u8, what: &'static str) -> Result<(), TlsError> {
 }
 
 impl Handshake {
+    /// ServerHello and Finished end their key's records: nothing may follow them in the same one
+    /// (RFC 8446 section 5.1), or a message would be read under the wrong key.
+    fn at_key_change(&self) -> Result<(), TlsError> {
+        if self.messages.pending.is_empty() {
+            Ok(())
+        } else {
+            Err(TlsError::Protocol("handshake message spans a key change"))
+        }
+    }
+
     pub(super) fn server_hello(&mut self, m: &Message) -> Result<Keys, TlsError> {
         expect(m, SERVER_HELLO, "expected ServerHello")?;
         let peer = PublicKey::from_raw(Alg::X25519, &parse_server_hello(m.body())?)?;
@@ -35,6 +46,7 @@ impl Handshake {
         let hello_hash = self.transcript.hash();
         let server_hs = derive_secret(&secrets.handshake, "s hs traffic", &hello_hash);
         self.messages.rx = Some(Protection::new(&server_hs));
+        self.at_key_change()?;
         Ok(Keys {
             master: secrets.master,
             client_hs: derive_secret(&secrets.handshake, "c hs traffic", &hello_hash),
@@ -64,6 +76,9 @@ impl Handshake {
         }
         expect(m, CERTIFICATE, "expected Certificate")?;
         f.chain = parse_certificate(m.body())?;
+        if let Some(pin) = &self.pin {
+            verify_server_chain(&f.chain, &pin.key_hash, pin.now)?;
+        }
         self.transcript.add(&m.raw);
         Ok(Step::CertificateVerify(f))
     }
@@ -85,6 +100,7 @@ impl Handshake {
     pub(super) fn finished(&mut self, f: Flight, m: &Message) -> Result<Established, TlsError> {
         expect(m, FINISHED, "expected Finished")?;
         check_server_finished(&f.keys.server_hs, &self.transcript.hash(), m.body())?;
+        self.at_key_change()?;
         self.transcript.add(&m.raw);
         let server_done = self.transcript.hash();
         let client_ap = derive_secret(&f.keys.master, "c ap traffic", &server_done);
@@ -98,7 +114,6 @@ impl Handshake {
         )?;
         Ok(Established {
             flight,
-            pending: std::mem::take(&mut self.messages.pending),
             rx: Protection::new(&server_ap),
             rx_secret: server_ap,
             tx: Protection::new(&client_ap),

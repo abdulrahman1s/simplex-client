@@ -17,6 +17,7 @@ mod record;
 mod shared;
 #[cfg(feature = "native")]
 mod stream;
+mod validity;
 mod verify;
 mod wire;
 #[cfg(feature = "native")]
@@ -33,7 +34,7 @@ pub use alert::Alert;
 pub use client::TlsClient;
 pub use der::{CertError, certificate_public_key};
 pub use error::TlsError;
-pub use identity::{ChainCertificates, IdentityError, chain_id_ca_certs, verify_server_chain};
+pub use identity::{ChainCertificates, IdentityError, Pin, chain_id_ca_certs, verify_server_chain};
 pub use info::TlsInfo;
 #[cfg(feature = "native")]
 pub use reader::TlsReader;

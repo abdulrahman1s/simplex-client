@@ -8,6 +8,7 @@ use crate::smp::error::SmpError;
 use crate::smp::events::{SessionInfo, SmpEventKind};
 use crate::smp::flow::{Liveness, Request};
 use crate::smp::transport::Established;
+use crate::tls::Pin;
 
 use super::link::Link;
 use super::outbox::{Outbox, Waiter};
@@ -52,7 +53,10 @@ impl SmpSession {
         cfg: &ConnConfig,
         now_ms: u64,
     ) -> Result<(Self, Vec<u8>), SmpError> {
-        let mut link = Link::start()?;
+        let mut link = Link::start(Pin {
+            key_hash: server.key_hash.clone(),
+            now: (cfg.wall_clock)(),
+        })?;
         let hello = link.take_outgoing().unwrap_or_default();
         let session = Self {
             key_hash: server.key_hash.clone(),

@@ -5,6 +5,7 @@ use super::app_rx::{AppReceiver, Received};
 use super::app_tx::AppSender;
 use super::error::TlsError;
 use super::handshake::{Established, Handshake};
+use super::identity::Pin;
 use super::info::TlsInfo;
 use super::record::{Inbound, RawRecord};
 
@@ -34,9 +35,20 @@ pub struct TlsClient {
 }
 
 impl TlsClient {
-    /// The client and the ClientHello to send first, offering `alpn` (`smp/1`, `xftp/1`; empty offers none).
+    /// The client and the ClientHello to send first, offering `alpn` (`smp/1`, `xftp/1`; empty
+    /// offers none). Any certificate chain is taken: check it, or use `start_pinned`.
     pub fn start(alpn: &[&str]) -> Result<(Self, Vec<u8>), TlsError> {
-        let (handshake, hello) = Handshake::start(alpn)?;
+        Self::open(alpn, None)
+    }
+
+    /// Like `start`, but a chain that is not `pin`'s identity fails the handshake with
+    /// `TlsError::Identity` before our Finished is queued.
+    pub fn start_pinned(alpn: &[&str], pin: Pin) -> Result<(Self, Vec<u8>), TlsError> {
+        Self::open(alpn, Some(pin))
+    }
+
+    fn open(alpn: &[&str], pin: Option<Pin>) -> Result<(Self, Vec<u8>), TlsError> {
+        let (handshake, hello) = Handshake::start(alpn, pin)?;
         let client = Self {
             inbound: Inbound::default(),
             phase: Phase::Handshake(Box::new(handshake)),
@@ -75,7 +87,7 @@ impl TlsClient {
         match &mut self.phase {
             Phase::Handshake(handshake) => {
                 if let Some(est) = handshake.on_record(record)? {
-                    self.phase = Phase::Ready(Box::new(self.established(est)?));
+                    self.phase = Phase::Ready(Box::new(self.established(est)));
                 }
             }
             Phase::Ready(ready) => match ready.rx.open(&record)? {
@@ -92,18 +104,13 @@ impl TlsClient {
         Ok(())
     }
 
-    fn established(&mut self, est: Established) -> Result<Ready, TlsError> {
+    fn established(&mut self, est: Established) -> Ready {
         self.outgoing.push_back(est.flight);
-        let mut rx = AppReceiver::new(est.rx, est.rx_secret);
-        let mut tx = AppSender::new(est.tx, est.tx_secret);
-        if rx.handshake(&est.pending)? {
-            self.outgoing.push_back(tx.key_update(false)?);
-        }
-        Ok(Ready {
-            rx,
-            tx,
+        Ready {
+            rx: AppReceiver::new(est.rx, est.rx_secret),
+            tx: AppSender::new(est.tx, est.tx_secret),
             info: est.info,
-        })
+        }
     }
 
     /// The next bytes to send, oldest first.

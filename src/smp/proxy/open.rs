@@ -2,7 +2,7 @@
 use crate::crypto::cb_decrypt;
 
 use super::client_error::ProxyClientError;
-use super::nonce::reverse_nonce;
+use super::nonce::{reverse_nonce, transmission_nonce};
 use super::seal::Opener;
 use crate::smp::error::SmpError;
 use crate::smp::flow::Answer;
@@ -30,6 +30,14 @@ impl Opener {
             Err(e) => return Err(e),
         };
         let nonce = nonce.unwrap_or_else(|| reverse_nonce(&self.nonce));
+        // The answer shares this command's key, and the proxy relays its nonce unauthenticated.
+        // A relay picks a fresh random one (Server.hs `randomCbNonce`), so ours can only come from
+        // a proxy handing back our own PFWD body, which would open; refuse it here instead of
+        // relying on no sender command ever parsing as an answer.
+        if nonce == self.nonce || nonce == transmission_nonce(self.version, &self.nonce) {
+            let why = "PRES under the command's own nonce".into();
+            return Ok(Err(ProxyClientError::Unexpected(why)));
+        }
         let plain = cb_decrypt(&self.secret, &nonce, &body)?;
         let mut ts = parse_payload(self.version, &plain)?;
         let (Some(t), None) = (ts.pop(), ts.pop()) else {

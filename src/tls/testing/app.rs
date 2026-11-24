@@ -22,12 +22,25 @@ pub(super) fn app_phase(
         sock.write_all(&tx.seal(HANDSHAKE, &handshake_message(24, &[1]))?)?;
         tx = Protection::new(&next_traffic_secret(&server_ap));
     }
+    if o.key_updates_in_one_record > 0 {
+        let n = o.key_updates_in_one_record;
+        let updates = handshake_message(24, &[0]).repeat(n);
+        sock.write_all(&tx.seal(HANDSHAKE, &updates)?)?;
+        let secret = (0..n).fold(server_ap, |s, _| next_traffic_secret(&s));
+        tx = Protection::new(&secret);
+    }
     if !o.send_data.is_empty() {
         let mut rec = tx.seal(APPLICATION_DATA, &o.send_data)?;
         if o.corrupt_app_record {
             rec[10] ^= 1;
         }
         sock.write_all(&rec)?;
+    }
+    if o.oversized_app {
+        sock.write_all(&tx.seal(APPLICATION_DATA, &[0x41; 16384 + 200])?)?;
+    }
+    if !o.second_data.is_empty() {
+        sock.write_all(&tx.seal(APPLICATION_DATA, &o.second_data)?)?;
     }
     if o.close_notify_after_data {
         sock.write_all(&tx.seal(ALERT, &[1, 0])?)?;

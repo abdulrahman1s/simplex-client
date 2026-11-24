@@ -45,6 +45,18 @@ pub fn address(key_hash: &[u8]) -> SmpServer {
 
 /// Starts the server; `chunk` caps the bytes one pipe read returns (0 for no cap).
 pub fn serve(chunk: usize, respond: Respond) -> Served {
+    let (opts, server, seen) = mock(respond);
+    let (sock, server_end) = Pipe::pair(chunk);
+    Served {
+        sock,
+        server,
+        seen,
+        handle: spawn_server(server_end, opts),
+    }
+}
+
+/// The TLS test server's options for an SMP server, its address and what it will receive.
+pub fn mock(respond: Respond) -> (MockOpts, SmpServer, Arc<Mutex<Vec<Incoming>>>) {
     let id = identity();
     let dh_key = keypair(Alg::X25519);
     let hello = ServerHello {
@@ -62,13 +74,7 @@ pub fn serve(chunk: usize, respond: Respond) -> Served {
         app: Some(app),
         ..MockOpts::default()
     };
-    let (sock, server_end) = Pipe::pair(chunk);
-    Served {
-        sock,
-        server: address(&id.key_hash),
-        seen,
-        handle: spawn_server(server_end, opts),
-    }
+    (opts, address(&id.key_hash), seen)
 }
 
 fn run(

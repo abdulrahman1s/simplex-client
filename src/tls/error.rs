@@ -5,6 +5,7 @@ use thiserror::Error;
 
 use super::alert::Alert;
 use super::der::CertError;
+use super::identity::IdentityError;
 use crate::crypto::CryptoError;
 
 #[derive(Debug, Error)]
@@ -37,6 +38,9 @@ pub enum TlsError {
     HelloRetryRequest,
     #[error("bad_certificate: {0}")]
     Certificate(#[from] CertError),
+    /// The chain is not the pinned identity: the server's fault, not the network's.
+    #[error("bad_certificate: {0}")]
+    Identity(#[from] IdentityError),
     #[error("internal_error: {0}")]
     Internal(&'static str),
     #[error("internal_error: {0}")]
@@ -60,6 +64,7 @@ impl From<TlsError> for io::Error {
             | TlsError::Alpn
             | TlsError::HelloRetryRequest
             | TlsError::Certificate(_)
+            | TlsError::Identity(_)
             | TlsError::Internal(_)
             | TlsError::Crypto(_) => io::Error::new(io::ErrorKind::InvalidData, e),
         }

@@ -93,6 +93,20 @@ fn a_server_with_another_identity_is_refused_at_the_handshake() {
 }
 
 #[test]
+fn a_server_whose_certificates_have_expired_is_refused() {
+    let cfg = ClientConfig {
+        wall_clock: || 253_402_300_800,
+        ..ClientConfig::default()
+    };
+    let mut rig = Rig::start_with(&Fake::new(), u32::MAX >> 1, cfg);
+    let ev = rig.next(T0);
+    assert!(
+        matches!(ev, SessionEvent::Closed(XftpError::Handshake(_))),
+        "{ev:?}"
+    );
+}
+
+#[test]
 fn a_command_past_its_deadline_ends_the_session() {
     let fake = Fake::new();
     let mut rig = ready(&fake, u32::MAX >> 1);
