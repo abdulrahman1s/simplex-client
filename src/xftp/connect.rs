@@ -1,8 +1,9 @@
-//! Dialling an XFTP server: TCP, TLS 1.3 with ALPN `xftp/1`, HTTP/2, then the handshake (Client.hs `getXFTPClient`).
+//! Dialling an XFTP server: TCP, TLS 1.3 with ALPN `xftp/1`, HTTP/2, then the handshake, each step against a deadline (Client.hs `getXFTPClient`).
 use std::net::{Shutdown, TcpStream};
+use std::time::Duration;
 
 use crate::h2::{Connection, Options};
-use crate::net::connect_tcp;
+use crate::net::{Deadline, NetError, Watchdog, connect_tcp};
 use crate::smp::SystemClock;
 use crate::tls::{TlsStream, verify_server_chain};
 
@@ -40,47 +41,90 @@ fn connect_host(
     cfg: &ClientConfig,
 ) -> Result<TcpXftpClient, XftpError> {
     let port = server.port_or_default();
-    let sock = connect_tcp(host, port, cfg.connect_timeout).map_err(connect_error)?;
-    sock.set_read_timeout(Some(cfg.connect_timeout))?;
+    let clock = SystemClock::new();
+    let deadline = Deadline::new(&clock, cfg.connect_timeout);
+    let sock = match connect_tcp(host, port, &deadline) {
+        Ok(sock) => sock,
+        Err(NetError::TimedOut { .. }) => return Err(XftpError::TimedOut),
+        Err(e) => return Err(connect_error(e)),
+    };
     let control = sock.try_clone()?;
-    let tls = TlsStream::connect(sock, &[ALPN]).map_err(connect_error)?;
+    let left = deadline.left().ok_or(XftpError::TimedOut)?;
+    // TLS gets what is left of the connect timeout, the two handshake requests one each, as upstream.
+    let tls = within(left, &control, || {
+        TlsStream::connect(sock, &[ALPN]).map_err(connect_error)
+    })?;
     control.set_read_timeout(Some(cfg.poll))?;
     control.set_write_timeout(Some(cfg.write_timeout))?;
+    let authority = authority(host, port);
+    let (conn, session) = within(cfg.connect_timeout * 2, &control, || {
+        handshake(tls, server, &authority, cfg, &clock)
+    })?;
+    Ok(TcpXftpClient {
+        client: XftpClient {
+            conn,
+            authority,
+            session,
+            cfg: *cfg,
+        },
+        socket: control,
+    })
+}
+
+/// Runs `step`, shutting `sock` if it takes longer than `budget`, which a dripping peer could
+/// otherwise stretch without end.
+fn within<T>(
+    budget: Duration,
+    sock: &TcpStream,
+    step: impl FnOnce() -> Result<T, XftpError>,
+) -> Result<T, XftpError> {
+    let cut = sock.try_clone()?;
+    let dog = Watchdog::arm(budget, move || {
+        let _ = cut.shutdown(Shutdown::Both); // already closed is the goal
+    })?;
+    let done = step();
+    if dog.disarm() {
+        return Err(XftpError::TimedOut);
+    }
+    done
+}
+
+/// HTTP/2, then the XFTP handshake. A server that does not speak the handshake is taken at
+/// version 1, as Haskell's client does.
+fn handshake(
+    tls: TlsStream<TcpStream>,
+    server: &XftpServer,
+    authority: &str,
+    cfg: &ClientConfig,
+    clock: &SystemClock,
+) -> Result<(Connection<TlsStream<TcpStream>>, Negotiated), XftpError> {
     let tls_unique = *tls.tls_unique();
     let (chain, alpn) = (
         tls.peer_cert_chain().to_vec(),
         tls.info().alpn().map(str::to_owned),
     );
-    let authority = authority(host, port);
     let mut conn = Connection::open(tls, Options::default())?;
     let facts = TlsFacts {
         tls_unique: &tls_unique,
         peer_chain: &chain,
     };
-    // A server that does not speak the handshake is taken at version 1, as Haskell's client does.
-    let (version, session_id) = if alpn.as_deref() == Some(ALPN) {
-        let patience = Patience {
-            clock: &SystemClock::new(),
-            timeout: cfg.connect_timeout,
-        };
-        let n = client_handshake(&mut conn, &authority, &server.key_hash, &facts, &patience)?;
-        (n.version, n.session_id)
-    } else {
+    if alpn.as_deref() != Some(ALPN) {
         verify_server_chain(&chain, &server.key_hash).map_err(|_| HandshakeError::Identity)?;
-        (1, tls_unique.to_vec())
-    };
-    Ok(TcpXftpClient {
-        client: XftpClient {
+        let session_id = tls_unique.to_vec();
+        return Ok((
             conn,
-            authority,
-            session: Negotiated {
-                version,
+            Negotiated {
+                version: 1,
                 session_id,
             },
-            cfg: *cfg,
-        },
-        socket: control,
-    })
+        ));
+    }
+    let patience = Patience {
+        clock,
+        timeout: cfg.connect_timeout,
+    };
+    let n = client_handshake(&mut conn, authority, &server.key_hash, &facts, &patience)?;
+    Ok((conn, n))
 }
 
 impl TcpXftpClient {

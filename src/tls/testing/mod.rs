@@ -9,9 +9,11 @@ mod hello;
 mod options;
 mod pipe;
 mod server;
+mod tcp;
 
 pub(crate) use cert::make_cert;
 pub(crate) use conn::ServerConn;
 pub(crate) use options::{AppHook, MockOpts, MockResult};
 pub(crate) use pipe::Pipe;
 pub(crate) use server::spawn_server;
+pub(crate) use tcp::{DRIP, dripping_server, tls_server};

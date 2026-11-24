@@ -86,3 +86,7 @@ All notable changes to this project are documented here. The format follows
   extension type may appear once, EncryptedExtensions may only answer what the ClientHello
   offered, a CertificateRequest must carry `signature_algorithms`, records over the plaintext
   limit are refused with `record_overflow`, and a record sequence number never wraps.
+- The blocking SMP connect (TCP, TLS and the SMP handshake) ends with `SmpError::Timeout` at
+  `ConnConfig::connect_timeout`, then the next host is tried; the timeout used to bound each
+  socket read, so a server dripping a byte now and then held a connect forever. Blocking XFTP
+  connects bound TCP and TLS by the connect timeout and the handshake by one per request.

@@ -3,6 +3,7 @@ mod auth;
 pub(crate) mod certs;
 mod commands;
 mod connection;
+mod deadline;
 mod fake;
 mod handshake;
 mod keepalive;
