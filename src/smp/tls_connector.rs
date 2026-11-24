@@ -5,12 +5,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::net::{Deadline, NetError, Watchdog, connect_tcp};
-use crate::tls::{TlsReader, TlsStream, TlsWriter};
+use crate::tls::{Pin, TlsError, TlsReader, TlsStream, TlsWriter};
 
 use super::address::SmpServer;
 use super::clock::SystemClock;
 use super::config::ConnConfig;
-use super::error::SmpError;
+use super::error::{HandshakeError, SmpError};
 use super::handshake::{HandshakeConfig, TlsFacts, client_handshake};
 use super::transport::{Closer, Connector, Established, Reader, Wire, Writer};
 
@@ -86,7 +86,14 @@ fn handshake(
     server: &SmpServer,
     cfg: &ConnConfig,
 ) -> Result<(Rd, Wr, Established), SmpError> {
-    let tls = TlsStream::connect(sock, &["smp/1"]).map_err(io_err)?;
+    let pin = Pin {
+        key_hash: server.key_hash.clone(),
+        now: (cfg.wall_clock)(),
+    };
+    let tls = TlsStream::connect_pinned(sock, &["smp/1"], pin).map_err(|e| match e {
+        TlsError::Identity(_) => HandshakeError::Identity.into(),
+        e => io_err(e),
+    })?;
     let (tls_unique, peer_chain) = (*tls.tls_unique(), tls.peer_cert_chain().to_vec());
     let (r, w) = tls.split();
     let (mut rd, mut wr) = (Rd(r), Wr(w));

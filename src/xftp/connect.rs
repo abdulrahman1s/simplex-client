@@ -5,12 +5,12 @@ use std::time::Duration;
 use crate::h2::{Connection, Options};
 use crate::net::{Deadline, NetError, Watchdog, connect_tcp};
 use crate::smp::SystemClock;
-use crate::tls::{TlsStream, verify_server_chain};
+use crate::tls::{Pin, TlsStream, verify_server_chain};
 
 use super::address::XftpServer;
 use super::address::authority;
 use super::client::{ClientConfig, XftpClient};
-use super::error::{HandshakeError, XftpError};
+use super::error::{HandshakeError, XftpError, tls_error};
 use super::handshake::{Negotiated, Patience, TlsFacts, client_handshake};
 use super::version::ALPN;
 
@@ -51,8 +51,12 @@ fn connect_host(
     let control = sock.try_clone()?;
     let left = deadline.left().ok_or(XftpError::TimedOut)?;
     // TLS gets what is left of the connect timeout, the two handshake requests one each, as upstream.
+    let pin = Pin {
+        key_hash: server.key_hash.clone(),
+        now: (cfg.wall_clock)(),
+    };
     let tls = within(left, &control, || {
-        TlsStream::connect(sock, &[ALPN]).map_err(connect_error)
+        TlsStream::connect_pinned(sock, &[ALPN], pin).map_err(tls_error)
     })?;
     control.set_read_timeout(Some(cfg.poll))?;
     control.set_write_timeout(Some(cfg.write_timeout))?;

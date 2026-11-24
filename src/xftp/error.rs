@@ -4,6 +4,7 @@ use thiserror::Error;
 use crate::crypto::CryptoError;
 use crate::encoding::{DecodeError, EncodeError};
 use crate::h2::{H2Error, Stop};
+use crate::tls::TlsError;
 
 use super::error_type::XftpErrorType;
 
@@ -75,6 +76,14 @@ impl From<H2Error> for XftpError {
             | H2Error::Closed
             | H2Error::TooLarge(_)) => Self::H2(e),
         }
+    }
+}
+
+/// A TLS failure: the server's own when its chain is not the pinned identity, else the network's.
+pub(super) fn tls_error(e: TlsError) -> XftpError {
+    match e {
+        TlsError::Identity(_) => HandshakeError::Identity.into(),
+        e => XftpError::Connect(e.to_string()),
     }
 }
 

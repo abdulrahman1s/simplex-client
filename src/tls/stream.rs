@@ -6,6 +6,7 @@ use super::app_rx::AppReceiver;
 use super::app_tx::AppSender;
 use super::error::TlsError;
 use super::handshake::perform;
+use super::identity::Pin;
 use super::info::TlsInfo;
 use super::reader::TlsReader;
 use super::shared::Shared;
@@ -19,9 +20,19 @@ pub struct TlsStream<S: Socket> {
 
 impl<S: Socket> TlsStream<S> {
     /// Runs the handshake on `sock`, offering `alpn` (`smp/1`, `xftp/1`; empty offers none).
-    /// Set a read timeout on the socket first to bound the handshake.
-    pub fn connect(mut sock: S, alpn: &[&str]) -> Result<Self, TlsError> {
-        let (est, inbound) = perform(&mut sock, alpn)?;
+    /// Any certificate chain is taken: check it with `verify_server_chain`, or use `connect_pinned`.
+    pub fn connect(sock: S, alpn: &[&str]) -> Result<Self, TlsError> {
+        Self::open(sock, alpn, None)
+    }
+
+    /// Like `connect`, but a chain that is not `pin`'s identity fails the handshake with
+    /// `TlsError::Identity` before our Finished is sent.
+    pub fn connect_pinned(sock: S, alpn: &[&str], pin: Pin) -> Result<Self, TlsError> {
+        Self::open(sock, alpn, Some(pin))
+    }
+
+    fn open(mut sock: S, alpn: &[&str], pin: Option<Pin>) -> Result<Self, TlsError> {
+        let (est, inbound) = perform(&mut sock, alpn, pin)?;
         let writer_sock = sock.try_clone()?;
         let shared = Arc::new(Shared::new(est.info));
         let rx = AppReceiver::new(est.rx, est.rx_secret);

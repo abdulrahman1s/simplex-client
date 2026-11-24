@@ -5,6 +5,7 @@ use super::app_rx::{AppReceiver, Received};
 use super::app_tx::AppSender;
 use super::error::TlsError;
 use super::handshake::{Established, Handshake};
+use super::identity::Pin;
 use super::info::TlsInfo;
 use super::record::{Inbound, RawRecord};
 
@@ -34,9 +35,20 @@ pub struct TlsClient {
 }
 
 impl TlsClient {
-    /// The client and the ClientHello to send first, offering `alpn` (`smp/1`, `xftp/1`; empty offers none).
+    /// The client and the ClientHello to send first, offering `alpn` (`smp/1`, `xftp/1`; empty
+    /// offers none). Any certificate chain is taken: check it, or use `start_pinned`.
     pub fn start(alpn: &[&str]) -> Result<(Self, Vec<u8>), TlsError> {
-        let (handshake, hello) = Handshake::start(alpn)?;
+        Self::open(alpn, None)
+    }
+
+    /// Like `start`, but a chain that is not `pin`'s identity fails the handshake with
+    /// `TlsError::Identity` before our Finished is queued.
+    pub fn start_pinned(alpn: &[&str], pin: Pin) -> Result<(Self, Vec<u8>), TlsError> {
+        Self::open(alpn, Some(pin))
+    }
+
+    fn open(alpn: &[&str], pin: Option<Pin>) -> Result<(Self, Vec<u8>), TlsError> {
+        let (handshake, hello) = Handshake::start(alpn, pin)?;
         let client = Self {
             inbound: Inbound::default(),
             phase: Phase::Handshake(Box::new(handshake)),

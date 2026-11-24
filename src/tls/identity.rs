@@ -45,6 +45,16 @@ pub enum IdentityError {
     Certificate(#[from] CertError),
 }
 
+/// The identity a server must prove inside the TLS handshake: its chain is checked on receipt,
+/// before our Finished goes out, as Transport/Client.hs `onServerCertificate` does.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Pin {
+    /// The CA fingerprint from the server's address.
+    pub key_hash: Vec<u8>,
+    /// Seconds since the Unix epoch, which the chain must be valid at.
+    pub now: i64,
+}
+
 /// Checks a server chain against the key hash from its address: the identity certificate must
 /// hash to `key_hash`, every certificate must be signed by the next and be valid at `now`
 /// (seconds since the Unix epoch), and the top of a chain of two must sign itself.

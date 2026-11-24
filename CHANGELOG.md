@@ -94,3 +94,6 @@ All notable changes to this project are documented here. The format follows
   notBefore and notAfter (no skew allowance, as upstream), in SMP connects, PKEY and XFTP. The
   time comes from the new `ConnConfig::wall_clock` and `xftp::ClientConfig::wall_clock`
   (default `smp::system_wall_clock`); `verify_server_chain` and `HandshakeConfig` take it too.
+- SMP and XFTP connects check the server's pinned identity inside the TLS handshake, before the
+  client Finished, as upstream does; new `TlsStream::connect_pinned`, `TlsClient::start_pinned`,
+  `tls::Pin` and `TlsError::Identity`.

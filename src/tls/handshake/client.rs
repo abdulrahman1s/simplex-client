@@ -2,6 +2,7 @@
 use std::io::{Read, Write};
 
 use super::super::error::TlsError;
+use super::super::identity::Pin;
 use super::super::record::Inbound;
 use super::machine::{Established, Handshake};
 
@@ -9,8 +10,9 @@ use super::machine::{Established, Handshake};
 pub(in crate::tls) fn perform<S: Read + Write>(
     sock: &mut S,
     alpn: &[&str],
+    pin: Option<Pin>,
 ) -> Result<(Established, Inbound), TlsError> {
-    let (mut handshake, hello) = Handshake::start(alpn)?;
+    let (mut handshake, hello) = Handshake::start(alpn, pin)?;
     sock.write_all(&hello)?;
     sock.flush()?;
     let mut inbound = Inbound::default();

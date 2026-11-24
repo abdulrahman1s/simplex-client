@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use crossbeam_channel::bounded;
 
+use super::certs::identity;
 use super::tls_server::address;
 use crate::encoding::b64_encode;
 use crate::smp::{
@@ -25,7 +26,11 @@ fn cfg() -> ConnConfig {
 }
 
 fn local(hosts: &str, port: u16) -> SmpServer {
-    format!("smp://{}@{hosts}:{port}", b64_encode(&[1; 32], true))
+    at_key(&[1; 32], hosts, port)
+}
+
+fn at_key(key_hash: &[u8], hosts: &str, port: u16) -> SmpServer {
+    format!("smp://{}@{hosts}:{port}", b64_encode(key_hash, true))
         .parse()
         .unwrap()
 }
@@ -52,11 +57,14 @@ fn server_hello_dripping_a_byte_per_record_times_out() {
             thread::sleep(DRIP);
         }
     });
+    let id = identity();
     let port = tls_server(MockOpts {
+        identity: Some((id.leaf, id.chain)),
         app: Some(app),
         ..MockOpts::default()
     });
-    assert_eq!(connect(&local("127.0.0.1", port)), Err(SmpError::Timeout));
+    let server = at_key(&id.key_hash, "127.0.0.1", port);
+    assert_eq!(connect(&server), Err(SmpError::Timeout));
 }
 
 #[test]

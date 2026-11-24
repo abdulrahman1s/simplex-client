@@ -1,5 +1,6 @@
 //! One handler per server handshake message, in the order RFC 8446 section 4.4.1 fixes.
 use super::super::error::TlsError;
+use super::super::identity::verify_server_chain;
 use super::super::info::TlsInfo;
 use super::super::key_schedule::{certificate_verify_input, derive_secret, handshake_secrets};
 use super::super::record::Protection;
@@ -75,6 +76,9 @@ impl Handshake {
         }
         expect(m, CERTIFICATE, "expected Certificate")?;
         f.chain = parse_certificate(m.body())?;
+        if let Some(pin) = &self.pin {
+            verify_server_chain(&f.chain, &pin.key_hash, pin.now)?;
+        }
         self.transcript.add(&m.raw);
         Ok(Step::CertificateVerify(f))
     }

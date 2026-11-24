@@ -1,12 +1,15 @@
 //! TLS under one session, cut into transport blocks (Transport.hs `tPutBlock`, `tGetBlock` over `getTLS`).
 use std::collections::VecDeque;
 
-use crate::smp::error::SmpError;
+use crate::smp::error::{HandshakeError, SmpError};
 use crate::smp::version::BLOCK_SIZE;
-use crate::tls::{TlsClient, TlsError};
+use crate::tls::{Pin, TlsClient, TlsError};
 
 fn tls_err(e: TlsError) -> SmpError {
-    SmpError::Io(e.to_string())
+    match e {
+        TlsError::Identity(_) => HandshakeError::Identity.into(),
+        e => SmpError::Io(e.to_string()),
+    }
 }
 
 pub(super) struct Link {
@@ -18,8 +21,8 @@ pub(super) struct Link {
 }
 
 impl Link {
-    pub(super) fn start() -> Result<Self, SmpError> {
-        let (tls, hello) = TlsClient::start(&["smp/1"]).map_err(tls_err)?;
+    pub(super) fn start(pin: Pin) -> Result<Self, SmpError> {
+        let (tls, hello) = TlsClient::start_pinned(&["smp/1"], pin).map_err(tls_err)?;
         Ok(Self {
             tls,
             partial: Vec::new(),

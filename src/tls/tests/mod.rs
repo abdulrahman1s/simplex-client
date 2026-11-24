@@ -8,12 +8,13 @@ mod handshake;
 mod identity;
 mod live;
 mod negative;
+mod pin;
 mod sticky;
 mod stream;
 
 use crate::crypto::Alg;
 use crate::tls::testing::{MockOpts, MockResult, Pipe, spawn_server};
-use crate::tls::{TlsError, TlsStream};
+use crate::tls::{Pin, TlsError, TlsStream};
 use std::thread::JoinHandle;
 
 pub(super) fn start(opts: MockOpts, chunk: usize) -> (Pipe, JoinHandle<MockResult>) {
@@ -23,6 +24,10 @@ pub(super) fn start(opts: MockOpts, chunk: usize) -> (Pipe, JoinHandle<MockResul
 
 pub(super) fn connect(client: Pipe) -> Result<TlsStream<Pipe>, TlsError> {
     TlsStream::connect(client, &["smp/1"])
+}
+
+pub(super) fn connect_pinned(client: Pipe, pin: Pin) -> Result<TlsStream<Pipe>, TlsError> {
+    TlsStream::connect_pinned(client, &["smp/1"], pin)
 }
 
 pub(super) fn opts_for(key: Alg) -> MockOpts {

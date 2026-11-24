@@ -1,5 +1,6 @@
 //! The client side of the TLS 1.3 handshake as a state machine fed one record at a time (RFC 8446 section 4).
 use super::super::error::TlsError;
+use super::super::identity::Pin;
 use super::super::info::TlsInfo;
 use super::super::key_schedule::{Secret, Transcript};
 use super::super::record::{Protection, RawRecord};
@@ -46,12 +47,17 @@ pub(in crate::tls) struct Handshake {
     pub(super) transcript: Transcript,
     pub(super) key: KeyPair,
     pub(super) messages: Messages,
+    pub(super) pin: Option<Pin>,
     step: Step,
 }
 
 impl Handshake {
-    /// The machine and the ClientHello record to send, offering `alpn`.
-    pub(in crate::tls) fn start(alpn: &[&str]) -> Result<(Self, Vec<u8>), TlsError> {
+    /// The machine and the ClientHello record to send, offering `alpn`; a `pin` is checked
+    /// against the server's chain as soon as it arrives.
+    pub(in crate::tls) fn start(
+        alpn: &[&str],
+        pin: Option<Pin>,
+    ) -> Result<(Self, Vec<u8>), TlsError> {
         let mut transcript = Transcript::new();
         let hello = client_hello::build(alpn, &mut transcript)?;
         let offered = alpn.iter().map(|p| (*p).to_owned()).collect();
@@ -60,6 +66,7 @@ impl Handshake {
             transcript,
             key: hello.key,
             messages: Messages::default(),
+            pin,
             step: Step::ServerHello,
         };
         Ok((machine, hello.record))
