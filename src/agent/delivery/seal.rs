@@ -7,6 +7,7 @@ use crate::agent::SmpQueueInfo;
 use crate::agent::error::{AgentError, Result};
 use crate::agent::limits::{E2E_ENC_CONFIRMATION_LENGTH, E2E_ENC_MESSAGE_LENGTH};
 use crate::agent::records::{RcvQueue, SndQueue};
+use crate::agent::version::supported_client_range;
 
 /// The SEND body for `envelope`. A confirmation carries our e2e key, from which the recipient derives the secret.
 pub fn seal(sq: &SndQueue, envelope: &[u8], confirmation: bool) -> Result<Vec<u8>> {
@@ -54,6 +55,9 @@ pub struct Opened {
 /// Opens a message on `rq`; sender-secured queues only take `PHEmpty`.
 pub fn open(rq: &RcvQueue, body: &[u8]) -> Result<Opened> {
     let env = ClientMsgEnvelope::from_bytes(body)?;
+    if !(supported_client_range().contains(env.version) || env.version <= rq.client_version) {
+        return Err(AgentError::Version);
+    }
     let (peer, header) = match (&rq.peer_e2e, env.e2e_pub) {
         (Some(k), None) => (k.clone(), HeaderKey::None),
         (Some(k), Some(_)) => (k.clone(), HeaderKey::Repeated),

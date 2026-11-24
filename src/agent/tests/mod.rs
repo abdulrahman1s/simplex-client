@@ -4,6 +4,7 @@ mod address_dr;
 mod chat_bytes;
 pub(crate) mod cli;
 mod delivery;
+mod envelope_checks;
 mod handshake;
 mod interop;
 mod live;
