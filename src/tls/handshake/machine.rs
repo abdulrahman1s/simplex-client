@@ -11,8 +11,6 @@ use crate::crypto::KeyPair;
 pub(in crate::tls) struct Established {
     /// The client's closing flight, to send before any application data.
     pub(in crate::tls) flight: Vec<u8>,
-    /// Handshake bytes that followed the server Finished.
-    pub(in crate::tls) pending: Vec<u8>,
     pub(in crate::tls) rx: Protection,
     pub(in crate::tls) rx_secret: Secret,
     pub(in crate::tls) tx: Protection,

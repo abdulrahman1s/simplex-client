@@ -25,17 +25,8 @@ pub struct TlsReader<S: Socket> {
 }
 
 impl<S: Socket> TlsReader<S> {
-    pub(super) fn new(
-        sock: S,
-        inbound: Inbound,
-        mut rx: AppReceiver,
-        handshake_buf: &[u8],
-        shared: Arc<Shared>,
-    ) -> Result<Self, TlsError> {
-        if rx.handshake(handshake_buf)? {
-            shared.key_update_requested.store(true, Ordering::Release);
-        }
-        Ok(Self {
+    pub(super) fn new(sock: S, inbound: Inbound, rx: AppReceiver, shared: Arc<Shared>) -> Self {
+        Self {
             sock,
             inbound,
             rx,
@@ -43,7 +34,7 @@ impl<S: Socket> TlsReader<S> {
             app_pos: 0,
             closed: false,
             shared,
-        })
+        }
     }
 
     #[must_use]

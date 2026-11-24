@@ -75,7 +75,7 @@ impl TlsClient {
         match &mut self.phase {
             Phase::Handshake(handshake) => {
                 if let Some(est) = handshake.on_record(record)? {
-                    self.phase = Phase::Ready(Box::new(self.established(est)?));
+                    self.phase = Phase::Ready(Box::new(self.established(est)));
                 }
             }
             Phase::Ready(ready) => match ready.rx.open(&record)? {
@@ -92,18 +92,13 @@ impl TlsClient {
         Ok(())
     }
 
-    fn established(&mut self, est: Established) -> Result<Ready, TlsError> {
+    fn established(&mut self, est: Established) -> Ready {
         self.outgoing.push_back(est.flight);
-        let mut rx = AppReceiver::new(est.rx, est.rx_secret);
-        let mut tx = AppSender::new(est.tx, est.tx_secret);
-        if rx.handshake(&est.pending)? {
-            self.outgoing.push_back(tx.key_update(false)?);
-        }
-        Ok(Ready {
-            rx,
-            tx,
+        Ready {
+            rx: AppReceiver::new(est.rx, est.rx_secret),
+            tx: AppSender::new(est.tx, est.tx_secret),
             info: est.info,
-        })
+        }
     }
 
     /// The next bytes to send, oldest first.

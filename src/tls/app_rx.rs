@@ -55,18 +55,20 @@ impl AppReceiver {
         }
     }
 
-    /// Tickets are ignored; KeyUpdate rotates the receiving key. True when the peer asked us to rotate ours.
-    pub(super) fn handshake(&mut self, bytes: &[u8]) -> Result<bool, TlsError> {
+    /// Tickets are ignored; KeyUpdate rotates the receiving key and must end its record, since what
+    /// follows was sealed under the next key (RFC 8446 section 5.1). True when the peer asked us
+    /// to rotate ours.
+    fn handshake(&mut self, bytes: &[u8]) -> Result<bool, TlsError> {
         append_handshake(&mut self.handshake_buf, bytes)?;
-        let mut requested = false;
         while let Some((ty, raw)) = take_handshake_message(&mut self.handshake_buf) {
             match ty {
                 NEW_SESSION_TICKET => {}
-                KEY_UPDATE => requested |= self.key_update(&raw[4..])?,
+                KEY_UPDATE if self.handshake_buf.is_empty() => return self.key_update(&raw[4..]),
+                KEY_UPDATE => return Err(TlsError::Protocol("KeyUpdate spans a key change")),
                 _ => return Err(TlsError::Protocol("unexpected post-handshake message")),
             }
         }
-        Ok(requested)
+        Ok(false)
     }
 
     fn key_update(&mut self, body: &[u8]) -> Result<bool, TlsError> {

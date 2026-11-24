@@ -79,3 +79,6 @@ All notable changes to this project are documented here. The format follows
   handshake (`updateMemberChatVRange`).
 - A blocking TLS read that fails for any reason but a timeout now fails every later read and
   write too, as the sans-I/O client already did; a retry could otherwise skip a forged record.
+- TLS refuses handshake messages that span a key change (RFC 8446 section 5.1): the encrypted
+  server flight sent unencrypted in the ServerHello record, anything after the server Finished
+  in its record, and anything after a KeyUpdate in its record.

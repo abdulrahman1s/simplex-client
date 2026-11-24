@@ -5,6 +5,7 @@ mod cert;
 mod client_hello;
 mod conn;
 mod flight;
+mod hello;
 mod options;
 mod pipe;
 mod server;

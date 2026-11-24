@@ -16,10 +16,16 @@ pub(crate) struct MockOpts {
     pub cert_request: bool,
     pub compat_ccs: bool,
     pub coalesce: bool,
+    /// ServerHello and the whole flight in one plaintext record.
+    pub plaintext_flight: bool,
+    /// A NewSessionTicket in the same record as the server Finished (with `coalesce`).
+    pub ticket_after_finished: bool,
     pub fragment: usize,
     pub corrupt_handshake_record: bool,
     pub alert_in_handshake: bool,
     pub key_update: bool,
+    /// This many KeyUpdates in one record, then data under the last key.
+    pub key_updates_in_one_record: usize,
     pub send_data: Vec<u8>,
     pub corrupt_app_record: bool,
     /// Sent in its own record after `send_data`.
@@ -43,10 +49,13 @@ impl Default for MockOpts {
             cert_request: false,
             compat_ccs: false,
             coalesce: false,
+            plaintext_flight: false,
+            ticket_after_finished: false,
             fragment: 0,
             corrupt_handshake_record: false,
             alert_in_handshake: false,
             key_update: false,
+            key_updates_in_one_record: 0,
             send_data: Vec::new(),
             corrupt_app_record: false,
             second_data: Vec::new(),

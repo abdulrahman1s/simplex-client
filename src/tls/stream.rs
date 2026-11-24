@@ -25,7 +25,7 @@ impl<S: Socket> TlsStream<S> {
         let writer_sock = sock.try_clone()?;
         let shared = Arc::new(Shared::new(est.info));
         let rx = AppReceiver::new(est.rx, est.rx_secret);
-        let reader = TlsReader::new(sock, inbound, rx, &est.pending, Arc::clone(&shared))?;
+        let reader = TlsReader::new(sock, inbound, rx, Arc::clone(&shared));
         let writer = TlsWriter::new(writer_sock, AppSender::new(est.tx, est.tx_secret), shared);
         Ok(Self { reader, writer })
     }
