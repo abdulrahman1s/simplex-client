@@ -10,6 +10,7 @@ mod hostile;
 mod keepalive;
 mod live;
 mod pool;
+mod pool_hello;
 mod pool_lifetime;
 mod pool_rig;
 mod proxy_codec;

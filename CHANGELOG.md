@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Through the tunnel, the TLS ClientHello goes out right behind the tunnel hello instead of
+  waiting for `{"ok":true}`, so connecting to a relay or file server takes one round trip
+  less. The relay's bytes are still refused until the tunnel says yes.
+
 ## [0.1.0] - 2026-11-24
 
 ### Security

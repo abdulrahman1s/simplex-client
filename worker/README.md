@@ -56,10 +56,13 @@ does. If that matters to you, deploy your own Worker, or put it behind a network
    - When the socket opens, it sends the text frame `{"ok":true}`.
    - On any failure, it sends `{"ok":false,"error":"<code>"}` and closes with code 1008
      (policy) or 1011 (upstream).
-4. After that, **binary** frames in both directions carry raw TCP bytes. Your first binary
-   bytes must be a TLS ClientHello that offers ALPN `smp/1` or `xftp/1` and has no SNI, and
-   so must every record you send until the relay's first encrypted record (see below). A text
-   frame after the first one closes the tunnel.
+4. After that, **binary** frames in both directions carry raw TCP bytes. You may send your
+   binary frames right after the text frame, without waiting for `{"ok":true}`: the Worker
+   holds them until the relay's socket opens, and drops them if it refuses the tunnel. That
+   saves a round trip, and `simplex-client` does it. The relay's bytes only ever come after
+   `{"ok":true}`. Your first binary bytes must be a TLS ClientHello that offers ALPN `smp/1`
+   or `xftp/1` and has no SNI, and so must every record you send until the relay's first
+   encrypted record (see below). A text frame after the first one closes the tunnel.
 5. Closing either side closes the other. When the relay closes, the WebSocket closes with
    1000. A relay error closes it with 1011 `upstream`. Reaching the maximum lifetime closes it
    with 1000 `lifetime`; reconnect.

@@ -48,7 +48,10 @@ impl Slot {
             }
             PipeInput::Open => Ok(()),
             PipeInput::Text(text) => match parse_tunnel_reply(&text) {
-                Ok(()) => link.carrier.send_client_hello().map_err(Why::Failed),
+                Ok(()) => {
+                    link.carrier.on_accepted();
+                    Ok(())
+                }
                 Err(e) => Err(refused(&e, notes)),
             },
             PipeInput::Binary(_) if !link.carrier.is_through() => Err(Why::Failed(

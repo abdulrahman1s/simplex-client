@@ -68,11 +68,10 @@ impl FileLink {
             }
             PipeInput::Open => None,
             PipeInput::Text(text) => match parse_tunnel_reply(&text) {
-                Ok(()) => self
-                    .carrier
-                    .send_client_hello()
-                    .err()
-                    .map(|e| (e.to_string(), false)),
+                Ok(()) => {
+                    self.carrier.on_accepted();
+                    None
+                }
                 Err(e) => {
                     let (err, limited) = refused(&e);
                     return (self.session.end(err), limited);
