@@ -30,9 +30,11 @@ fn a_check_tests_only_the_users_own_relays_after_the_start() {
 }
 
 #[test]
-fn a_lone_relay_is_never_checked_because_it_could_not_be_disabled() {
-    let (_, fake) = started(&[LIVE]);
-    assert!(fake.asked().is_empty());
+fn a_lone_relay_is_checked_for_the_network_but_never_disabled() {
+    let (mut t, fake) = started(&[LIVE]);
+    assert_eq!(servers(&fake), vec![LIVE.to_owned()]);
+    t.relay_answers(&fake, LIVE, false);
+    assert!(disabled_calls(&t).is_empty());
 }
 
 #[test]

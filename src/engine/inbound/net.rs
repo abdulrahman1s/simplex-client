@@ -1,4 +1,4 @@
-//! Offline: no relay of the user's is up; reported once each way (the old codec's `hostDisconnected` rule).
+//! Offline: no relay of the user's is up, or a check reached none; reported once each way (the old codec's `hostDisconnected` rule).
 
 use crate::types::Event;
 
@@ -15,6 +15,11 @@ impl<A: AgentPort> Engine<A> {
         }
         self.state.hosts.insert(server, up);
         let offline = !self.state.hosts.values().any(|up| *up);
+        self.set_offline(offline);
+    }
+
+    /// The agent's hosts and the relay checks both decide; either way it is told only on a change.
+    pub(crate) fn set_offline(&mut self, offline: bool) {
         if offline != self.state.offline {
             self.state.offline = offline;
             self.emit(Event::Offline(offline));

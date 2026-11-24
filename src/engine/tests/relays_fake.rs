@@ -7,6 +7,7 @@ use crossbeam_channel::Sender;
 use super::T;
 use crate::engine::jobs::JobDone;
 use crate::engine::relays::{RelayDone, RelayTester};
+use crate::types::Event;
 
 pub const LIVE: &str = "smp://jZxOZYTgS4Q3Mp5r4wJW5ruxuQAPb8y5pa4a1DI2l6Y=@127.0.0.1:5223";
 pub const DEAD: &str = "smp://jZxOZYTgS4Q3Mp5r4wJW5ruxuQAPb8y5pa4a1DI2l6Y=@127.0.0.2:5999";
@@ -52,25 +53,31 @@ pub fn started(relays: &[&str]) -> (T, Fake) {
 
 impl T {
     /// `server` answers the running check: it passes, or fails with `why`.
-    pub fn relay_answers(&mut self, fake: &Fake, server: &str, passes: bool) {
+    /// What it put out.
+    pub fn relay_answers(&mut self, fake: &Fake, server: &str, passes: bool) -> Vec<Event> {
         let failure = (!passes).then(|| "BROKER NETWORK".to_owned());
-        self.relay_answers_run(fake.run(), server, failure);
+        self.relay_answers_run(fake.run(), server, failure)
     }
 
-    pub fn relay_answers_run(&mut self, run: u64, server: &str, failure: Option<String>) {
+    pub fn relay_answers_run(
+        &mut self,
+        run: u64,
+        server: &str,
+        failure: Option<String>,
+    ) -> Vec<Event> {
         let server = server.to_owned();
         self.e.on_job(JobDone::Relay(RelayDone {
             run,
             server,
             failure,
         }));
-        self.out();
+        self.out()
     }
 
     /// Time passes and the loop's timer runs.
-    pub fn relay_time(&mut self, secs: u64) {
+    pub fn relay_time(&mut self, secs: u64) -> Vec<Event> {
         self.clock.advance(std::time::Duration::from_secs(secs));
         self.e.tick();
-        self.out();
+        self.out()
     }
 }

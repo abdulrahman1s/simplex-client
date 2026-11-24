@@ -22,6 +22,7 @@ mod prefs;
 mod profile;
 mod relays;
 mod relays_fake;
+mod relays_offline;
 mod relays_retry;
 mod restart;
 mod resync;

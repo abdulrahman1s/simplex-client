@@ -1,9 +1,11 @@
 //! Relay checks: which of the user's own relays answer, which take new queues, and the one retry after a network failure (the old codec's relay rules; Agent.hs `testProtocolServer`).
 
 mod check;
+mod configure;
 mod real;
 mod retry;
 mod tester;
+mod wake;
 
 use std::collections::{BTreeSet, HashSet};
 use std::time::Duration;
