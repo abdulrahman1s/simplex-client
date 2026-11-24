@@ -4,9 +4,11 @@ import { connect } from "cloudflare:sockets";
 import { checkClientHello, MAX_HELLO_BYTES } from "./clienthello";
 import type { Env } from "./env";
 import { Meter, type Limits } from "./limits";
-import { checkTarget, parseHello, tokenEquals, type ErrorCode, type Policy } from "./validate";
+import { checkTarget, parseHello, socketHostname, tokenEquals, type ErrorCode, type Policy } from "./validate";
 
 const CONNECT_TIMEOUT_MS = 10_000;
+const CONNECT_ATTEMPTS = 4;
+const TIMEOUT = new Error("timeout");
 /** How long a lost release keeps a lease, beyond the tunnel's own lifetime. */
 const LEASE_SLACK_MS = 60_000;
 
@@ -42,6 +44,8 @@ class Tunnel {
     private readonly cx: TunnelContext,
   ) {
     this.meter = new Meter(cx.limits, Date.now());
+    // Newer compatibility dates deliver binary frames as Blob unless asked otherwise.
+    ws.binaryType = "arraybuffer";
     ws.addEventListener("message", (e) => this.onMessage(e.data));
     ws.addEventListener("close", () => this.end(1000, "closed"));
     ws.addEventListener("error", () => this.end(1011, "error"));
@@ -57,7 +61,7 @@ class Tunnel {
       this.enqueue(() => this.open(data));
       return;
     }
-    if (this.phase === "hello") return this.fail("bad_request");
+    if (this.phase === "hello" || !(data instanceof ArrayBuffer)) return this.fail("bad_request");
     const limits = this.cx.limits;
     if (data.byteLength > limits.maxFrameBytes) return this.fail("bad_request");
     if (!this.meter.add(data.byteLength, Date.now())) return this.fail("quota");
@@ -83,20 +87,35 @@ class Tunnel {
     if (!(await this.acquire())) return this.fail("too_many_tunnels");
     if (this.closed()) return;
 
-    try {
-      const socket = connect({ hostname: target.host, port: hello.port }, { secureTransport: "off", allowHalfOpen: false });
-      this.socket = socket;
-      socket.closed.catch(() => undefined);
-      await withTimeout(socket.opened, CONNECT_TIMEOUT_MS);
-    } catch {
-      return this.fail("connect_failed");
-    }
-    if (this.closed() || !this.socket) return;
-    this.writer = this.socket.writable.getWriter();
+    const socket = await this.dial(socketHostname(target.host), hello.port);
+    if (this.closed()) return;
+    if (!socket) return this.fail("connect_failed");
+    this.writer = socket.writable.getWriter();
     this.phase = "probe";
     this.ws.send(JSON.stringify({ ok: true }));
     this.arm(this.cx.limits.helloTimeoutMs); // the ClientHello must follow promptly
-    void this.pump(this.socket);
+    void this.pump(socket);
+  }
+
+  /**
+   * Opens the relay socket. Cloudflare sometimes refuses a connect to a host name at once
+   * ("proxy request failed") and accepts the next try, so quick refusals are retried.
+   */
+  private async dial(hostname: string, port: number): Promise<Socket | null> {
+    for (let attempt = 1; attempt <= CONNECT_ATTEMPTS && !this.closed(); attempt++) {
+      const socket = connect({ hostname, port }, { secureTransport: "off", allowHalfOpen: false });
+      this.socket = socket;
+      socket.closed.catch(() => undefined);
+      try {
+        await withTimeout(socket.opened, CONNECT_TIMEOUT_MS);
+        return socket;
+      } catch (e) {
+        socket.close().catch(() => undefined);
+        if (e === TIMEOUT) return null;
+      }
+      await new Promise((r) => setTimeout(r, 100 * attempt));
+    }
+    return null;
   }
 
   /** Takes a lease on the client's counter. Fails open: an unreachable counter must not stop chat. */
@@ -205,7 +224,7 @@ class Tunnel {
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error("timeout")), ms);
+    timer = setTimeout(() => reject(TIMEOUT), ms);
   });
   return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
 }

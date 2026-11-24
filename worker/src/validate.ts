@@ -76,6 +76,11 @@ export function checkTarget(
   return { host };
 }
 
+/** `connect()` wants IPv6 literals in brackets; a bare one is refused. */
+export function socketHostname(host: string): string {
+  return host.includes(":") ? `[${host}]` : host;
+}
+
 export function hostMatches(host: string, pattern: string): boolean {
   return pattern.startsWith("*.") ? host.endsWith(pattern.slice(1)) : host === pattern;
 }

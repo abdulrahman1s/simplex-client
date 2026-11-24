@@ -6,6 +6,7 @@ import {
   parseIpv6,
   parseList,
   parsePorts,
+  socketHostname,
   tokenEquals,
   type Policy,
 } from "../src/validate";
@@ -109,6 +110,14 @@ describe("checkTarget hosts", () => {
     expect(target("relays.example.org", 5223, policy)).toEqual({ error: "forbidden_host" });
     expect(target("evilrelays.example.org", 5223, policy)).toEqual({ error: "forbidden_host" });
     expect(target("smp5.simplex.im", 5223, policy)).toEqual({ error: "forbidden_host" });
+  });
+});
+
+describe("socketHostname", () => {
+  it("brackets IPv6 literals for connect() and leaves the rest alone", () => {
+    expect(socketHostname("2a01:4f8::1")).toBe("[2a01:4f8::1]");
+    expect(socketHostname("1.1.1.1")).toBe("1.1.1.1");
+    expect(socketHostname("smp4.simplex.im")).toBe("smp4.simplex.im");
   });
 });
 
