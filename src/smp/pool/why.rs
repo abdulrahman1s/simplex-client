@@ -12,9 +12,13 @@ pub(super) enum Why {
     Failed(SmpError),
     /// The tunnel refused more tunnels from this address for now.
     Limited(SmpError),
-    /// The Worker's maximum lifetime: dial again at once.
+    /// The Worker's maximum lifetime: dial again at once if the tunnel lived `MIN_LIFETIME`.
     Lifetime,
 }
+
+/// The Worker's tunnels live 24 h by default. A `lifetime` close much sooner is no reason to
+/// skip the back-off, or a hostile tunnel could make the pool redial in a tight loop.
+pub(super) const MIN_LIFETIME: Duration = Duration::from_secs(3600);
 
 pub(super) fn ms(d: Duration) -> u64 {
     u64::try_from(d.as_millis()).unwrap_or(u64::MAX)

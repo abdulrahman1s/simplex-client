@@ -97,3 +97,6 @@ All notable changes to this project are documented here. The format follows
 - SMP and XFTP connects check the server's pinned identity inside the TLS handshake, before the
   client Finished, as upstream does; new `TlsStream::connect_pinned`, `TlsClient::start_pinned`,
   `tls::Pin` and `TlsError::Identity`.
+- The tunnel pool redials at once after a `1000 lifetime` close only when the session was up
+  and the tunnel lived an hour; earlier ones wait out the back-off, so a hostile tunnel cannot
+  force a reconnect loop.

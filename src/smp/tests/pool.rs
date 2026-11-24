@@ -95,21 +95,6 @@ fn rate_limited_tunnels_wait_at_least_a_minute() {
 }
 
 #[test]
-fn the_lifetime_close_dials_again_at_once() {
-    let mut rig = Rig::new();
-    rig.pool.ensure(&address(&[1; 32]), T0);
-    let id = rig.open_tunnel(T0);
-    let close = PipeInput::Closed {
-        code: 1000,
-        reason: "lifetime".into(),
-    };
-    rig.pool.on_input(id, close, T0 + 50);
-    assert_eq!(rig.pool.next_deadline(), Some(T0 + 50));
-    rig.pool.tick(T0 + 50);
-    assert_eq!(rig.wire.borrow().dialled.len(), 2);
-}
-
-#[test]
 fn an_error_frame_while_up_takes_the_session_down_and_not_tls_is_logged() {
     let mut served = serve(0, answer_with(Response::Ok));
     let mut rig = Rig::new();

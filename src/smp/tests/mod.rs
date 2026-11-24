@@ -9,6 +9,7 @@ mod handshake;
 mod keepalive;
 mod live;
 mod pool;
+mod pool_lifetime;
 mod pool_rig;
 mod proxy_codec;
 mod proxy_pkey;
