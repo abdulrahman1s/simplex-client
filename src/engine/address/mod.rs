@@ -1,4 +1,4 @@
-//! The user's address (Phase 3): making and deleting it, the requests that come through it, accepting and
+//! The user's address: making and deleting it, the requests that come through it, accepting and
 //! rejecting them (Commands.hs `APICreateMyAddress`, `APIDeleteMyAddress`, `APIAcceptContact`,
 //! `APIRejectContact`; Subscriber.hs `processContactConnMessage` REQ).
 

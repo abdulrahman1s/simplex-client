@@ -1,4 +1,4 @@
-//! Files over XFTP (Phase 2, groups in Phase 4): sending, fetching, cancelling, opening and locating a message's file, and the friend's or member's file offers (Commands.hs `APISendMessages`, `CancelFile`; Subscriber.hs `processFileInvitation`, `processFDMessage`, `xFileCancel`).
+//! Files over XFTP, for friends and groups: sending, fetching, cancelling, opening and locating a message's file, and the friend's or member's file offers (Commands.hs `APISendMessages`, `CancelFile`; Subscriber.hs `processFileInvitation`, `processFDMessage`, `xFileCancel`).
 
 mod body;
 mod cancel;

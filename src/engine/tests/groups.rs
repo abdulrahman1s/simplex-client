@@ -1,4 +1,4 @@
-//! Groups (Phase 4): the seed every group test starts from, and the rules of the foundation.
+//! Groups: the seed every group test starts from, and the rules of the foundation.
 
 mod admin;
 mod admin_member;
