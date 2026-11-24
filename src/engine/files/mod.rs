@@ -24,9 +24,9 @@ use std::sync::atomic::AtomicBool;
 
 pub(crate) use body::edit_caption;
 pub(crate) use history::HistoryFile;
-pub(crate) use uploaded::descr_parts;
 pub(crate) use inbound::offer;
 pub use transfers::{FileDone, FileKey, Transfers};
+pub(crate) use uploaded::descr_parts;
 
 use crate::xftp::XftpServer;
 
