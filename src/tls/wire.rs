@@ -60,6 +60,19 @@ pub(super) fn u24_value(b: &[u8]) -> usize {
     b.iter().take(3).fold(0, |a, x| a << 8 | usize::from(*x))
 }
 
+/// Handshake bytes waiting to form a whole message. SMP and XFTP certificate chains are a few
+/// kilobytes; anything near this is refused instead of buffered.
+const MAX_HANDSHAKE_PENDING: usize = 1 << 17;
+
+/// Appends handshake bytes taken out of records, keeping `pending` within its bound.
+pub(super) fn append_handshake(pending: &mut Vec<u8>, bytes: &[u8]) -> Result<(), TlsError> {
+    if pending.len() + bytes.len() > MAX_HANDSHAKE_PENDING {
+        return Err(TlsError::Unsupported("handshake message too large"));
+    }
+    pending.extend_from_slice(bytes);
+    Ok(())
+}
+
 /// Removes and returns the first complete handshake message (header included) from `pending`.
 pub(super) fn take_handshake_message(pending: &mut Vec<u8>) -> Option<(u8, Vec<u8>)> {
     let len = u24_value(pending.get(1..4)?);

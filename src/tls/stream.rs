@@ -3,6 +3,8 @@ use std::io::{self, Read, Write};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
+use super::app_rx::AppReceiver;
+use super::app_tx::AppSender;
 use super::error::TlsError;
 use super::handshake::perform;
 use super::info::TlsInfo;
@@ -20,21 +22,15 @@ impl<S: Socket> TlsStream<S> {
     /// Runs the handshake on `sock`, offering `alpn` (`smp/1`, `xftp/1`; empty offers none).
     /// Set a read timeout on the socket first to bound the handshake.
     pub fn connect(mut sock: S, alpn: &[&str]) -> Result<Self, TlsError> {
-        let est = perform(&mut sock, alpn)?;
+        let (est, inbound) = perform(&mut sock, alpn)?;
         let writer_sock = sock.try_clone()?;
         let shared = Arc::new(Shared {
             info: est.info,
             key_update_requested: AtomicBool::new(false),
         });
-        let reader = TlsReader::new(
-            sock,
-            est.inbound,
-            est.rx,
-            est.rx_secret,
-            est.pending,
-            Arc::clone(&shared),
-        )?;
-        let writer = TlsWriter::new(writer_sock, est.tx, est.tx_secret, shared);
+        let rx = AppReceiver::new(est.rx, est.rx_secret);
+        let reader = TlsReader::new(sock, inbound, rx, &est.pending, Arc::clone(&shared))?;
+        let writer = TlsWriter::new(writer_sock, AppSender::new(est.tx, est.tx_secret), shared);
         Ok(Self { reader, writer })
     }
 

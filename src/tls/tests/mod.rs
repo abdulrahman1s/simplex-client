@@ -1,5 +1,6 @@
 //! TLS tests: the client against an in-process server (`testing`) and against real SMP servers.
 
+mod client;
 mod der;
 mod handshake;
 mod identity;

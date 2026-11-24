@@ -96,6 +96,12 @@ pub(super) struct Inbound {
 }
 
 impl Inbound {
+    /// Appends bytes from the network; the caller then takes every complete record, which leaves
+    /// at most one partial record (5 + 2^14 + 256 bytes) behind.
+    pub(super) fn push(&mut self, bytes: &[u8]) {
+        self.buf.extend_from_slice(bytes);
+    }
+
     pub(super) fn next_record(&mut self, sock: &mut impl Read) -> Result<RawRecord, TlsError> {
         loop {
             if let Some(record) = self.take_record()? {
@@ -110,7 +116,7 @@ impl Inbound {
         }
     }
 
-    fn take_record(&mut self) -> Result<Option<RawRecord>, TlsError> {
+    pub(super) fn take_record(&mut self) -> Result<Option<RawRecord>, TlsError> {
         let Some(&[ty, major, _, hi, lo]) = self.buf.first_chunk::<5>() else {
             return Ok(None);
         };
