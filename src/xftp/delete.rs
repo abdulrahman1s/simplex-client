@@ -6,12 +6,11 @@ use crate::h2::Progress;
 use crate::smp::{Clock, SystemClock};
 
 use super::client::{ClientConfig, Ctl};
+use super::config::ATTEMPTS;
 use super::description::{FileDescription, Party};
 use super::error::XftpError;
 use super::error_type::XftpErrorType;
 use super::pool::Pool;
-
-const ATTEMPTS: usize = 3;
 
 /// Sends `FDEL` for every chunk. A chunk the server no longer knows counts as deleted. Every chunk is tried;
 /// the first other failure is returned at the end.

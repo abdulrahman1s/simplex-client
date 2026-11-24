@@ -1,6 +1,11 @@
 //! How long an XFTP connection waits for each step (Client.hs `XFTPClientConfig`, `xftpClientTimeout`).
 use std::time::Duration;
 
+/// Tries of one command on one server, each on a fresh connection after a temporary failure.
+pub(super) const ATTEMPTS: usize = 3;
+/// Recipient keys one FNEW or FADD carries (Agent's `xftpMaxRecipientsPerRequest`).
+pub(super) const MAX_PER_REQUEST: usize = 200;
+
 #[derive(Debug, Clone, Copy)]
 pub struct ClientConfig {
     pub connect_timeout: Duration,

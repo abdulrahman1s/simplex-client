@@ -13,15 +13,13 @@ use super::file_digest::sha512_files;
 use super::file_encrypt::{EncryptParams, encrypt_file};
 use super::file_header::FileHeader;
 use super::progress::CancelFlag;
+use super::upload_descr::Sealed;
 use super::version::AUTH_TAG_SIZE;
 
 /// An encrypted file that is deleted when this is dropped, however the upload ends.
 pub(super) struct Prepared {
     pub(super) path: PathBuf,
-    pub(super) key: SbKey,
-    pub(super) nonce: CbNonce,
-    pub(super) digest: Vec<u8>,
-    pub(super) enc_size: u64,
+    pub(super) sealed: Sealed,
     pub(super) specs: Vec<ChunkSpec>,
 }
 
@@ -60,22 +58,24 @@ pub(super) fn prepare(
     // Built before the file exists, so its Drop also cleans up after a failed encryption.
     let mut prepared = Prepared {
         path,
-        key,
-        nonce,
-        digest: Vec::new(),
-        enc_size,
+        sealed: Sealed {
+            key,
+            nonce,
+            digest: Vec::new(),
+            enc_size,
+        },
         specs: prepare_chunk_specs(&sizes),
     };
     let params = EncryptParams {
         src: source,
         header: &header,
-        key: &prepared.key,
-        nonce: &prepared.nonce,
+        key: &prepared.sealed.key,
+        nonce: &prepared.sealed.nonce,
         content_len,
         enc_size,
         dst: &prepared.path,
     };
     encrypt_file(&params, cancel, &mut |_| {})?;
-    prepared.digest = sha512_files(&[&prepared.path])?;
+    prepared.sealed.digest = sha512_files(&[&prepared.path])?;
     Ok(prepared)
 }

@@ -2,4 +2,6 @@
 mod fake_h2;
 mod fake_server;
 mod fake_xftp;
+mod mem;
+mod rig;
 mod session;

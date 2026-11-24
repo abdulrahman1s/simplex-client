@@ -9,12 +9,11 @@ use crate::smp::{Clock, SystemClock};
 use super::address::XftpServer;
 use super::chunks::ChunkSpec;
 use super::client::ClientConfig;
-use super::description::FileDescription;
 use super::error::XftpError;
 use super::pool::Pool;
 use super::progress::{CancelFlag, ProgressFn};
-use super::upload_chunk::{Job, SentChunk, send_chunk};
-use super::upload_descr::describe;
+use super::upload_chunk::{Job, send_chunk};
+use super::upload_descr::{SentChunk, Uploaded, uploaded};
 use super::upload_prepare::prepare;
 
 pub struct UploadParams<'a> {
@@ -27,17 +26,6 @@ pub struct UploadParams<'a> {
     /// How many recipients each chunk is made for (the chat uses 4 for a direct file).
     pub recipients: usize,
     pub storage_hours: Option<u32>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Uploaded {
-    /// Keeps the replica keys that delete the file; keep it to call `delete_file` later.
-    pub sender: FileDescription,
-    /// One description per recipient.
-    pub recipients: Vec<FileDescription>,
-    pub encrypted_size: u64,
-    /// The earliest time (epoch seconds) a server may drop a chunk, when the servers say.
-    pub expires: Option<i64>,
 }
 
 fn read_chunk(file: &mut File, spec: ChunkSpec) -> Result<Vec<u8>, XftpError> {
@@ -75,10 +63,10 @@ pub fn upload(
     let mut pool = Pool::new(ClientConfig::default());
     let mut file = File::open(&prepared.path)?;
     let (mut sent, mut done) = (Vec::<SentChunk>::new(), 0u64);
-    progress(0, prepared.enc_size);
+    let total = prepared.sealed.enc_size;
+    progress(0, total);
     for spec in &prepared.specs {
         let bytes = read_chunk(&mut file, *spec)?;
-        let total = prepared.enc_size;
         let chunk = send_chunk(&job, &mut pool, *spec, &bytes, &mut |n| {
             progress(done + n as u64, total)
         })?;
@@ -86,17 +74,6 @@ pub fn upload(
         progress(done, total);
         sent.push(chunk);
     }
-    let expires = sent
-        .iter()
-        .map(|c| c.expires)
-        .collect::<Option<Vec<_>>>()
-        .and_then(|v| v.into_iter().min());
-    let (sender, recipients) = describe(&prepared, &sent, recipients)
-        .ok_or(XftpError::Unexpected("chunk without recipient"))?;
-    Ok(Uploaded {
-        sender,
-        recipients,
-        encrypted_size: prepared.enc_size,
-        expires,
-    })
+    uploaded(&prepared.sealed, &sent, recipients)
+        .ok_or(XftpError::Unexpected("chunk without recipient"))
 }

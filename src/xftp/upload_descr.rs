@@ -1,7 +1,55 @@
 //! Descriptions of an uploaded file: the sender's, to delete it, and one per recipient (Agent.hs `sndFileToDescrs`).
+use crate::crypto::{CbNonce, SbKey};
+
+use super::address::XftpServer;
+use super::chunks::ChunkSpec;
 use super::description::{ChunkReplica, FileChunk, FileDescription, Party};
-use super::upload_chunk::SentChunk;
-use super::upload_prepare::Prepared;
+
+/// The encrypted file as its descriptions name it.
+pub(super) struct Sealed {
+    pub(super) key: SbKey,
+    pub(super) nonce: CbNonce,
+    /// SHA-512 of the encrypted file.
+    pub(super) digest: Vec<u8>,
+    pub(super) enc_size: u64,
+}
+
+/// A chunk one server holds, with the ids and keys of its sender and recipients.
+pub(super) struct SentChunk {
+    pub(super) spec: ChunkSpec,
+    pub(super) digest: Vec<u8>,
+    pub(super) server: XftpServer,
+    pub(super) sender_id: Vec<u8>,
+    pub(super) sender_key: Vec<u8>,
+    /// Id and PKCS#8 key per recipient.
+    pub(super) recipients: Vec<(Vec<u8>, Vec<u8>)>,
+    pub(super) expires: Option<i64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Uploaded {
+    /// Keeps the replica keys that delete the file; keep it to call `delete_file` later.
+    pub sender: FileDescription,
+    /// One description per recipient.
+    pub recipients: Vec<FileDescription>,
+    pub encrypted_size: u64,
+    /// The earliest time (epoch seconds) a server may drop a chunk, when the servers say.
+    pub expires: Option<i64>,
+}
+
+/// The descriptions and the earliest expiry of `sent`, made for `recipients`.
+pub(super) fn uploaded(sealed: &Sealed, sent: &[SentChunk], recipients: usize) -> Option<Uploaded> {
+    let expires = (sent.iter().map(|c| c.expires))
+        .collect::<Option<Vec<_>>>()
+        .and_then(|v| v.into_iter().min());
+    let (sender, recipients) = describe(sealed, sent, recipients)?;
+    Some(Uploaded {
+        sender,
+        recipients,
+        encrypted_size: sealed.enc_size,
+        expires,
+    })
+}
 
 fn chunks(
     sent: &[SentChunk],
@@ -22,7 +70,7 @@ fn chunks(
 
 fn description(
     party: Party,
-    prepared: &Prepared,
+    prepared: &Sealed,
     sent: &[SentChunk],
     chunks: Vec<FileChunk>,
 ) -> FileDescription {
@@ -39,8 +87,8 @@ fn description(
 }
 
 /// The sender description and one recipient description per recipient key of each chunk.
-pub(super) fn describe(
-    prepared: &Prepared,
+fn describe(
+    prepared: &Sealed,
     sent: &[SentChunk],
     recipients: usize,
 ) -> Option<(FileDescription, Vec<FileDescription>)> {
@@ -70,10 +118,6 @@ pub(super) fn describe(
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
-    use crate::crypto::{CbNonce, SbKey};
-    use crate::xftp::chunks::ChunkSpec;
     use crate::xftp::description::encode_description;
 
     use super::*;
@@ -86,16 +130,11 @@ mod tests {
         )
         .parse()
         .unwrap();
-        let prepared = Prepared {
-            path: PathBuf::from("/nonexistent/simplex-test"),
+        let prepared = Sealed {
             key: SbKey::new([1; 32]),
             nonce: CbNonce::new([2; 24]),
             digest: vec![3; 64],
             enc_size: 65536,
-            specs: vec![ChunkSpec {
-                offset: 0,
-                size: 65536,
-            }],
         };
         let sent = [SentChunk {
             spec: ChunkSpec {

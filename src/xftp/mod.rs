@@ -27,6 +27,7 @@ mod file_encrypt;
 mod file_header;
 mod handshake;
 mod handshake_msgs;
+mod mem;
 #[cfg(feature = "native")]
 mod ops;
 #[cfg(feature = "native")]
@@ -47,7 +48,6 @@ mod transmission;
 mod upload;
 #[cfg(feature = "native")]
 mod upload_chunk;
-#[cfg(feature = "native")]
 mod upload_descr;
 #[cfg(feature = "native")]
 mod upload_prepare;
@@ -85,6 +85,7 @@ pub use handshake::{
     handshake_body, verify_identity,
 };
 pub use handshake_msgs::{ServerHandshake, encode_client_handshake};
+pub use mem::{Answer, Call, Fetched, MemDownload, MemUpload, Step};
 #[cfg(feature = "native")]
 pub use ops::NewChunk;
 pub use progress::{CancelFlag, ProgressFn};
@@ -96,7 +97,8 @@ pub use servers::{FLUX, SIMPLEX, preset_servers};
 pub use session::{SessionEvent, XftpSession};
 pub use transmission::{decode_transmission, encode_transmission};
 #[cfg(feature = "native")]
-pub use upload::{UploadParams, Uploaded, upload};
+pub use upload::{UploadParams, upload};
+pub use upload_descr::Uploaded;
 pub use version::{
     ALPN, AUTH_TAG_SIZE, BLOCK_SIZE, BLOCKED_FILES, DEFAULT_PORT, FILE_STORAGE_TIME, MAX_VERSION,
     MIN_VERSION,
