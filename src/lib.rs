@@ -5,6 +5,8 @@
 
 pub mod agent;
 pub mod chat;
+#[cfg(feature = "native")]
+pub mod client;
 pub mod crypto;
 pub mod encoding;
 pub mod engine;

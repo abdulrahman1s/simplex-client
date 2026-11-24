@@ -12,6 +12,11 @@ categories = ["network-programming", "cryptography", "wasm"]
 readme = "README.md"
 publish = false
 
+[features]
+default = ["native"]
+# Threads, TCP, SQLite and the engine: everything a running client needs.
+native = []
+
 [dependencies]
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
