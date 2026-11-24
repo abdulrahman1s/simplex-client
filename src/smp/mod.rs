@@ -20,6 +20,7 @@ mod signed_key;
 mod tls_connector;
 mod transmission;
 mod transport;
+mod tunnel;
 mod version;
 
 #[cfg(test)]
@@ -46,4 +47,5 @@ pub use server_error::{CommandError, ErrorType};
 pub use tls_connector::TlsConnector;
 pub use transmission::{Incoming, authorized, encode_transmission, pack, parse_payload};
 pub use transport::{Closer, Connector, Established, Reader, Wire, Writer};
+pub use tunnel::{TunnelError, parse_tunnel_reply, tunnel_hello};
 pub use version::{BLOCK_SIZE, MAX_VERSION, MIN_VERSION};
