@@ -93,6 +93,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- A message that skips, repeats or breaks the chain before it (`MsgIntegrity`) now shows a
+  `ChatNotice::Integrity` item before it, as simplex-chat's `CIRcvIntegrityError` does: "skipped
+  message ID", "unexpected message ID", "incorrect message hash", "duplicate message ID". A
+  receipt whose hash differs shows the message as `Delivery::DeliveredBadHash`; in a group, one
+  such receipt wins over the good ones. Engine records are format 2 now; format 1 still reads.
 - A forward's time with a year past 9999, or a date out of range, no longer overflows (a
   panic in debug builds, a wrapped time in release): the JSON `x.grp.msg.forward` is refused,
   as Aeson refuses it, and a binary forward takes the time it arrived.

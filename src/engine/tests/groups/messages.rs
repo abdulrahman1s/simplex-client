@@ -231,6 +231,7 @@ fn a_group_item_shows_the_furthest_any_member_got_and_an_error_leaves_it() {
     let got = one(&t.agent(AgentEvent::Rcvd {
         conn: ms[1].1,
         msg_id: ids[1],
+        status: crate::agent::client::RcptStatus::Ok,
     }));
     assert_eq!(got.delivery, Delivery::Delivered);
 }
@@ -324,6 +325,7 @@ fn an_observers_message_is_dropped_and_a_message_arriving_twice_is_kept_once() {
             conn: ms[0].1,
             msg_id: id,
             body: body.clone(),
+            integrity: crate::agent::MsgIntegrity::Ok,
         });
     }
     let all = t.e.group_page(g, None, 10).unwrap();

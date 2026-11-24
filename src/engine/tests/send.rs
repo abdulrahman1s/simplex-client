@@ -40,7 +40,11 @@ fn sending_makes_an_item_that_is_sent_and_then_delivered_by_receipt() {
 
     let out = t.agent(AgentEvent::Sent { conn, msg_id: 1 });
     assert_eq!(messages(&out)[0].delivery, Delivery::Sent);
-    let out = t.agent(AgentEvent::Rcvd { conn, msg_id: 1 });
+    let out = t.agent(AgentEvent::Rcvd {
+        conn,
+        msg_id: 1,
+        status: crate::agent::client::RcptStatus::Ok,
+    });
     let [d] = messages(&out).try_into().unwrap();
     assert_eq!((d.id, d.delivery), (m.id, Delivery::Delivered));
     assert!(

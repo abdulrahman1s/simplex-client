@@ -13,6 +13,7 @@ mod friend_pq;
 mod groups;
 mod handshake;
 mod inbound;
+mod integrity;
 mod limits;
 mod live_address;
 mod live_call;
@@ -179,6 +180,7 @@ impl T {
             conn: *conn,
             msg_id,
             body,
+            integrity: crate::agent::MsgIntegrity::Ok,
         })
     }
 

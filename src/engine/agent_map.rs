@@ -65,13 +65,18 @@ pub(super) fn event(e: Native, log: &Log) -> Option<AgentEvent> {
         Native::Con { conn } => AgentEvent::Con {
             conn: conn_id(conn),
         },
-        // The port carries neither the integrity verdict nor the broker time yet.
+        // Items take the time they arrive, so the broker time is not carried.
         Native::Msg {
-            conn, msg_id, body, ..
+            conn,
+            msg_id,
+            body,
+            integrity,
+            ..
         } => AgentEvent::Msg {
             conn: conn_id(conn),
             msg_id: msg_id.0,
             body,
+            integrity,
         },
         Native::Sent { conn, msg_id } => AgentEvent::Sent {
             conn: conn_id(conn),
@@ -82,9 +87,14 @@ pub(super) fn event(e: Native, log: &Log) -> Option<AgentEvent> {
             msg_id: msg_id.0,
             err: failure(&err),
         },
-        Native::Rcvd { conn, msg_id, .. } => AgentEvent::Rcvd {
+        Native::Rcvd {
+            conn,
+            msg_id,
+            receipt,
+        } => AgentEvent::Rcvd {
             conn: conn_id(conn),
             msg_id: msg_id.0,
+            status: receipt.status,
         },
         Native::Up { server } => AgentEvent::Up {
             server: host(&server),
@@ -171,6 +181,39 @@ mod tests {
         assert!(matches!(failure(&lost), AgentFailure::Network(_)));
         let auth = proxied(ProxyError::BasicAuth);
         assert!(matches!(failure(&auth), AgentFailure::Other(_)));
+    }
+
+    #[test]
+    fn the_integrity_verdict_and_the_receipts_hash_status_reach_the_engine() {
+        use crate::agent::client::{AgentMsgId, RcptStatus, Receipt};
+        use crate::agent::{MsgErrorType, MsgIntegrity};
+        let skipped = MsgIntegrity::Error(MsgErrorType::Skipped { from: 2, to: 4 });
+        let msg = Native::Msg {
+            conn: client::ConnId(1),
+            msg_id: AgentMsgId(5),
+            body: b"x".to_vec(),
+            integrity: skipped,
+            broker_ts: 0,
+        };
+        assert!(matches!(
+            event(msg, &Log::discard()),
+            Some(AgentEvent::Msg { integrity, .. }) if integrity == skipped
+        ));
+        let rcvd = Native::Rcvd {
+            conn: client::ConnId(1),
+            msg_id: AgentMsgId(5),
+            receipt: Receipt {
+                status: RcptStatus::BadMsgHash,
+                info: Vec::new(),
+            },
+        };
+        assert!(matches!(
+            event(rcvd, &Log::discard()),
+            Some(AgentEvent::Rcvd {
+                status: RcptStatus::BadMsgHash,
+                ..
+            })
+        ));
     }
 
     #[test]

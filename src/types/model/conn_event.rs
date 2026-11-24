@@ -1,4 +1,4 @@
-//! What a connection-event notice says: the phase of an address switch and the state of a ratchet re-sync (CIContent/Events.hs `RcvConnEvent`, `SndConnEvent`).
+//! What a connection-event notice says: the phase of an address switch, the state of a ratchet re-sync and a broken message chain (CIContent/Events.hs `RcvConnEvent`, `SndConnEvent`; CIContent.hs `msgIntegrityError`).
 
 use serde::{Deserialize, Serialize};
 
@@ -25,4 +25,18 @@ pub enum SyncStatus {
     Started,
     /// "connection synchronization agreed"
     Agreed,
+}
+
+/// `MsgErrorType` of `CIRcvIntegrityError`: how a received message did not follow the one before.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "t", content = "c", rename_all = "snake_case")]
+pub enum IntegrityError {
+    /// "skipped message ID from..to": messages that never arrived.
+    Skipped { from: i64, to: i64 },
+    /// "unexpected message ID n"
+    BadId(i64),
+    /// "incorrect message hash"
+    BadHash,
+    /// "duplicate message ID"
+    Duplicate,
 }

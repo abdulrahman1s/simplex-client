@@ -1,4 +1,4 @@
-//! A sent message's delivery: Sending, then Sent, then Delivered by receipt, or Failed.
+//! A sent message's delivery: Sending, then Sent, then Delivered by receipt (with a bad hash, maybe), or Failed.
 
 use crate::types::Event;
 use crate::types::model::{ChatRef, Delivery};
@@ -13,7 +13,7 @@ fn rank(d: Delivery) -> u8 {
     match d {
         Delivery::Sending | Delivery::Received => 0,
         Delivery::Sent => 1,
-        Delivery::Delivered | Delivery::Failed => 2,
+        Delivery::Delivered | Delivery::DeliveredBadHash | Delivery::Failed => 2,
     }
 }
 

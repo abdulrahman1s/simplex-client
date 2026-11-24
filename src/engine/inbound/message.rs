@@ -1,6 +1,7 @@
 //! A received message: every element's `x.*` event handled, then one ack, whatever happened
 //! (chat's `withAckMessage`), with a receipt when it held an event that asks for one.
 
+use crate::agent::MsgIntegrity;
 use crate::chat::{ChatEvent, ChatMessage, parse_chat_elements};
 use crate::engine::agent_port::{AgentMsgId, AgentPort, ConnId};
 use crate::engine::error::Result;
@@ -16,7 +17,17 @@ pub(crate) fn asks_receipt(e: &ChatEvent) -> bool {
 }
 
 impl<A: AgentPort> Engine<A> {
-    pub(crate) fn on_msg(&mut self, conn: &ConnId, msg_id: AgentMsgId, body: &[u8]) {
+    pub(crate) fn on_msg(
+        &mut self,
+        conn: &ConnId,
+        msg_id: AgentMsgId,
+        body: &[u8],
+        integrity: MsgIntegrity,
+    ) {
+        if let Err(e) = self.on_integrity(conn, integrity) {
+            self.log
+                .line(format_args!("an integrity notice not kept: {}", e.detail));
+        }
         let friend = self.state.friend_of(conn);
         let receipt = match (friend, self.state.member_of(conn)) {
             (Some(friend), _) => self.on_body(friend, body),

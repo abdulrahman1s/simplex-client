@@ -21,12 +21,14 @@ fn a_message_that_comes_again_is_kept_once_and_acked_again() {
         conn,
         msg_id: 4,
         body: body.clone(),
+        integrity: crate::agent::MsgIntegrity::Ok,
     });
     assert_eq!(messages(&first).len(), 1);
     let again = t.agent(AgentEvent::Msg {
         conn,
         msg_id: 4,
         body,
+        integrity: crate::agent::MsgIntegrity::Ok,
     });
     assert!(messages(&again).is_empty());
     assert_eq!(t.acks().len(), 2);
@@ -56,7 +58,11 @@ fn friends_their_conversations_and_pending_deliveries_survive_a_restart() {
     assert_eq!((friends[0].name.as_str(), friends[0].ready), ("bob", true));
     assert_eq!(chats[0].unread, 1);
     assert!(chats[0].last.is_some());
-    e.agent.queued.push(AgentEvent::Rcvd { conn, msg_id: 1 });
+    e.agent.queued.push(AgentEvent::Rcvd {
+        conn,
+        msg_id: 1,
+        status: crate::agent::client::RcptStatus::Ok,
+    });
     e.pump();
     let out: Vec<Event> = std::iter::from_fn(|| e.pop_out()).collect();
     assert_eq!(messages(&out)[0].delivery, Delivery::Delivered);

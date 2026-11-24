@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use super::bytes;
-use super::conn_event::{SwitchPhase, SyncStatus};
+use super::conn_event::{IntegrityError, SwitchPhase, SyncStatus};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "t", content = "c", rename_all = "snake_case")]
@@ -65,6 +65,8 @@ pub enum ChatNotice {
         member: Option<String>,
     },
     BadSignature,
+    /// The relay dropped, reordered or replayed messages before this one (`CIRcvIntegrityError`).
+    Integrity(IntegrityError),
     /// A member invited the user to talk directly (`RGEMemberCreatedContact`, "started direct
     /// connection with you"); the invitation waits with the requests.
     DirectInvitation,
