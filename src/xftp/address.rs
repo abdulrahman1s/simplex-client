@@ -57,6 +57,20 @@ impl XftpServer {
     }
 }
 
+/// The `:authority` of requests to `host:port`: brackets around IPv6, no default port.
+pub(super) fn authority(host: &str, port: u16) -> String {
+    let host = if host.contains(':') {
+        format!("[{host}]")
+    } else {
+        host.to_owned()
+    };
+    if port == DEFAULT_PORT {
+        host
+    } else {
+        format!("{host}:{port}")
+    }
+}
+
 fn host_key(host: &str) -> (u8, Vec<u8>) {
     if let Ok(ip) = host.parse::<Ipv4Addr>() {
         (0, ip.octets().to_vec())
