@@ -7,6 +7,7 @@ mod files;
 mod forward;
 mod forward_signed;
 mod history;
+mod history_accept;
 mod leave;
 mod links;
 mod links_host;
