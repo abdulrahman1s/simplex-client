@@ -30,7 +30,12 @@ impl AgentClient {
             },
         };
         let qkey = AMessage::Qkey(vec![(info, m.new.auth.public()?)]);
-        let body = seal(&sq, &agent_envelope(&mut rec, &mut ratchet, qkey)?, false)?;
+        let v = self.envelope_agent_version();
+        let body = seal(
+            &sq,
+            &agent_envelope(&mut rec, &mut ratchet, qkey, v)?,
+            false,
+        )?;
         rec.switch = Some(Switch::Moving(Moving {
             step: Step::WaitingQuse,
             ..m
@@ -54,7 +59,7 @@ impl AgentClient {
         let qtest = AMessage::Qtest(vec![addr(&m.new)]);
         let body = seal(
             &m.new,
-            &agent_envelope(&mut rec, &mut ratchet, qtest)?,
+            &agent_envelope(&mut rec, &mut ratchet, qtest, self.envelope_agent_version())?,
             false,
         )?;
         let keep_after = m.keep_after.or(Some(AgentMsgId(rec.last_id)));

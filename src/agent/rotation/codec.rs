@@ -1,4 +1,4 @@
-//! The stored form of a switch, inside its connection record (format 4).
+//! The stored form of a switch, inside its connection record (format 4; `Tested` from format 5).
 use crate::encoding::{Decode, DecodeError, Decoder, Encode, EncodeError, Large};
 
 use super::state::{Moving, Step, Switch};
@@ -15,6 +15,7 @@ impl Encode for Step {
             Self::Qtest => b'Q',
             Self::Testing { body } => return (b'T', Large(body.clone())).encode(out),
             Self::Ready => b'R',
+            Self::Tested => b'D',
         };
         tag.encode(out)
     }
@@ -32,6 +33,7 @@ impl Decode for Step {
                 body: Large::decode(d)?.0,
             },
             b'R' => Self::Ready,
+            b'D' => Self::Tested,
             t => return Err(DecodeError::BadTag("switch step", t)),
         })
     }
@@ -118,6 +120,7 @@ mod tests {
                 body: vec![5; 16000],
             },
             Step::Ready,
+            Step::Tested,
         ];
         for step in steps {
             let sw = Switch::Moving(Moving {

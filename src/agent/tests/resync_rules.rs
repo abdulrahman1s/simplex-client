@@ -37,7 +37,7 @@ fn give_key(
 ) -> Result<(), AgentError> {
     let info = ratchet_info(answered).unwrap();
     n.agent
-        .on_ratchet_key(&mut n.store, c, Version(8), wire(p), info)
+        .on_ratchet_key(&mut n.store, c, wire(p), info)
         .map(|_| ())
 }
 
@@ -191,9 +191,7 @@ fn a_key_at_an_unsupported_e2e_version_is_refused() {
     let mut w = wire(&key);
     w.version = Version(9);
     let info = ratchet_info(None).unwrap();
-    let r = b
-        .agent
-        .on_ratchet_key(&mut b.store, cb, Version(8), w, info);
+    let r = b.agent.on_ratchet_key(&mut b.store, cb, w, info);
     assert!(matches!(r, Err(AgentError::Version)));
     assert_eq!(state(&b, cb), SyncState::Ok);
 }

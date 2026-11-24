@@ -3,7 +3,7 @@ use super::rotation_peer::Peer;
 use super::support::{Rig, WAIT, next_msg, server};
 use crate::agent::client::ConnId;
 use crate::agent::message::{AMessage, SndQAddr};
-use crate::agent::records::{Batch, RcvQueue};
+use crate::agent::records::RcvQueue;
 use crate::agent::rotation::{Step, Switch};
 use crate::agent::testing::{FakeSmp, Node, new_queue, pump};
 use crate::agent::version::CURRENT_CLIENT;
@@ -113,13 +113,9 @@ pub fn both_ways(r: &Rig, a: &mut Node, b: Node, p: &Peer, ca: ConnId) -> Node {
     b
 }
 
-/// The agent version a 7.0.x peer agrees on.
-pub fn as_v7(a: &mut Node, ca: ConnId) {
-    let (mut rec, _) = a.agent.editable(ca).unwrap();
-    rec.agent_version = Version(7);
-    a.agent
-        .save(&mut a.store, rec, None, Batch::default())
-        .unwrap();
+/// The connection agreed the version a 7.0.x peer speaks.
+pub fn assert_v7(a: &Node, ca: ConnId) {
+    assert_eq!(a.agent.conn(ca).unwrap().rec.agent_version, Version(7));
 }
 
 /// QKEY is queued and has gone: the switch waits for QUSE.

@@ -69,12 +69,13 @@ impl AgentClient {
                 self.build_qtest(store, id, m)?;
                 return self.switch_step(store, id);
             }
-            Step::Ready if !sending => self.move_to_new(store, id, m)?,
+            Step::Ready | Step::Tested if !sending => self.move_to_new(store, id, m)?,
             Step::Securing
             | Step::Confirming
             | Step::WaitingQuse
             | Step::Testing { .. }
-            | Step::Ready => {}
+            | Step::Ready
+            | Step::Tested => {}
         }
         Ok(())
     }

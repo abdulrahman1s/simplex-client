@@ -1,9 +1,9 @@
 //! A switch given up: the new queue refuses SKEY or QTEST, or it does not end in time; we stay on the old queue (Agent.hs `ICQSndSecure`, the `AM_QTEST_` and `AM_QEND_` outcomes).
 use super::rotation_peer::Peer;
 use super::rotation_support::{
-    as_v7, move_offline, one_step, step_of, switch_of, wait_settled, waiting_quse,
+    assert_v7, move_offline, one_step, step_of, switch_of, wait_settled, waiting_quse,
 };
-use super::support::{WAIT, connect, rig, wait_for};
+use super::support::{WAIT, connect, rig, v7_agent, wait_for};
 use crate::agent::client::{AgentEvent, ConnId};
 use crate::agent::error::AgentError;
 use crate::agent::message::AMessage;
@@ -64,9 +64,10 @@ fn a_refused_skey_gives_the_switch_up_drops_what_it_kept_and_sending_goes_on_on_
 #[test]
 fn a_refused_qtest_gives_the_v7_switch_up_and_sending_goes_on_on_the_old_queue() {
     let r = rig();
+    r.pin("b", v7_agent());
     let (mut a, mut b) = (r.node("a"), r.node("b"));
     let (ca, cb) = connect(&mut a, &mut b, false, true);
-    as_v7(&mut a, ca);
+    assert_v7(&a, ca);
     let mut p = Peer::start(&r, &mut a, &mut b, cb);
     p.qadd(&mut b);
     pump(&mut [&mut a, &mut b], WAIT, |n| {

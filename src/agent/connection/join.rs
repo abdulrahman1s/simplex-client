@@ -13,7 +13,7 @@ use crate::agent::links::{
     ConnShortLink, ConnectionLink, ConnectionRequestUri, restore_short_link,
 };
 use crate::agent::records::{Batch, ConnRecord, ConnStatus};
-use crate::agent::version::{CURRENT_AGENT, supported_agent_range, supported_client_range};
+use crate::agent::version::supported_client_range;
 
 impl AgentClient {
     /// `conn_info` is chat's `x.info` with our profile. The inviter's `Info` and then `Con` follow.
@@ -25,7 +25,8 @@ impl AgentClient {
         pq: bool,
     ) -> Result<ConnId> {
         let id = ConnId(store.next_id("agent.conn")?);
-        let mut rec = ConnRecord::new(id, ConnStatus::Resolving, CURRENT_AGENT, pq);
+        let v = self.cfg.agent_versions.max();
+        let mut rec = ConnRecord::new(id, ConnStatus::Resolving, v, pq);
         rec.conn_info = Some(conn_info);
         let ratchet = match link {
             ConnectionLink::Full(req @ ConnectionRequestUri::Invitation { .. }) => {
@@ -65,7 +66,7 @@ impl AgentClient {
         };
         let agent_v = data
             .agent_v_range
-            .highest_common(&supported_agent_range())
+            .highest_common(&self.cfg.agent_versions)
             .ok_or(AgentError::Version)?;
         let q = data
             .smp_queues

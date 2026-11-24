@@ -1,5 +1,5 @@
 //! A peer's `AgentRatchetKey` (per-queue encrypted only) and `EREADY` (Agent.hs 7.1.4 `newRatchetKey`, `ereadyMsg`).
-use crate::encoding::{Decode, Encode, Version};
+use crate::encoding::{Decode, Encode};
 use crate::ratchet::{
     self, PqSupport, PrivParams, Ratchet, RatchetVersions, RcvParams, Resynced, ratchet_key_hash,
     supported_e2e_range,
@@ -32,12 +32,11 @@ impl BeforeDecrypt {
 }
 
 impl AgentClient {
-    /// The agent version is not raised here as `updateConnVersion` would; nothing reads it yet.
+    /// `newRatchetKey`; `receive` has raised the agent version from the envelope already.
     pub(crate) fn on_ratchet_key(
         &mut self,
         store: &mut Store,
         id: ConnId,
-        _agent_version: Version,
         e2e: E2eParams,
         info: Vec<u8>,
     ) -> Result<Handled> {

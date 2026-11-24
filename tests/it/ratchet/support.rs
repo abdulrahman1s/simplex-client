@@ -20,6 +20,11 @@ pub struct Pair {
 }
 
 pub fn handshake(invite_pq: bool, join_pq: bool) -> Pair {
+    handshake_with(invite_pq, join_pq, None)
+}
+
+/// `versions` replaces what both ratchets start with, as for a pair that speaks a later version.
+pub fn handshake_with(invite_pq: bool, join_pq: bool, versions: Option<RatchetVersions>) -> Pair {
     let (a_priv, a_params) =
         generate_rcv_params(CURRENT_E2E_VERSION, PqSupport(invite_pq)).unwrap();
     let uri = ParamsUri::from_params(&a_params, supported_e2e_range());
@@ -40,7 +45,7 @@ pub fn handshake(invite_pq: bool, join_pq: bool) -> Pair {
     let bob_init = pq_x3dh_snd(&b_priv, &rcv).unwrap();
     let alice_init = pq_x3dh_rcv(&a_priv, &b_params).unwrap();
     assert_same_init(&alice_init.0, &bob_init.0);
-    let versions = RatchetVersions::new(v);
+    let versions = versions.unwrap_or(RatchetVersions::new(v));
     let dhrs = KeyPair::generate(Alg::X448).unwrap();
     let bob_dhrs = dhrs.public.clone();
     let dhrs = dhrs.private;

@@ -18,8 +18,11 @@ pub enum Step {
     Qtest,
     /// v7: QTEST, sealed for the new queue, goes there alone; its success proves the queue (`SSSendingQTEST`).
     Testing { body: Vec<u8> },
-    /// The new queue takes messages: what waits moves to it once no send is in flight.
+    /// v8: the new queue takes messages: what waits moves to it once no send is in flight, then QEND.
     Ready,
+    /// v7: QTEST went (`AM_QTEST_`); the move drops the old queue. Kept apart from `Ready` because
+    /// the connection may have been raised to v8 meanwhile, and the peer still ends the v7 way.
+    Tested,
 }
 
 /// The peer moves the queue we send to; `rec.snd` is still the old one.

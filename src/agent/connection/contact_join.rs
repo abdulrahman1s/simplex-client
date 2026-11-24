@@ -1,5 +1,5 @@
 //! Joining an address: a queue for the answer, then our request sent unsigned to the address queue; an address that publishes ratchet keys gets the ratchet-encrypted form (Agent.hs `joinConnSrv'` for `CRContactUri`, `compatibleContactUri`).
-use crate::encoding::{Decode, Encode};
+use crate::encoding::{Decode, Encode, VersionRange};
 use crate::ratchet::{
     CURRENT_E2E_VERSION, PqSupport, Ratchet, RatchetVersions, compatible_e2e_version,
     generate_rcv_params,
@@ -21,7 +21,7 @@ use crate::agent::links::ConnectionRequestUri;
 use crate::agent::message::AgentMessage;
 use crate::agent::msg_hash;
 use crate::agent::records::{Batch, ConnRecord, ConnStatus, ContactRequest};
-use crate::agent::version::{supported_agent_range, supported_client_range};
+use crate::agent::version::supported_client_range;
 
 impl AgentClient {
     /// The versions and keys of a request to `req`: its reply queue is next. Returns the ratchet when the address has keys.
@@ -35,7 +35,7 @@ impl AgentClient {
         };
         let agent_v = data
             .agent_v_range
-            .highest_common(&supported_agent_range())
+            .highest_common(&self.cfg.agent_versions)
             .ok_or(AgentError::Version)?;
         let q = data
             .smp_queues
@@ -93,7 +93,8 @@ impl AgentClient {
             .take()
             .ok_or(AgentError::Prohibited("no request"))?;
         let conn_info = rec.conn_info.take().unwrap_or_default();
-        let (envelope, ratchet) = request_envelope(&mut rec, ratchet, &req, reply, conn_info)?;
+        let vr = self.cfg.agent_versions;
+        let (envelope, ratchet) = request_envelope(&mut rec, vr, ratchet, &req, reply, conn_info)?;
         req.body = Some(seal_once(&req.queue, &envelope.to_bytes()?)?);
         rec.request = Some(req);
         rec.status = ConnStatus::Requesting;
@@ -115,13 +116,14 @@ impl AgentClient {
 /// The request as the address expects it: our invitation, or the ratchet-encrypted reply queue and info.
 fn request_envelope(
     rec: &mut ConnRecord,
+    vr: VersionRange,
     ratchet: Option<Ratchet>,
     req: &ContactRequest,
     reply: SmpQueueInfo,
     conn_info: Vec<u8>,
 ) -> Result<(AgentMsgEnvelope, Option<Ratchet>)> {
     let Some(ratchet_key_id) = req.ratchet_key_id.clone() else {
-        let conn_req = invitation_uri(rec, reply.address.sender_id)?;
+        let conn_req = invitation_uri(rec, vr, reply.address.sender_id)?;
         let env = AgentMsgEnvelope::Invitation {
             agent_version: req.agent_version,
             conn_req,

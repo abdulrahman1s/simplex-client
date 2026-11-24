@@ -1,6 +1,8 @@
 //! The agent's servers, timings and retry intervals (Env/SQLite.hs `defaultAgentConfig`, simplexmq 7.1.4, AGPL-3.0-only).
 use std::time::Duration;
 
+use crate::agent::version::supported_agent_range;
+use crate::encoding::VersionRange;
 use crate::smp::{ConnConfig, SmpServer};
 
 /// `RetryInterval`: the delay stays at `initial` until `increase_after` has passed, then grows by half up to `max`.
@@ -52,6 +54,8 @@ pub struct AgentConfig {
     pub delivery: DeliveryConfig,
     /// How soon a handshake step (NEW, SKEY, LKEY) that failed is sent again while its server is up.
     pub step_retry: Duration,
+    /// `smpAgentVRange`: the agent versions links offer and joins accept; every message carries its maximum.
+    pub agent_versions: VersionRange,
 }
 
 impl AgentConfig {
@@ -63,6 +67,7 @@ impl AgentConfig {
             smp: ConnConfig::default(),
             delivery: DeliveryConfig::default(),
             step_retry: Duration::from_secs(5),
+            agent_versions: supported_agent_range(),
         }
     }
 }

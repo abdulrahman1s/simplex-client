@@ -12,4 +12,5 @@ mod resync;
 mod sizes;
 mod support;
 mod two_phase;
+mod version;
 mod x3dh;

@@ -74,8 +74,10 @@ impl AgentClient {
                 Ok(Handled::Ack)
             }
             AgentMsgEnvelope::Message {
-                enc_agent_message, ..
+                agent_version,
+                enc_agent_message,
             } if opened.sender_e2e.is_none() => {
+                self.update_conn_version(store, id, agent_version)?;
                 self.on_agent_message(store, id, smp_msg_id, ts.0, &enc_agent_message)
             }
             AgentMsgEnvelope::Invitation {
@@ -94,7 +96,10 @@ impl AgentClient {
                 agent_version,
                 e2e_encryption,
                 info,
-            } => self.on_ratchet_key(store, id, agent_version, e2e_encryption, info),
+            } => {
+                self.update_conn_version(store, id, agent_version)?;
+                self.on_ratchet_key(store, id, e2e_encryption, info)
+            }
             AgentMsgEnvelope::Confirmation { .. }
             | AgentMsgEnvelope::Message { .. }
             | AgentMsgEnvelope::Invitation { .. } => {
