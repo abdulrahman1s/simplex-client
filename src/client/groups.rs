@@ -7,7 +7,8 @@ use crate::types::model::GroupMember;
 use crate::types::{Event, Request, RequestKind};
 
 impl Client {
-    /// Makes a group with the user as its owner; it appears in the next `Event::Chats`.
+    /// Makes a group with the user as its owner; `Event::GroupAdd` follows. `create_group`
+    /// waits for it and returns the `Group`.
     pub fn new_group(&self, name: &str) -> Result<()> {
         self.request(Request::NewGroup(name.to_owned()))
     }

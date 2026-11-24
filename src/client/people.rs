@@ -38,7 +38,7 @@ impl Client {
         self.request(Request::Connect(link.to_owned()))
     }
 
-    /// Accepts a request from `Event::Chats { requests, .. }`.
+    /// Accepts a request by its id; `Event::Request` carries one that can `accept` itself.
     pub fn accept(&self, request: i64) -> Result<()> {
         self.request(Request::Accept(request))
     }

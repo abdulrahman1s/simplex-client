@@ -63,7 +63,7 @@ impl Client {
         })
     }
 
-    /// Sends a file; its progress arrives as `Event::Updated`.
+    /// Sends a file; its progress arrives as `Event::MessageUpdate`.
     pub fn send_file(&self, chat: ChatRef, path: impl AsRef<Path>) -> Result<()> {
         self.request(Request::SendFile {
             chat,

@@ -27,7 +27,8 @@ pub enum Event {
     GroupRemove(Group),
     /// The user was invited into a group.
     GroupInvite(GroupInvite),
-    /// Someone joined a group the user is in.
+    /// A member connected with the user: someone new to the group, or, right after the user
+    /// joins, each member already there. The engine names them only.
     MemberAdd(Member),
     /// No relay is reachable (`true`), or one is again (`false`).
     Offline(bool),

@@ -70,7 +70,8 @@ client.on("message", async (message) => {
 
 Events: `ready` (your profile), `message` and `messageUpdate` (a `Message`), `request` (a
 `FriendRequest`, once), `friendAdd` and `friendRemove` (a `Friend`), `groupAdd` and
-`groupRemove` (a `Group`), `groupInvite` (a `GroupInvite`), `memberAdd` (a `Member`),
+`groupRemove` (a `Group`), `groupInvite` (a `GroupInvite`), `memberAdd` (a `Member` who
+connected with you: someone new, or each one already there when you join),
 `offline` and `online`, `change` (the store changed: save it) and `raw` (every engine event as
 `{t, c}`). `on`, `off` and `once` take them; `await client.once("ready")` works too.
 

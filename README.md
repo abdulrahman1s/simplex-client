@@ -114,7 +114,7 @@ for anything else.
 | `FriendAdd(friend)` / `FriendRemove(friend)` | a friend finishes connecting / is removed |
 | `GroupAdd(group)` / `GroupRemove(group)` | you make or join a group / leave it |
 | `GroupInvite(invite)` | you are invited into a group |
-| `MemberAdd(member)` | someone joins one of your groups |
+| `MemberAdd(member)` | a member connects with you: someone new, or each one there when you join |
 | `Offline(bool)` | no relay is reachable, or one is again |
 | `Raw(event)` | anything else the engine reports, and every chat list |
 
@@ -195,13 +195,13 @@ const bot = await Client.start({
 
 bot.on("request", (request) => request.accept());
 bot.on("friendAdd", (friend) => friend.send("Hi! I echo what you write."));
-
 bot.on("message", async (message) => {
   if (message.mine || !message.text) return;
   await message.reply(message.text);
 });
 
 bot.on("change", () => writeFileSync(SNAPSHOT, bot.save()));
+console.log("My address:", await bot.createAddress());
 ```
 
 `transport: "tcp"` picks direct TCP explicitly; a `tunnel` URL uses the WebSocket tunnel
@@ -274,7 +274,7 @@ The protocol, limits and settings are in [worker/README.md](worker/README.md).
 | Feature | Default | What it enables |
 |---|---|---|
 | `native` | yes | Threads, TCP and TLS, the SQLite store, the engine and `Client` |
-| `wasm` | no | The client in a browser or node, through a WebSocket tunnel; use with `--no-default-features` |
+| `wasm` | no | The client in a browser, Node.js or Bun, through a WebSocket tunnel or TCP; use with `--no-default-features` |
 
 ## Protocol versions tracked
 

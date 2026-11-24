@@ -18,7 +18,8 @@ pub(crate) enum Note {
     GroupAdd(ChatGroup),
     GroupRemove(ChatGroup),
     GroupInvite(ChatGroup),
-    /// A member joined; the engine names them only.
+    /// A member connected with the user (`MemberJoined`): someone new to the group, or each
+    /// member already there when the user joins. The engine names them only.
     MemberAdd {
         group: i64,
         name: String,

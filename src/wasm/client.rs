@@ -52,7 +52,8 @@ impl Client {
     /// Calls `handler` for each `name` event: `ready` (the profile), `message` and
     /// `messageUpdate` (a `Message`), `request` (a `FriendRequest`), `friendAdd` and
     /// `friendRemove` (a `Friend`), `groupAdd` and `groupRemove` (a `Group`), `groupInvite`
-    /// (a `GroupInvite`), `memberAdd` (a `Member`), `offline`, `online`, `change` (the store
+    /// (a `GroupInvite`), `memberAdd` (a `Member` who connected with you: someone new, or each
+    /// one already there when you join), `offline`, `online`, `change` (the store
     /// changed: save it) and `raw` (every engine event, as JSON).
     pub fn on(
         &self,

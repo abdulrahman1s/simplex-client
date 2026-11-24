@@ -44,8 +44,9 @@ All notable changes to this project are documented here. The format follows
 - **Breaking:** `simplex_client::Event` is now the high-level event: `Ready`, `Message`,
   `MessageUpdate`, `Request`, `FriendAdd`, `FriendRemove`, `GroupAdd`, `GroupRemove`,
   `GroupInvite`, `MemberAdd`, `Offline` and `Raw` for the rest. The engine's events stay at
-  `simplex_client::types::Event`. `simplex_client::Friend` is now the object; the chat
-  list's record is `types::model::Friend`.
+  `simplex_client::types::Event`. `simplex_client::Friend` and `FriendRequest` are now the
+  objects; the chat list's records are `types::model::Friend` and `FriendRequest`. A
+  wasm-only build has no root `Event`; use `types::Event`.
 - **Breaking (JS):** events carry objects and are named `ready`, `message`, `messageUpdate`,
   `request`, `friendAdd`, `friendRemove`, `groupAdd`, `groupRemove`, `groupInvite`,
   `memberAdd`, `offline`, `online`, `change` and `raw` (was `event`); `chats` is gone. The
