@@ -5,6 +5,7 @@ mod codes;
 mod connect;
 mod delete;
 mod dispatch;
+mod forward;
 mod history;
 mod invite;
 mod kind;

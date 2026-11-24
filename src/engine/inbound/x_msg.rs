@@ -51,6 +51,7 @@ impl<A: AgentPort> Engine<A> {
         let mut item = ItemRecord::new(MessageAuthor::Friend, body, self.clock.wall_ms());
         item.timed = self.incoming_timed(ChatRef::Direct(friend), c.ttl, false)?;
         item.link = crate::engine::link::of(&c.content);
+        item.forwarded = c.forward == Some(true);
         item.shared_id = shared;
         item.reply = c
             .quote

@@ -99,6 +99,12 @@ impl Message {
         self.client.delete(&self.info)
     }
 
+    /// Forwarded from another chat.
+    #[must_use]
+    pub const fn forwarded(&self) -> bool {
+        self.info.forwarded
+    }
+
     /// The preview of the link the text has.
     #[must_use]
     pub const fn link(&self) -> Option<&crate::types::model::LinkInfo> {

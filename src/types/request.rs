@@ -80,6 +80,13 @@ pub enum Request {
         chat: ChatRef,
         on: bool,
     },
+    /// A message goes to another chat as the user's own, marked forwarded
+    /// (`APIForwardChatItems`); a file goes again only when it is here.
+    Forward {
+        from: ChatRef,
+        item: i64,
+        to: ChatRef,
+    },
     /// A text with a link, and the link's preview (`MCLink`); the page makes the preview.
     SendLink {
         chat: ChatRef,

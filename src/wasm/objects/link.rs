@@ -1,4 +1,4 @@
-//! Links from JS: `sendLink` on a friend or group, and a message's `link`.
+//! Links and forwarding from JS: `sendLink` and `forward` on a friend or group, and a message's `link` and `forwarded`.
 
 use wasm_bindgen::prelude::*;
 
@@ -45,6 +45,15 @@ macro_rules! send_link {
     ($t:ty) => {
         #[wasm_bindgen]
         impl $t {
+            /// Sends `message` here as the user's own, marked forwarded; its file only when it
+            /// is here, else its caption.
+            #[wasm_bindgen(unchecked_return_type = "Promise<void>")]
+            pub fn forward(&self, message: &Message) -> js_sys::Promise {
+                let (from, item) = (message.info().chat, message.info().id);
+                let to = self.chat();
+                self.shared().queue(Request::Forward { from, item, to })
+            }
+
             /// Sends `text` with the preview of the link it has: `{ uri, title, description, image? }`.
             #[wasm_bindgen(js_name = sendLink, unchecked_return_type = "Promise<void>")]
             pub fn send_link(
@@ -72,6 +81,12 @@ send_link!(Group);
 
 #[wasm_bindgen]
 impl Message {
+    /// Forwarded from another chat.
+    #[wasm_bindgen(getter)]
+    pub fn forwarded(&self) -> bool {
+        self.info().forwarded
+    }
+
     /// The preview of the link the text has: `{ uri, title, description, image }`, or `undefined`.
     #[wasm_bindgen(getter)]
     pub fn link(&self) -> JsValue {

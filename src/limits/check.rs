@@ -97,6 +97,7 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::SetUnreadMark { .. }
         | Request::SetAlias { .. }
         | Request::SetMessageTtl { .. }
+        | Request::Forward { .. }
         | Request::SetBlocked { .. }
         | Request::SetMemberBlocked { .. }
         | Request::ShowCode(_)

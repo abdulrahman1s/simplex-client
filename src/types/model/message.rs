@@ -67,6 +67,9 @@ pub struct ChatMessage {
     /// The preview of the link the text has (`MCLink`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link: Option<LinkInfo>,
+    /// Forwarded from another chat (`CIForwardedFrom`).
+    #[serde(default)]
+    pub forwarded: bool,
 }
 
 /// A disappearing message (Messages.hs `CITimed`). The user's own count from sending; a

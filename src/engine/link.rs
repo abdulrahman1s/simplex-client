@@ -1,4 +1,4 @@
-//! A link's preview between the page's `LinkInfo` and the protocol's `LinkPreview`.
+//! A link's preview between the page's `LinkInfo` and the protocol's `LinkPreview`, and what else a sent text may carry.
 
 use crate::types::model::LinkInfo;
 use base64::Engine as _;
@@ -57,4 +57,12 @@ pub fn content_of(text: String, link: Option<&LinkInfo>) -> MsgContent {
         },
         None => MsgContent::Text { text },
     }
+}
+
+/// What a sent text carries besides itself: its link's preview, and whether it is forwarded
+/// (`mcForward`).
+#[derive(Clone, Copy, Default)]
+pub struct Outgoing<'a> {
+    pub link: Option<&'a LinkInfo>,
+    pub forward: bool,
 }

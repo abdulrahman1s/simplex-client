@@ -83,6 +83,13 @@ All notable changes to this project are documented here. The format follows
   dropped; group history keeps it too. **Breaking:** `Request` has a new variant and
   `ChatMessage` a new field.
 
+- Forwarding: `Request::Forward { from, item, to }` (`friend.forward(&message)`,
+  `group.forward`; JS the same) sends a message to another chat as the user's own with
+  `forward: true` (`APIForwardChatItems`, `mcForward`): text and link previews as they are, a
+  file again when it is here, else its caption. A received forward shows in
+  `ChatMessage.forwarded` (JS `message.forwarded`). **Breaking:** `Request` has a new variant,
+  `ChatMessage` a new field, and the engine's `send_file` takes a `FileMeta`.
+
 ### Fixed
 
 - The profile sent to friends said disappearing messages were allowed, so an official app

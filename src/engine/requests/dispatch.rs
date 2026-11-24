@@ -5,6 +5,8 @@ use crate::types::{Event, Request};
 use super::kind::kind_of;
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{EngineError, Result};
+use crate::engine::files::FileMeta;
+use crate::engine::link::Outgoing;
 use crate::engine::machine::Engine;
 use crate::limits::check;
 
@@ -46,7 +48,15 @@ impl<A: AgentPort> Engine<A> {
                 preview,
                 duration,
                 text,
-            } => self.send_file(chat, &path, kind, preview.as_deref(), duration, &text),
+            } => {
+                let meta = FileMeta {
+                    preview: preview.as_deref(),
+                    duration,
+                    text: &text,
+                    forward: false,
+                };
+                self.send_file(chat, &path, kind, meta)
+            }
             Request::ReceiveFile { chat, item } => self.receive_file(chat, item),
             Request::CancelFile { chat, item } => self.cancel_file(chat, item),
             Request::OpenFile { chat, item } => self.open_file(chat, item),
@@ -61,13 +71,19 @@ impl<A: AgentPort> Engine<A> {
                 text,
                 reply_to,
                 mentions,
-            } => self.send_text(chat, &text, reply_to, &mentions, None),
+            } => self.send_text(chat, &text, reply_to, &mentions, Outgoing::default()),
             Request::SendLink {
                 chat,
                 text,
                 preview,
                 reply_to,
-            } => self.send_text(chat, &text, reply_to, &[], Some(&preview)),
+            } => {
+                let out = Outgoing {
+                    link: Some(&preview),
+                    forward: false,
+                };
+                self.send_text(chat, &text, reply_to, &[], out)
+            }
             Request::MarkRead(chat) => self.mark_read(chat),
             Request::History {
                 chat,
@@ -104,6 +120,7 @@ impl<A: AgentPort> Engine<A> {
             Request::SetGroupPrefs { group, prefs } => self.set_group_prefs(group, &prefs),
             Request::Moderate { group, item } => self.moderate(group, item),
             Request::DeleteForMe { chat, item } => self.delete_for_me(chat, item),
+            Request::Forward { from, item, to } => self.forward(from, item, to),
             Request::ClearChat(chat) => self.clear_chat(chat),
             Request::MarkReadUpTo { chat, item } => self.read_to(chat, Some(item)),
             Request::SetUnreadMark { chat, on } => self.set_unread_mark(chat, on),

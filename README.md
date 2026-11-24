@@ -14,7 +14,8 @@ small, plain API.
 - SMP queues over TLS, with the agent's double ratchet and the post-quantum KEM
 - Private message routing: messages reach other people's relays through one of yours, so
   their relay never sees your IP address
-- Chat messages, contacts, groups, replies, edits, deletes and reactions, link previews
+- Chat messages, contacts, groups, replies, edits, deletes and reactions, link previews,
+  forwarding
 - Disappearing messages, for a friend or a group
 - Chat preferences (full delete, reactions, voice, files, calls), your own and per friend
 - Group admin: roles, blocking for everyone, removing members, moderation, the group's name,
@@ -354,7 +355,12 @@ await friend.sendLink("see https://simplex.chat", {
   image: smallJpeg, // optional
 });
 client.on("message", (m) => m.link && console.log(m.link.title));
+
+await carol.forward(message); // as yours, marked forwarded; message.forwarded on arrival
 ```
+
+A forwarded file goes again only when it is here (sent from here, or downloaded and still in
+memory in wasm); otherwise its caption goes as text, as the official apps do.
 
 ### Your own housekeeping
 

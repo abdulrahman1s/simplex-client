@@ -23,7 +23,7 @@ pub fn kind_of(r: &Request) -> RequestKind {
         Request::React { .. } => K::React,
         Request::SetMuted { .. } => K::Mute,
         Request::SetTimer { .. } => K::Timer,
-        Request::SendLink { .. } => K::Send,
+        Request::SendLink { .. } | Request::Forward { .. } => K::Send,
         Request::SetPrefs { .. } => K::Prefs,
         Request::SetMemberRole { .. }
         | Request::BlockMemberForAll { .. }

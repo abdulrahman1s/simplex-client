@@ -42,6 +42,7 @@ pub use mem_files::MemFiles;
 pub use queued::queue;
 #[cfg(feature = "wasm")]
 pub use runner::FileRunner;
+pub use send::FileMeta;
 pub use store::{DiskFiles, FileStore};
 pub use transfers::{FileDone, FileKey, Transfers};
 pub(crate) use uploaded::descr_parts;

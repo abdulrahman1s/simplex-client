@@ -124,4 +124,9 @@ impl Group {
     pub fn set_message_ttl(&self, ttl: Option<i64>) -> Result<()> {
         self.client.set_message_ttl(Some(self.chat()), ttl)
     }
+
+    /// Sends `msg` here as the user's own, marked forwarded; its file only when it is here.
+    pub fn forward(&self, msg: &Message) -> Result<()> {
+        self.client.forward(msg.info(), self.chat())
+    }
 }

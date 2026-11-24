@@ -1,12 +1,13 @@
 //! Send: a text message to a friend or a group, maybe replying to one of theirs or the user's.
 
 use crate::types::Event;
-use crate::types::model::{ChatRef, LinkInfo, MessageAuthor, MessageBody};
+use crate::types::model::{ChatRef, MessageAuthor, MessageBody};
 
 use crate::chat::container::MsgContainer;
 use crate::chat::{ChatEvent, ChatMessage};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
+use crate::engine::link::Outgoing;
 use crate::engine::machine::Engine;
 use crate::engine::quote::outgoing;
 use crate::engine::records::{ItemRecord, keys};
@@ -23,17 +24,17 @@ impl<A: AgentPort> Engine<A> {
         text: &str,
         reply_to: Option<i64>,
         mentions: &[(String, i64)],
-        link: Option<&LinkInfo>,
+        out: Outgoing<'_>,
     ) -> Result<()> {
         let id = match chat {
             ChatRef::Direct(id) => id,
-            ChatRef::Group(g) => return self.send_group_text(g, text, reply_to, mentions, link),
+            ChatRef::Group(g) => return self.send_group_text(g, text, reply_to, mentions, out),
         };
         let f = self.friend(id)?;
         if !f.reachable() {
             return Err(fail(Code::RequestFailed, "not connected"));
         }
-        let content = crate::engine::link::content_of(text.to_owned(), link);
+        let content = crate::engine::link::content_of(text.to_owned(), out.link);
         let (mut container, reply) = match reply_to {
             Some(item) => {
                 let q = self
@@ -46,6 +47,7 @@ impl<A: AgentPort> Engine<A> {
         };
         let timed = self.outgoing_timed(ChatRef::Direct(id))?;
         container.ttl = timed.map(|t| t.ttl);
+        container.forward = out.forward.then_some(true);
         let msg = ChatMessage::new(ChatEvent::MsgNew(container))?;
         let body = encode_sized(&msg, PQ)?;
         let agent_id = self.agent.send(&mut self.store, &f.conn, f.pq, body)?;
@@ -53,7 +55,8 @@ impl<A: AgentPort> Engine<A> {
         let mut item = ItemRecord::new(MessageAuthor::Me, MessageBody::Text(text.to_owned()), now);
         item.reply = reply;
         item.timed = timed;
-        item.link = link.cloned();
+        item.link = out.link.cloned();
+        item.forwarded = out.forward;
         item.shared_id = msg.msg_id.map(|m| m.0);
         let m = self.add_item(ChatRef::Direct(id), &item)?;
         self.put_index(&keys::sent(&f.conn, agent_id), m.id)?;

@@ -1,7 +1,7 @@
 //! Send in a group: one item, the message to every current member (kept for those still connecting), with its quote and mentions (Commands.hs `sendGroupContentMessages_`; Internal.hs `prepareGroupMsg`, `getCIMentions`).
 
 use crate::types::Event;
-use crate::types::model::{ChatRef, LinkInfo, Mention, MessageAuthor, MessageBody, Quote};
+use crate::types::model::{ChatRef, Mention, MessageAuthor, MessageBody, Quote};
 
 use super::mention::{mentioned_names, quote_mentions};
 use super::policy::at_least;
@@ -11,6 +11,7 @@ use crate::chat::ids::MemberId;
 use crate::chat::{ChatEvent, ChatMessage};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
+use crate::engine::link::Outgoing;
 use crate::engine::machine::Engine;
 use crate::engine::quote::outgoing;
 use crate::engine::records::{GroupRecord, ItemRecord, keys};
@@ -47,13 +48,13 @@ impl<A: AgentPort> Engine<A> {
         text: &str,
         reply_to: Option<i64>,
         mentions: &[(String, i64)],
-        link: Option<&LinkInfo>,
+        out: Outgoing<'_>,
     ) -> Result<()> {
         let g = self.group(group)?;
         Self::assert_my_role(&g, &ROLE_TO_SEND)?;
         let wire_text = quote_mentions(text, mentions.iter().map(|(n, _)| n.as_str()));
         let msg_mentions = self.outgoing_mentions(&g, &wire_text, mentions)?;
-        let content = crate::engine::link::content_of(wire_text, link);
+        let content = crate::engine::link::content_of(wire_text, out.link);
         let (mut container, reply) = match reply_to {
             Some(item) => {
                 let (q, shown) = self.group_quote(&g, item)?;
@@ -64,6 +65,7 @@ impl<A: AgentPort> Engine<A> {
         container.mentions = msg_mentions;
         let timed = self.outgoing_timed(ChatRef::Group(group))?;
         container.ttl = timed.map(|t| t.ttl);
+        container.forward = out.forward.then_some(true);
         let msg = ChatMessage::new(ChatEvent::MsgNew(container))?;
         sized(&msg)?;
         let sent = self.send_to_group(group, &msg, None)?;
@@ -71,7 +73,8 @@ impl<A: AgentPort> Engine<A> {
         let mut item = ItemRecord::new(MessageAuthor::Me, MessageBody::Text(text.to_owned()), now);
         item.reply = reply;
         item.timed = timed;
-        item.link = link.cloned();
+        item.link = out.link.cloned();
+        item.forwarded = out.forward;
         item.shared_id = msg.msg_id.map(|m| m.0);
         item.mentions = mentions
             .iter()

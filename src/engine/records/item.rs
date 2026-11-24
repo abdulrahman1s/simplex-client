@@ -32,6 +32,9 @@ pub struct ItemRecord {
     /// The preview of the link the text has (`MCLink`).
     #[serde(default)]
     pub link: Option<LinkInfo>,
+    /// Forwarded from another chat (`CIForwardedFrom`).
+    #[serde(default)]
+    pub forwarded: bool,
 }
 
 impl ItemRecord {
@@ -55,6 +58,7 @@ impl ItemRecord {
             verified: false,
             timed: None,
             link: None,
+            forwarded: false,
         }
     }
 
@@ -76,6 +80,7 @@ impl ItemRecord {
             mentions: self.mentions.clone(),
             timed: self.timed,
             link: self.link.clone(),
+            forwarded: self.forwarded,
         }
     }
 }

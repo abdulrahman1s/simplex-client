@@ -92,6 +92,15 @@ impl Client {
         self.request(Request::SetTimer { chat, ttl })
     }
 
+    /// Sends `msg` to `to` as the user's own, marked forwarded.
+    pub fn forward(&self, msg: &ChatMessage, to: ChatRef) -> Result<()> {
+        self.request(Request::Forward {
+            from: msg.chat,
+            item: msg.id,
+            to,
+        })
+    }
+
     /// `text` with the preview of the link it has.
     pub fn send_link(&self, chat: ChatRef, text: &str, preview: LinkInfo) -> Result<()> {
         self.request(Request::SendLink {
