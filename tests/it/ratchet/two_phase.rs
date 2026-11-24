@@ -5,6 +5,8 @@ use simplex_client::ratchet::{
     CURRENT_E2E_VERSION, EncRatchetMessage, MsgEncryptKey, PqSupport, e2e_enc_agent_msg_length,
     e2e_enc_conn_info_length,
 };
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 #[test]
 fn a_stored_message_key_encrypts_later_into_the_same_wire_format() {

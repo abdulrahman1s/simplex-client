@@ -3,6 +3,7 @@ use crate::crypto::CryptoError;
 use crate::encoding::{DecodeError, EncodeError};
 use crate::ratchet::RatchetError;
 use crate::smp::SmpError;
+#[cfg(feature = "native")]
 use crate::store::StoreError;
 use thiserror::Error;
 
@@ -46,6 +47,7 @@ pub enum AgentError {
     Unsupported(&'static str),
 }
 
+#[cfg(feature = "native")]
 /// `StoreError` holds driver errors that are neither `Clone` nor comparable, so it is kept as text.
 impl From<StoreError> for AgentError {
     fn from(e: StoreError) -> Self {

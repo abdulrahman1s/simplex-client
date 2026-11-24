@@ -3,10 +3,12 @@ use super::chat_support::*;
 use simplex_client::chat::compress::{compress_body, compress_to_limit, decompress_container};
 use simplex_client::chat::container::MsgContainer;
 use simplex_client::chat::limits::{MAX_ENCODED_MSG_LENGTH, MAX_ENCODED_MSG_LENGTH_PQ};
-use simplex_client::chat::zstd_frame::{compress, content_size, decompress_limited};
+use simplex_client::chat::zstd_frame::{compress, compress_pure, content_size, decompress_limited};
 use simplex_client::chat::{
     ChatError, ChatEvent as E, ChatMessage, encode_chat_message, parse_chat_messages,
 };
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 /// Text that compresses well and makes a body of about `n` bytes.
 fn big_message(n: usize) -> ChatMessage {
@@ -159,6 +161,24 @@ fn a_frame_that_lies_about_its_size_is_refused() {
 }
 
 #[test]
+fn ruzstd_frames_state_their_size_and_decode_here() {
+    for n in [181usize, 1000, 15602, 65536, 200_000] {
+        let data: Vec<u8> = (0..n).map(|i| b"hello json "[i % 11]).collect();
+        let frame = compress_pure(&data).unwrap();
+        assert_eq!(content_size(&frame), Some(n as u64));
+        assert_eq!(decompress_limited(&frame, n).unwrap(), data);
+    }
+}
+
+#[cfg(feature = "native")]
+#[test]
+fn libzstd_decodes_ruzstd_frames() {
+    let data = big_message(20_000).to_json().unwrap();
+    let frame = compress_pure(&data).unwrap();
+    assert_eq!(zstd::bulk::decompress(&frame, data.len()).unwrap(), data);
+}
+
+#[test]
 fn malformed_containers_are_refused() {
     assert!(decompress_container(&[]).is_err());
     assert!(decompress_container(&[0]).is_err(), "an empty list");
@@ -192,6 +212,7 @@ fn a_container_inside_a_container_is_refused() {
 
 // The tests below drive the `zstd` command line tool (`nix shell nixpkgs#zstd`).
 #[allow(clippy::disallowed_methods, reason = "interop test with the zstd CLI")]
+#[cfg(feature = "native")]
 fn zstd_cli(args: &[&str], stdin: Option<&[u8]>) -> Option<Vec<u8>> {
     use std::io::Write;
     use std::process::{Command, Stdio};
@@ -214,10 +235,12 @@ fn zstd_cli(args: &[&str], stdin: Option<&[u8]>) -> Option<Vec<u8>> {
     out.status.success().then_some(out.stdout)
 }
 
+#[cfg(feature = "native")]
 fn tmp(name: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!("zaun-chat-{}-{name}", std::process::id()))
 }
 
+#[cfg(feature = "native")]
 #[test]
 fn cli_level_3_output_with_content_size_decodes_here() {
     if zstd_cli(&["-V"], None).is_none() {
@@ -249,6 +272,7 @@ fn cli_level_3_output_with_content_size_decodes_here() {
     }
 }
 
+#[cfg(feature = "native")]
 #[test]
 fn cli_output_from_stdin_has_no_content_size_and_is_refused() {
     let Some(frame) = zstd_cli(&["-3", "-c", "-q"], Some(&vec![b'a'; 1000])) else {
@@ -259,6 +283,7 @@ fn cli_output_from_stdin_has_no_content_size_and_is_refused() {
     assert!(decompress_limited(&frame, 65536).is_err());
 }
 
+#[cfg(feature = "native")]
 #[test]
 fn the_zstd_cli_decodes_our_frames_and_whole_x_containers() {
     if zstd_cli(&["-V"], None).is_none() {
@@ -267,8 +292,9 @@ fn the_zstd_cli_decodes_our_frames_and_whole_x_containers() {
     }
     for n in [181usize, 1000, 15602, 65536] {
         let data: Vec<u8> = (0..n).map(|i| b"hello json "[i % 11]).collect();
-        let frame = compress(&data).unwrap();
-        assert_eq!(zstd_cli(&["-d", "-c", "-q"], Some(&frame)).unwrap(), data);
+        for frame in [compress(&data).unwrap(), compress_pure(&data).unwrap()] {
+            assert_eq!(zstd_cli(&["-d", "-c", "-q"], Some(&frame)).unwrap(), data);
+        }
     }
     let big = big_message(20_000);
     let wire = encode_chat_message(&big, false).unwrap();

@@ -1,8 +1,12 @@
 //! A file name from a stranger's header, made safe to create in a folder of ours.
+#[cfg(feature = "native")]
 use std::fs::OpenOptions;
+#[cfg(feature = "native")]
 use std::io::ErrorKind;
+#[cfg(feature = "native")]
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "native")]
 use super::error::XftpError;
 
 const MAX_NAME_BYTES: usize = 200;
@@ -23,6 +27,7 @@ pub fn safe_file_name(name: &str) -> String {
     }
 }
 
+#[cfg(feature = "native")]
 /// Claims a new empty file `name`, `name (1)`, `name (2)` … in `dir` and returns its path.
 pub fn claim_unique(dir: &Path, name: &str) -> Result<PathBuf, XftpError> {
     let (stem, ext) = match name.rfind('.') {

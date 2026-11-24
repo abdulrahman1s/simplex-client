@@ -2,6 +2,8 @@
 use simplex_client::h2::{
     Headers, HpackDecoder, Huffman, decode_int, encode_headers, encode_int, huffman_encode,
 };
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 use super::hex::{hex, unhex};
 

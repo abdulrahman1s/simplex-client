@@ -1,6 +1,8 @@
 //! Out-of-order and skipped delivery (RatchetTests.hs `testSkippedMessages`; nook's skipped and fuzz tests).
 use super::support::{MODES, Pair, handshake, recv, recv_err, reload, send};
 use simplex_client::ratchet::RatchetError;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 #[test]
 fn skipped_and_out_of_order_messages_decrypt_across_ratchet_steps() {

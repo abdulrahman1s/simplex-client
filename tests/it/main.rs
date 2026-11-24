@@ -15,13 +15,17 @@ mod chat_roundtrip;
 mod chat_support;
 mod crypto;
 mod encoding;
+#[cfg(feature = "native")]
 mod h2_connection;
 mod h2_hpack;
+#[cfg(feature = "native")]
 mod h2_support;
 mod hex;
 mod ratchet;
 mod vectors;
 mod xftp_description;
+#[cfg(feature = "native")]
 mod xftp_file;
+#[cfg(feature = "native")]
 mod xftp_live;
 mod xftp_protocol;

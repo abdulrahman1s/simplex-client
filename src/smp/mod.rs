@@ -7,6 +7,7 @@ mod block;
 mod clock;
 mod commands;
 mod config;
+#[cfg(feature = "native")]
 mod connection;
 mod error;
 mod events;
@@ -17,12 +18,14 @@ mod queue_data;
 mod responses;
 mod server_error;
 mod signed_key;
+#[cfg(feature = "native")]
 mod tls_connector;
 mod transmission;
 mod transport;
 mod version;
 
 #[cfg(test)]
+#[cfg(feature = "native")]
 mod tests;
 
 pub use address::{DEFAULT_PORT, SmpServer};
@@ -31,6 +34,7 @@ pub use block::{RcvBlocks, SndBlocks, block_ciphers, max_payload};
 pub use clock::{Clock, SystemClock};
 pub use commands::{Command, NewQueue};
 pub use config::ConnConfig;
+#[cfg(feature = "native")]
 pub use connection::{Answer, Request, SmpConnection};
 pub use error::{HandshakeError, SmpError};
 pub use events::{SessionInfo, SmpEvent, SmpEventKind};
@@ -43,6 +47,7 @@ pub use queue_data::{
 };
 pub use responses::{QueueIds, Response, ServerNtfCreds};
 pub use server_error::{CommandError, ErrorType};
+#[cfg(feature = "native")]
 pub use tls_connector::TlsConnector;
 pub use transmission::{Incoming, authorized, encode_transmission, pack, parse_payload};
 pub use transport::{Closer, Connector, Established, Reader, Wire, Writer};

@@ -8,6 +8,8 @@ use simplex_client::ratchet::{
     KemSharedSecret, ParamsUri, PqSupport, PrivKem, PrivParams, Ratchet, RatchetVersions,
     RcvParams, pq_x3dh_rcv, pq_x3dh_snd,
 };
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 const TRANSCRIPT: &str = include_str!("nook_transcript.json");
 

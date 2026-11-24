@@ -2,6 +2,8 @@
 use super::support::{Pair, handshake, recv, send};
 use simplex_client::encoding::{Decode, Encode};
 use simplex_client::ratchet::{PrivParams, Ratchet};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 #[test]
 fn a_ratchet_stored_mid_conversation_with_skipped_keys_continues_identically() {

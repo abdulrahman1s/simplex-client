@@ -7,6 +7,8 @@ use simplex_client::ratchet::{
     KemSecretKey, KemSharedSecret, PqSupport, PrivKem, PrivParams, Ratchet, RatchetVersions,
     kem_decapsulate, pq_x3dh_rcv, pq_x3dh_snd,
 };
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 struct Triple {
     keys: KemKeyPair,

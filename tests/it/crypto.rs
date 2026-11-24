@@ -2,6 +2,8 @@
 use poly1305::{Poly1305 as CratePoly, universal_hash::KeyInit};
 use simplex_client::crypto::*;
 use simplex_client::encoding::{Decode, Encode};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 use crate::hex::{arr, hex, unhex};
 use crate::vectors::*;
