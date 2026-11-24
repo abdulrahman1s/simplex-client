@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use super::bytes;
+use super::conn_event::{SwitchPhase, SyncStatus};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "t", content = "c", rename_all = "snake_case")]
@@ -28,17 +29,41 @@ pub enum ChatNotice {
     GroupCreated,
     YouJoined,
     MemberJoined(String),
-    MemberAdded { by: Option<String>, who: String },
+    MemberAdded {
+        by: Option<String>,
+        who: String,
+    },
     MemberLeft(String),
-    MemberRemoved { by: Option<String>, who: String },
+    MemberRemoved {
+        by: Option<String>,
+        who: String,
+    },
     YouLeft,
     YouRemoved(String),
     GroupDeleted,
     GroupNameChanged(String),
-    NameChanged { from: String, to: String },
+    NameChanged {
+        from: String,
+        to: String,
+    },
     FriendDeleted,
-    GroupInvitation { group: String, sent: bool },
+    GroupInvitation {
+        group: String,
+        sent: bool,
+    },
     CodeChanged,
+    /// The connection's queue moved (`RCESwitchQueue`, or `SCESwitchQueue` when the item is the
+    /// user's). `member`: in a group, who the user's own switch is with ("... for <name>").
+    AddressSwitch {
+        phase: SwitchPhase,
+        member: Option<String>,
+    },
+    /// The connection's ratchet re-sync moved on (`RCERatchetSync`, or `SCERatchetSync` when
+    /// the item is the user's). `member` as for `AddressSwitch`.
+    RatchetSync {
+        status: SyncStatus,
+        member: Option<String>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

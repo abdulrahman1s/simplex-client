@@ -21,6 +21,15 @@ pub struct Receipt {
     pub info: Vec<u8>,
 }
 
+/// `SwitchPhase` of a `SWITCH QDSnd`, the two that chat shows: the peer moves the queue we send to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SwitchPhase {
+    /// The peer's QADD was taken.
+    Started,
+    /// We send to the new queue.
+    Completed,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum AgentEvent {
     /// `create_invitation` is done: the link to give the peer.
@@ -104,6 +113,11 @@ pub enum AgentEvent {
     RatchetSync {
         conn: ConnId,
         state: crate::agent::resync::SyncState,
+    },
+    /// `SWITCH QDSnd`: the peer is moving, or has moved, the queue we send to on `conn`.
+    Switch {
+        conn: ConnId,
+        phase: SwitchPhase,
     },
     /// Someone used the address `conn`: answer with `accept_contact` or `reject_contact` on `inv_id`.
     Req {

@@ -4,7 +4,7 @@ use crate::store::Store;
 use super::addr::addr;
 use super::reseal::reseal;
 use super::state::{Moving, Switch};
-use crate::agent::client::{AgentClient, AgentEvent, AgentMsgId, ConnId};
+use crate::agent::client::{AgentClient, AgentEvent, AgentMsgId, ConnId, SwitchPhase};
 use crate::agent::delivery::{agent_envelope, seal};
 use crate::agent::error::{AgentError, Result};
 use crate::agent::message::AMessage;
@@ -36,10 +36,18 @@ impl AgentClient {
         c.sends = ids.into();
         c.send.retry = None;
         c.send.next_at = 0;
+        // Every switch that does not give up passes here once; 7.1.4 says `SPCompleted` when
+        // QTEST or QEND went, which here follows the move.
+        let completed = AgentEvent::Switch {
+            conn: id,
+            phase: SwitchPhase::Completed,
+        };
         if !fast_rotation(rec.agent_version) {
             // QTEST went already: the old queue is dropped (`AM_QTEST_`).
             rec.switch = None;
-            return self.save(store, rec, None, b);
+            self.save(store, rec, None, b)?;
+            self.emit(completed);
+            return Ok(());
         }
         let mut ratchet = ratchet.ok_or(AgentError::Prohibited("no ratchet"))?;
         let env = agent_envelope(&mut rec, &mut ratchet, AMessage::Qend(vec![addr(&old)]))?;
@@ -58,6 +66,7 @@ impl AgentClient {
         };
         let body = seal(&new, &env, false)?;
         self.enqueue_built(store, rec, ratchet, SendKind::Quiet, body, b)?;
+        self.emit(completed);
         Ok(())
     }
 

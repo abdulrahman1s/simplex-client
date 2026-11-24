@@ -5,6 +5,7 @@ mod address_join;
 mod calls;
 mod change;
 mod codes;
+mod conn_events;
 mod contact;
 mod fake_agent;
 mod files;

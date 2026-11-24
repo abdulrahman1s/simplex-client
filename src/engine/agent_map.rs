@@ -121,6 +121,10 @@ pub(super) fn event(e: Native, log: &Log) -> Option<AgentEvent> {
             conn: conn_id(conn),
             state,
         },
+        Native::Switch { conn, phase } => AgentEvent::Switch {
+            conn: conn_id(conn),
+            phase,
+        },
         Native::Address { conn, full, short } => AgentEvent::Address {
             conn: conn_id(conn),
             full,

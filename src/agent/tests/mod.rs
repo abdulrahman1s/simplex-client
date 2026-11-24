@@ -11,6 +11,7 @@ mod restart;
 pub(crate) mod resync;
 mod resync_rules;
 mod rotation;
+mod rotation_events;
 mod rotation_give_up;
 mod rotation_hosts;
 mod rotation_peer;

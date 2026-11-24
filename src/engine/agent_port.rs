@@ -95,6 +95,11 @@ pub enum AgentEvent {
         conn: ConnId,
         state: crate::agent::resync::SyncState,
     },
+    /// `SWITCH QDSnd`: the peer moves the queue we send to on `conn`.
+    Switch {
+        conn: ConnId,
+        phase: crate::agent::client::SwitchPhase,
+    },
     /// `REQ`: someone used the address `conn`; `invitation` names the request to
     /// `accept_request`/`reject_request`, `conn_info` is their `x.contact`.
     Req {
