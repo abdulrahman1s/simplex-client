@@ -35,9 +35,12 @@ ratchet.
 - anything inside TLS. TLS terminates in your browser, not at Cloudflare, and is pinned by the
   relay's fingerprint.
 
-The Worker logs nothing and keeps nothing. It has no `console.log`, and `wrangler.toml` turns
-observability, invocation logs and Logpush off. Your IP is used only in hashed form, as the
-rate-limit key and the name of the per-IP counter (see [Limits](#limits)). Cloudflare as a
+The Worker logs nothing. It has no `console.log`, and `wrangler.toml` turns observability,
+invocation logs and Logpush off. The only thing it stores is a salted hash of your IP (of your
+/64 for IPv6), with the times of your recent and open tunnels. That record is the per-IP
+counter (see [Limits](#limits)). It is deleted once you have no open tunnels and none started
+in the last minute. If a tunnel ends without telling the counter, it is deleted at most
+30 minutes later. Cloudflare as a
 company still handles the connection, so it can see the metadata above whatever this code
 does. If that matters to you, deploy your own Worker, or put it behind a network you trust.
 
@@ -119,7 +122,8 @@ One tunnel is one TCP socket.
 | Relay connect time | fixed | 10 s |
 
 - **How IPs are used.** The client IP is hashed: SHA-256 over the `IP_SALT` secret and the IP,
-  or over the IP alone if no salt is set. The hash is the key for both the rate-limit binding
+  or over the IP alone if no salt is set. For IPv6 the /64 prefix is hashed, since one client
+  usually holds a whole /64. The hash is the key for both the rate-limit binding
   and the per-IP counter.
 - **The fast first gate.** The Workers Rate Limiting binding refuses an upgrade before the
   WebSocket opens. Its counters live on each Cloudflare machine and are synced loosely, so a
@@ -181,8 +185,10 @@ the client at `wss://simplex-tunnel.<your-subdomain>.workers.dev/v1`. You can al
 
 Notes for the Workers Free plan:
 
-- CPU time is limited per request, but waiting on the network does not count. The Worker does
-  little work per byte: it copies buffers and parses one ClientHello.
+- CPU time is limited per request (10 ms on Free), and waiting on the network does not count.
+  The Worker does little work per byte: it copies buffers and parses one ClientHello.
+  Cloudflare does not document whether CPU time adds up over a WebSocket that stays open for
+  hours, and this has not been tested. A busy tunnel on the Free plan might be cut off early.
 - Open connections have no wall-clock limit while the client stays connected.
 - Cloudflare restarts long connections when it updates its runtime (with up to 20 minutes'
   notice), so the client must reconnect, as it does after `lifetime`.

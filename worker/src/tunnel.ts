@@ -95,13 +95,12 @@ class Tunnel {
     if ("error" in target) return this.fail(target.error);
     const token = this.cx.env.TUNNEL_TOKEN;
     if (token && !tokenEquals(hello.token ?? "", token)) return this.fail("unauthorized");
+    const admission = await this.admit();
+    if (admission !== "ok") return this.fail(admission);
     const address = await resolveAddress(target.host);
     if (this.closed()) return;
     if (address === null) return this.fail("connect_failed");
     if (checkAddress(address)) return this.fail("forbidden_host");
-    const admission = await this.admit();
-    if (admission !== "ok") return this.fail(admission);
-    if (this.closed()) return;
 
     const socket = connect(
       { hostname: socketHostname(address), port: hello.port },
@@ -126,13 +125,14 @@ class Tunnel {
   private async admit(): Promise<Admission> {
     const ns = this.cx.env.TUNNELS;
     if (!ns) return "ok";
-    const stub = ns.getByName(this.cx.clientKey);
+    // A fresh stub per call: a stub that has thrown once may stay broken.
+    const stub = () => ns.getByName(this.cx.clientKey);
     const id = crypto.randomUUID();
-    this.release = () => stub.release(id);
+    this.release = () => stub().release(id);
     const { maxTunnelsPerIp, maxNewTunnelsPerMinute } = this.cx.limits;
     let admission: Admission;
     try {
-      admission = await stub.admit(id, { maxOpen: maxTunnelsPerIp, maxStarts: maxNewTunnelsPerMinute, leaseMs: LEASE_MS });
+      admission = await stub().admit(id, { maxOpen: maxTunnelsPerIp, maxStarts: maxNewTunnelsPerMinute, leaseMs: LEASE_MS });
     } catch {
       return "ok";
     }
@@ -140,7 +140,7 @@ class Tunnel {
       this.release = undefined;
       return admission;
     }
-    this.renewer = setInterval(() => void stub.renew(id, LEASE_MS).catch(() => undefined), LEASE_RENEW_MS);
+    this.renewer = setInterval(() => void stub().renew(id, LEASE_MS).catch(() => undefined), LEASE_RENEW_MS);
     return "ok";
   }
 

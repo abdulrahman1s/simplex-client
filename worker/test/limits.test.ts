@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ipKey } from "../src/ipkey";
+import { clientNetwork, ipKey } from "../src/ipkey";
 import { admit, emptyState, nextExpiry, prune, release, renew, START_WINDOW_MS } from "../src/leases";
 import { DEFAULT_LIMITS, Meter, readLimits } from "../src/limits";
 
@@ -115,6 +115,14 @@ describe("ipKey", () => {
     expect(a).toMatch(/^[0-9a-f]{32}$/);
     expect(a).toBe(await ipKey("203.0.113.7", "salt"));
     expect(a).not.toContain("203");
+  });
+
+  it("treats an IPv6 client's whole /64 as one client", async () => {
+    expect(clientNetwork("2001:db8:1:2:aaaa::1")).toBe("2001:db8:1:2::/64");
+    expect(await ipKey("2001:db8:1:2::1", "s")).toBe(await ipKey("2001:db8:1:2:ffff:ffff:ffff:ffff", "s"));
+    expect(await ipKey("2001:db8:1:2::1", "s")).not.toBe(await ipKey("2001:db8:1:3::1", "s"));
+    expect(clientNetwork("203.0.113.7")).toBe("203.0.113.7");
+    expect(clientNetwork("not an ip")).toBe("not an ip");
   });
 
   it("changes with the salt and with the address", async () => {
