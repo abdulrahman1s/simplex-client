@@ -28,20 +28,24 @@ impl<S: Socket> TlsWriter<S> {
 
     /// Rotates our sending key and tells the server to do the same for what it sends.
     pub fn request_key_update(&mut self) -> Result<(), TlsError> {
+        self.shared.check()?;
         let record = self.tx.key_update(true)?;
         self.sock.write_all(&record)?;
         Ok(())
     }
 
-    /// Sends close_notify and shuts down the sending direction.
+    /// Sends close_notify and shuts down the sending direction; after a failure only the latter.
     pub fn close(&mut self) -> Result<(), TlsError> {
-        let record = self.tx.close_notify()?;
-        self.sock.write_all(&record)?;
+        if self.shared.check().is_ok() {
+            let record = self.tx.close_notify()?;
+            self.sock.write_all(&record)?;
+        }
         self.sock.shutdown(Shutdown::Write)?;
         Ok(())
     }
 
     fn send(&mut self, data: &[u8]) -> Result<(), TlsError> {
+        self.shared.check()?;
         let mut out = Vec::new();
         if self
             .shared

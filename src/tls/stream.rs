@@ -1,7 +1,6 @@
 //! A TLS 1.3 client connection over any `Socket`, whole or split into reader and writer halves.
 use std::io::{self, Read, Write};
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 
 use super::app_rx::AppReceiver;
 use super::app_tx::AppSender;
@@ -24,10 +23,7 @@ impl<S: Socket> TlsStream<S> {
     pub fn connect(mut sock: S, alpn: &[&str]) -> Result<Self, TlsError> {
         let (est, inbound) = perform(&mut sock, alpn)?;
         let writer_sock = sock.try_clone()?;
-        let shared = Arc::new(Shared {
-            info: est.info,
-            key_update_requested: AtomicBool::new(false),
-        });
+        let shared = Arc::new(Shared::new(est.info));
         let rx = AppReceiver::new(est.rx, est.rx_secret);
         let reader = TlsReader::new(sock, inbound, rx, &est.pending, Arc::clone(&shared))?;
         let writer = TlsWriter::new(writer_sock, AppSender::new(est.tx, est.tx_secret), shared);

@@ -77,3 +77,5 @@ All notable changes to this project are documented here. The format follows
   switch started the v7 way still ends the v7 way.
 - A group member's chat version range follows each JSON message they send, not only the
   handshake (`updateMemberChatVRange`).
+- A blocking TLS read that fails for any reason but a timeout now fails every later read and
+  write too, as the sans-I/O client already did; a retry could otherwise skip a forged record.

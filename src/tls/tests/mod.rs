@@ -6,6 +6,7 @@ mod handshake;
 mod identity;
 mod live;
 mod negative;
+mod sticky;
 mod stream;
 
 use crate::crypto::Alg;

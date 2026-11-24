@@ -29,6 +29,9 @@ pub(super) fn app_phase(
         }
         sock.write_all(&rec)?;
     }
+    if !o.second_data.is_empty() {
+        sock.write_all(&tx.seal(APPLICATION_DATA, &o.second_data)?)?;
+    }
     if o.close_notify_after_data {
         sock.write_all(&tx.seal(ALERT, &[1, 0])?)?;
         return Ok(());

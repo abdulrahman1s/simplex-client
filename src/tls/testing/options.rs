@@ -22,6 +22,8 @@ pub(crate) struct MockOpts {
     pub key_update: bool,
     pub send_data: Vec<u8>,
     pub corrupt_app_record: bool,
+    /// Sent in its own record after `send_data`.
+    pub second_data: Vec<u8>,
     pub close_notify_after_data: bool,
     pub echo: bool,
     /// A leaf key and the chain to present instead of a self-signed certificate of `key`.
@@ -47,6 +49,7 @@ impl Default for MockOpts {
             key_update: false,
             send_data: Vec::new(),
             corrupt_app_record: false,
+            second_data: Vec::new(),
             close_notify_after_data: false,
             echo: false,
             identity: None,
