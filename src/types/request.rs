@@ -21,6 +21,13 @@ pub enum Request {
         picture: Option<Picture>,
     },
     CreateInvite,
+    /// An invitation the user answers incognito: whoever joins it knows the user only by a
+    /// random name (`APIAddContact` incognito).
+    CreateIncognitoInvite,
+    /// Connects through a link incognito (`APIConnect` incognito).
+    ConnectIncognito(String),
+    /// Accepts a request incognito (`APIAcceptContact` incognito).
+    AcceptIncognito(i64),
     Connect(String),
     Accept(i64),
     Reject(i64),

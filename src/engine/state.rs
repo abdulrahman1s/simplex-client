@@ -30,6 +30,8 @@ pub struct State {
     pub offline: bool,
     /// The invitation being made: one at a time.
     pub inviting: Option<ConnId>,
+    /// It is incognito, so one made again after a relay failed is too.
+    pub inviting_incognito: bool,
     /// The chat list changed and is due out; at most one is pending.
     pub chats_dirty: bool,
     pub address: AddressState,

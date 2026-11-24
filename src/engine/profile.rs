@@ -23,10 +23,27 @@ pub fn sent_profile(user: &UserRecord) -> Profile {
     p
 }
 
+/// Who the user is to a friend met incognito: the random name, the default preferences, no
+/// picture and no line about them (`generateRandomProfile`).
+#[must_use]
+pub fn incognito_user(name: &str) -> UserRecord {
+    UserRecord::named(name)
+}
+
+/// The user as a friend knows them: themselves, or their incognito profile.
+#[must_use]
+pub fn user_for(user: &UserRecord, f: &FriendRecord) -> UserRecord {
+    f.incognito
+        .as_deref()
+        .map_or_else(|| user.clone(), incognito_user)
+}
+
 /// The profile as one friend is sent it: the user's timer for them in its preferences
 /// (Types.hs `userProfileDirect` with `mergePreferences`, no fallback to a user-wide timer).
+/// Incognito, the user's own preferences stay out too.
 #[must_use]
 pub fn sent_profile_to(user: &UserRecord, f: &FriendRecord) -> Profile {
+    let user = &user_for(user, f);
     let mut p = sent_profile(user);
     p.preferences = Some(sent_to(user.prefs.as_ref(), f.my_prefs.as_ref()));
     p

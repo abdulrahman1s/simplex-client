@@ -30,6 +30,11 @@ impl FriendRequest {
         self.client.accept(self.id())
     }
 
+    /// Accepts by a random name only: they never see the user's profile.
+    pub fn accept_incognito(&self) -> Result<()> {
+        self.client.accept_incognito(self.id())
+    }
+
     pub fn reject(&self) -> Result<()> {
         self.client.reject(self.id())
     }

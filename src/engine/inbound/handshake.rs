@@ -6,7 +6,7 @@ use crate::types::{Event, RequestKind};
 use crate::engine::agent_port::{AgentFailure, AgentPort, ConnId};
 use crate::engine::error::{Code, EngineError, Result, fail};
 use crate::engine::machine::Engine;
-use crate::engine::profile::{conn_info, received_profile};
+use crate::engine::profile::{conn_info, received_profile, user_for};
 use crate::engine::records::{ConnKind, ConnRecord, FriendRecord, ItemRecord, keys};
 use crate::engine::relays::Retry;
 use crate::engine::timed::adopt::apply_profile;
@@ -31,7 +31,10 @@ impl<A: AgentPort> Engine<A> {
             return Ok(());
         }
         let mut rec = self.state.conns.get(conn).cloned().ok_or_else(unknown)?;
-        let ConnKind::Invitation { created, .. } = rec.kind else {
+        let ConnKind::Invitation {
+            created, incognito, ..
+        } = rec.kind.clone()
+        else {
             return Err(unknown());
         };
         let shared = short.clone().unwrap_or_else(|| full.clone());
@@ -39,6 +42,7 @@ impl<A: AgentPort> Engine<A> {
             full: Some(full),
             short,
             created,
+            incognito,
         };
         self.save_conn(rec)?;
         if self.state.inviting.as_ref() == Some(conn) {
@@ -62,9 +66,16 @@ impl<A: AgentPort> Engine<A> {
             return self.on_owner_conf(friend, conn, info);
         }
         let rec = self.state.conns.get(conn).ok_or_else(unknown)?;
-        let ConnKind::Invitation { full, short, .. } = &rec.kind else {
+        let ConnKind::Invitation {
+            full,
+            short,
+            incognito,
+            ..
+        } = &rec.kind
+        else {
             return Err(unknown());
         };
+        let incognito = incognito.clone();
         let links: Vec<String> = [full, short].into_iter().flatten().cloned().collect();
         let profile = received_profile(info)
             .ok_or_else(|| fail(Code::RequestFailed, "conn-info without a profile"))?;
@@ -72,7 +83,8 @@ impl<A: AgentPort> Engine<A> {
         let mut f = FriendRecord::new(id, *conn, self.clock.wall_ms());
         apply_profile(self.state.user.prefs.as_ref(), &mut f, &profile);
         f.invited_with = links;
-        let ours = conn_info(&self.state.user)?;
+        f.incognito.clone_from(&incognito);
+        let ours = conn_info(&user_for(&self.state.user, &f))?;
         self.agent.allow(&mut self.store, conn, ours)?;
         self.save_friend(f)?;
         self.save_conn(ConnRecord {

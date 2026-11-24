@@ -7,9 +7,9 @@ pub fn kind_of(r: &Request) -> RequestKind {
     use RequestKind as K;
     match r {
         Request::SetProfile(_) | Request::SetPicture(_) => K::SetProfile,
-        Request::CreateInvite => K::CreateInvite,
-        Request::Connect(_) => K::Connect,
-        Request::Accept(_) | Request::Reject(_) => K::Answer,
+        Request::CreateInvite | Request::CreateIncognitoInvite => K::CreateInvite,
+        Request::Connect(_) | Request::ConnectIncognito(_) => K::Connect,
+        Request::Accept(_) | Request::AcceptIncognito(_) | Request::Reject(_) => K::Answer,
         Request::CreateAddress | Request::DeleteAddress => K::Address,
         Request::Send { .. } => K::Send,
         Request::SendFile { .. } => K::SendFile,

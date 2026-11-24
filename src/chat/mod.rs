@@ -24,6 +24,7 @@ pub mod message;
 mod open_enum;
 pub mod preferences;
 pub mod profile;
+pub mod random_profile;
 pub mod reaction;
 pub mod signed;
 pub mod version;

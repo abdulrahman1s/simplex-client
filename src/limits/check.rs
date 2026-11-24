@@ -76,6 +76,9 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::SetPicture(_)
         | Request::SetGroupPicture { .. }
         | Request::CreateInvite
+        | Request::CreateIncognitoInvite
+        | Request::ConnectIncognito(_)
+        | Request::AcceptIncognito(_)
         | Request::Connect(_)
         | Request::Accept(_)
         | Request::Reject(_)

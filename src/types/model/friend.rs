@@ -43,6 +43,9 @@ pub struct Friend {
     /// The address their profile shows, to pass on or connect through.
     #[serde(default)]
     pub address: Option<String>,
+    /// The random name the user goes by with them, when connected incognito.
+    #[serde(default)]
+    pub incognito: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

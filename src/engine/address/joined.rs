@@ -3,7 +3,7 @@
 use crate::engine::agent_port::{AgentPort, ConnId};
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
-use crate::engine::profile::{conn_info, received_profile};
+use crate::engine::profile::{conn_info, received_profile, user_for};
 
 impl<A: AgentPort> Engine<A> {
     pub(crate) fn on_owner_conf(&mut self, friend: i64, conn: &ConnId, info: &[u8]) -> Result<()> {
@@ -11,7 +11,8 @@ impl<A: AgentPort> Engine<A> {
             .ok_or_else(|| fail(Code::RequestFailed, "conn-info without a profile"))?;
         self.on_x_info(friend, &profile)?;
         self.refresh_friend_range_from(friend, info)?;
-        let ours = conn_info(&self.state.user)?;
+        let me = user_for(&self.state.user, &self.friend(friend)?);
+        let ours = conn_info(&me)?;
         self.agent.allow(&mut self.store, conn, ours)?;
         Ok(())
     }

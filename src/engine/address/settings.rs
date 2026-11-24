@@ -53,7 +53,7 @@ impl<A: AgentPort> Engine<A> {
         if req.member.is_some() {
             return Ok(());
         }
-        let friend = self.accept_address_request(request, req)?;
+        let friend = self.accept_address_request(request, req, None)?;
         if let Some(text) = a.auto_reply {
             self.put(&reply_key(friend), &text)?;
         }

@@ -111,7 +111,7 @@ impl<A: AgentPort> Engine<A> {
         let made: Result<()> = match kind {
             Retry::Invite => {
                 self.state.inviting = None;
-                self.create_invite()
+                self.create_invite(self.state.inviting_incognito)
             }
             Retry::Address => {
                 self.state.address.creating = None;

@@ -37,7 +37,8 @@ impl<A: AgentPort> Engine<A> {
         match request {
             Request::SetProfile(p) => self.set_profile(&p),
             Request::SetPicture(p) => self.set_picture(p),
-            Request::Accept(id) => self.accept_request(id),
+            Request::Accept(id) => self.accept_request(id, false),
+            Request::AcceptIncognito(id) => self.accept_request(id, true),
             Request::Reject(id) => self.reject_request(id),
             Request::CreateAddress => self.create_address(),
             Request::DeleteAddress => self.delete_address(),
@@ -63,8 +64,10 @@ impl<A: AgentPort> Engine<A> {
             Request::LocateFile { chat, item, tag } => self.locate_file(chat, item, tag),
             Request::ShowCode(friend) => self.show_code(friend),
             Request::Verify { friend, code } => self.verify(friend, &code),
-            Request::CreateInvite => self.create_invite(),
-            Request::Connect(link) => self.connect(&link),
+            Request::CreateInvite => self.create_invite(false),
+            Request::CreateIncognitoInvite => self.create_invite(true),
+            Request::Connect(link) => self.connect(&link, false),
+            Request::ConnectIncognito(link) => self.connect(&link, true),
             Request::RemoveFriend(id) => self.remove_friend(id),
             Request::Send {
                 chat,

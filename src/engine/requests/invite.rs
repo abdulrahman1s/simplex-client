@@ -1,10 +1,11 @@
 //! CreateInvite: a one-time invitation, one at a time, its link reported when the relay made it.
 
 use crate::agent::short_link::{ContactShortLinkData, encode_short_link_data};
+use crate::chat::random_profile::random_name;
 use crate::engine::agent_port::{AgentPort, ConnId};
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
-use crate::engine::profile::sent_profile;
+use crate::engine::profile::{incognito_user, sent_profile};
 use crate::engine::records::{ConnKind, ConnRecord, UserRecord, keys};
 use crate::limits::MAX_LINK_DATA;
 
@@ -26,12 +27,17 @@ fn link_data(user: &UserRecord) -> Result<Vec<u8>> {
 }
 
 impl<A: AgentPort> Engine<A> {
-    pub(crate) fn create_invite(&mut self) -> Result<()> {
+    pub(crate) fn create_invite(&mut self, incognito: bool) -> Result<()> {
         if self.state.inviting.is_some() {
             return Ok(());
         }
         self.evict_invitations()?;
-        let data = link_data(&self.state.user)?;
+        self.state.inviting_incognito = incognito;
+        let incognito = incognito.then(random_name).flatten();
+        let me = incognito
+            .as_deref()
+            .map_or_else(|| self.state.user.clone(), incognito_user);
+        let data = link_data(&me)?;
         let conn = self
             .agent
             .create_invitation(&mut self.store, PQ, true, data)?;
@@ -42,6 +48,7 @@ impl<A: AgentPort> Engine<A> {
                 full: None,
                 short: None,
                 created,
+                incognito,
             },
         })?;
         self.state.inviting = Some(conn);

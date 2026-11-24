@@ -1,9 +1,10 @@
 //! Accept and Reject: accepting joins the requester's invitation with our profile and makes them a friend that turns ready on `CON`; rejecting forgets the request and tells no one (Commands.hs `APIAcceptContact`, `APIRejectContact`).
 
+use crate::chat::random_profile::random_name;
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
-use crate::engine::profile::conn_info;
+use crate::engine::profile::{conn_info, incognito_user};
 use crate::engine::records::{ConnKind, ConnRecord, FriendRecord, RequestRecord, keys};
 
 /// Every connection this engine makes is post-quantum.
@@ -17,21 +18,28 @@ impl<A: AgentPort> Engine<A> {
             .ok_or_else(|| fail(Code::RequestFailed, "no such request"))
     }
 
-    pub(crate) fn accept_request(&mut self, request: i64) -> Result<()> {
+    pub(crate) fn accept_request(&mut self, request: i64, incognito: bool) -> Result<()> {
         let req = self.request_of(request)?;
         if let Some(inv) = req.member.clone() {
             return self.accept_member_invite(req, inv);
         }
-        self.accept_address_request(request, req).map(|_| ())
+        let incognito = incognito.then(random_name).flatten();
+        self.accept_address_request(request, req, incognito)
+            .map(|_| ())
     }
 
-    /// A request through the address: the friend it makes.
+    /// A request through the address: the friend it makes, who knows the user by `incognito`
+    /// when given (`APIAcceptContact` incognito).
     pub(crate) fn accept_address_request(
         &mut self,
         request: i64,
         req: RequestRecord,
+        incognito: Option<String>,
     ) -> Result<i64> {
-        let ours = conn_info(&self.state.user)?;
+        let me = incognito
+            .as_deref()
+            .map_or_else(|| self.state.user.clone(), incognito_user);
+        let ours = conn_info(&me)?;
         let conn = self
             .agent
             .accept_request(&mut self.store, &req.invitation, ours, PQ)?;
@@ -40,6 +48,7 @@ impl<A: AgentPort> Engine<A> {
         f.name = req.name;
         f.about = req.about;
         f.image = req.image;
+        f.incognito = incognito;
         self.save_friend(f)?;
         self.save_conn(ConnRecord {
             conn,

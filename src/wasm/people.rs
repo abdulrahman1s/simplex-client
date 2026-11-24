@@ -10,9 +10,18 @@ use crate::types::Request;
 #[wasm_bindgen]
 impl Client {
     /// A one-time invitation link for one person.
+    /// `{ incognito: true }`: whoever joins knows the user by a random name only.
     #[wasm_bindgen(js_name = createInvite, unchecked_return_type = "Promise<string>")]
-    pub fn create_invite(&self) -> js_sys::Promise {
-        self.shared.ask(Want::Invite, Request::CreateInvite)
+    pub fn create_invite(
+        &self,
+        #[wasm_bindgen(unchecked_param_type = "{ incognito?: boolean }")] options: JsValue,
+    ) -> js_sys::Promise {
+        let request = if incognito(&options) {
+            Request::CreateIncognitoInvite
+        } else {
+            Request::CreateInvite
+        };
+        self.shared.ask(Want::Invite, request)
     }
 
     /// The user's long-lived address, made on first use.
@@ -28,8 +37,16 @@ impl Client {
 
     /// Connects through an invitation, an address or a group link.
     #[wasm_bindgen(unchecked_return_type = "Promise<void>")]
-    pub fn connect(&self, link: &str) -> js_sys::Promise {
-        self.shared.queue(Request::Connect(link.trim().to_owned()))
+    pub fn connect(
+        &self,
+        link: &str,
+        #[wasm_bindgen(unchecked_param_type = "{ incognito?: boolean }")] options: JsValue,
+    ) -> js_sys::Promise {
+        let link = link.trim().to_owned();
+        if incognito(&options) {
+            return self.shared.queue(Request::ConnectIncognito(link));
+        }
+        self.shared.queue(Request::Connect(link))
     }
 
     /// The user's chat preferences, sent to every friend they change: `{ voice: "no", … }`.
@@ -133,4 +150,10 @@ impl Client {
         }
         map
     }
+}
+
+/// `{ incognito: true }` in a call's options.
+fn incognito(options: &JsValue) -> bool {
+    let json = super::convert::from_js(options);
+    json.get("incognito").and_then(serde_json::Value::as_bool) == Some(true)
 }

@@ -346,6 +346,21 @@ await group.setPrefs({ voice: { on: false }, files: { on: true, role: "moderator
 await group.delete();               // an owner deletes it for every member too
 ```
 
+### Incognito
+
+A friend made incognito knows you only by a random name (an adjective and a noun, from the
+official apps' lists), with the default preferences and no picture; your profile changes never
+reach them.
+
+```js
+const link = await client.createInvite({ incognito: true });
+await client.connect(theirLink, { incognito: true });
+client.on("request", (r) => r.acceptIncognito());
+console.log(friend.raw.incognito); // the name they know you by
+```
+
+Groups always get your own profile; joining one incognito is not supported yet.
+
 ### Your address
 
 ```js

@@ -38,6 +38,26 @@ impl Client {
         self.request(Request::Connect(link.to_owned()))
     }
 
+    /// An invitation whoever joins knows the user by a random name only.
+    pub fn create_incognito_invite(&self) -> Result<String> {
+        let Answer::Event(Event::Invite(link)) =
+            self.ask(Want::Invite, Request::CreateIncognitoInvite)?
+        else {
+            return Err(unexpected(RequestKind::CreateInvite));
+        };
+        Ok(link)
+    }
+
+    /// Connects through `link` by a random name only.
+    pub fn connect_incognito(&self, link: &str) -> Result<()> {
+        self.request(Request::ConnectIncognito(link.to_owned()))
+    }
+
+    /// Accepts a request by a random name only.
+    pub fn accept_incognito(&self, request: i64) -> Result<()> {
+        self.request(Request::AcceptIncognito(request))
+    }
+
     /// Accepts a request by its id; `Event::Request` carries one that can `accept` itself.
     pub fn accept(&self, request: i64) -> Result<()> {
         self.request(Request::Accept(request))

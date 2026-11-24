@@ -19,6 +19,9 @@ pub enum ConnKind {
         short: Option<String>,
         /// Milliseconds since the epoch, for evicting the oldest.
         created: i64,
+        /// Made incognito: the random name the user goes by with whoever answers.
+        #[serde(default)]
+        incognito: Option<String>,
     },
     Friend {
         id: i64,

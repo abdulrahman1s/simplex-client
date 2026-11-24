@@ -3,13 +3,14 @@
 //! again (codec `on_plan`; Commands.hs `connectViaContact`).
 
 use crate::agent::links::{ConnShortLink, ConnectionLink, ConnectionRequestUri, ContactConnType};
+use crate::chat::random_profile::random_name;
 use crate::crypto::random_vec;
 use crate::engine::address::contact_conn_info;
 use crate::engine::agent_port::{AgentFailure, AgentPort};
 use crate::engine::error::{Code, EngineError, Result, fail};
 use crate::engine::groups::group_contact_info;
 use crate::engine::machine::Engine;
-use crate::engine::profile::conn_info;
+use crate::engine::profile::{conn_info, incognito_user};
 use crate::engine::records::{ConnKind, ConnRecord, FriendRecord, keys};
 
 use super::invite::PQ;
@@ -74,7 +75,7 @@ fn connect_error(e: AgentFailure) -> EngineError {
 }
 
 impl<A: AgentPort> Engine<A> {
-    pub(crate) fn connect(&mut self, text: &str) -> Result<()> {
+    pub(crate) fn connect(&mut self, text: &str, incognito: bool) -> Result<()> {
         let text = text.trim();
         if text.is_empty() || text.chars().any(char::is_whitespace) {
             return Err(fail(Code::BadLink, "empty or contains spaces"));
@@ -94,9 +95,16 @@ impl<A: AgentPort> Engine<A> {
             self.state.chats_dirty = true;
             return Ok(());
         }
+        // Incognito, whoever answers knows the user only by a random name (`APIConnect`).
+        let incognito = (incognito && !matches!(kind, Kind::Group))
+            .then(random_name)
+            .flatten();
+        let me = incognito
+            .as_deref()
+            .map_or_else(|| self.state.user.clone(), incognito_user);
         let info = match kind {
-            Kind::Invitation => conn_info(&self.state.user)?,
-            Kind::Address => contact_conn_info(&self.state.user, request_id()?)?,
+            Kind::Invitation => conn_info(&me)?,
+            Kind::Address => contact_conn_info(&me, request_id()?)?,
             Kind::Group => group_contact_info(&self.state.user, request_id()?)?,
         };
         // Group connections are PQ off.
@@ -108,6 +116,7 @@ impl<A: AgentPort> Engine<A> {
         let id = self.store.next_id(keys::FRIEND_SEQ)?;
         let mut friend = FriendRecord::new(id, conn, self.clock.wall_ms());
         friend.link = Some(uri);
+        friend.incognito = incognito;
         self.save_friend(friend)?;
         self.save_conn(ConnRecord {
             conn,

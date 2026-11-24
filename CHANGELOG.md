@@ -121,6 +121,16 @@ All notable changes to this project are documented here. The format follows
   new variants, `Friend` and `ChatProfile` new fields, and `UserRecord` and `AddressRecord` new
   fields.
 
+- Incognito: `Request::CreateIncognitoInvite`, `ConnectIncognito(link)` and
+  `AcceptIncognito(request)` (`client.create_incognito_invite`, `connect_incognito`,
+  `request.accept_incognito`; JS `createInvite({ incognito: true })`,
+  `connect(link, { incognito: true })`, `request.acceptIncognito()`) make a friend who knows
+  the user only by a random name from upstream's word lists (`generateRandomProfile`), with
+  the default preferences and no picture, in the invitation's link data, the handshake and
+  every later profile. `Friend.incognito` holds the name. A retried invitation stays incognito.
+  Groups still get the user's own profile. **Breaking:** `Request` has new variants and
+  `Friend` a new field; JS `createInvite` and `connect` take an optional options argument.
+
 ### Fixed
 
 - The profile sent to friends said disappearing messages were allowed, so an official app

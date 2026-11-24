@@ -54,6 +54,10 @@ pub struct FriendRecord {
     /// The address their profile shows, if any (`Profile.contactLink`).
     #[serde(default)]
     pub address: Option<String>,
+    /// The random name the user goes by with them, when connected incognito; they never see
+    /// the user's own profile.
+    #[serde(default)]
+    pub incognito: Option<String>,
 }
 
 const fn pq_on() -> bool {
@@ -85,6 +89,7 @@ impl FriendRecord {
             my_prefs: None,
             local: ChatLocal::default(),
             address: None,
+            incognito: None,
         }
     }
 
