@@ -1,4 +1,4 @@
-//! A group (Types.hs `GroupInfo`): its profile, the user's own membership and Zaun's local settings.
+//! A group (Types.hs `GroupInfo`): its profile, the user's own membership and its local settings.
 
 use serde::{Deserialize, Serialize};
 

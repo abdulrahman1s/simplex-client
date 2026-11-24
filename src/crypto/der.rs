@@ -1,4 +1,4 @@
-//! X.509 SubjectPublicKeyInfo and PKCS#8 DER of the four key kinds, byte for byte as SimpleX writes them (RFC 8410; nook keys.ts).
+//! X.509 SubjectPublicKeyInfo and PKCS#8 DER of the four key kinds, byte for byte as SimpleX writes them (RFC 8410).
 use zeroize::Zeroizing;
 
 use super::{Alg, CryptoError};

@@ -1,6 +1,6 @@
 //! The engine against the official CLI 7.1.4 over a local smp-server and xftp-server. Run with
-//! `ZAUN_TEST_SMP`, `ZAUN_TEST_XFTP`, `ZAUN_TEST_CLI=<port of a CLI started with -p, -s, --xftp-server,
-//! --files-folder /home/cli/files>` and `ZAUN_TEST_CLI_HOME=<that CLI's home on this computer>`.
+//! `SIMPLEX_TEST_SMP`, `SIMPLEX_TEST_XFTP`, `SIMPLEX_TEST_CLI=<port of a CLI started with -p, -s, --xftp-server,
+//! --files-folder /home/cli/files>` and `SIMPLEX_TEST_CLI_HOME=<that CLI's home on this computer>`.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -33,7 +33,7 @@ pub(super) struct Native {
 
 impl Native {
     pub(super) fn start(dir: &Dir) -> Native {
-        let relays = vec![var("ZAUN_TEST_SMP"), var("ZAUN_TEST_XFTP")];
+        let relays = vec![var("SIMPLEX_TEST_SMP"), var("SIMPLEX_TEST_XFTP")];
         let hello = Config { dir: dir.0.clone(), key: KEY.into(), name: "alice".into(), relays };
         let log = Log::new(std::io::stderr());
         let (agent, smp) = NativeAgent::new(&hello.relays, log.clone());
@@ -170,7 +170,7 @@ pub(super) fn cli_send(c: &mut Cli, cid: i64, content: Value) -> i64 {
 fn the_engine_and_the_official_cli_chat_edit_react_delete_verify_share_files_and_call() {
     let dir = Dir::new();
     let mut n = Native::start(&dir);
-    let mut c = Cli::open(var("ZAUN_TEST_CLI").parse().unwrap());
+    let mut c = Cli::open(var("SIMPLEX_TEST_CLI").parse().unwrap());
     let (cid, bob) = connect(&mut n, &mut c);
     let chat = ChatRef::Direct(bob);
 
@@ -304,7 +304,7 @@ fn the_engine_and_the_official_cli_chat_edit_react_delete_verify_share_files_and
     until(&mut n, &mut c, "bob has the file", |_, c| {
         cli_event(c, "rcvFileComplete", |_| true)
     });
-    let home = PathBuf::from(var("ZAUN_TEST_CLI_HOME"));
+    let home = PathBuf::from(var("SIMPLEX_TEST_CLI_HOME"));
     assert_eq!(
         std::fs::read(home.join("files/from-alice.bin")).unwrap(),
         bytes

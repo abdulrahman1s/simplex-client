@@ -1,4 +1,4 @@
-//! Time in: command timeouts, the keepalive PING and the judgement of silence (nook smp/client.ts `onTimeout`; Client.hs `pingServer`).
+//! Time in: command timeouts, the keepalive PING and the judgement of silence (Client.hs `pingServer`).
 use crate::smp::commands::Command;
 use crate::smp::error::SmpError;
 use crate::smp::events::SmpEventKind;

@@ -1,4 +1,4 @@
-//! `AgentPort` over the native agent client: ids, errors and events mapped, nothing else (ADR-0042).
+//! `AgentPort` over the native agent client: ids, errors and events mapped, nothing else.
 
 #[cfg(feature = "native")]
 use crossbeam_channel::{Receiver, unbounded};

@@ -1,4 +1,4 @@
-//! The client side of the SMP handshake (Transport.hs `smpClientHandshake`, `smpTHandleClient`, `blockEncryption`; nook smp/handshake.ts).
+//! The client side of the SMP handshake (Transport.hs `smpClientHandshake`, `smpTHandleClient`, `blockEncryption`).
 //!
 //! Server hello is read, checked against the TLS channel and the pinned identity, then the client hello is sent with
 //! our X25519 key, as the Haskell client does (`agreeSecret = True`), which turns on sbc-chain block encryption.

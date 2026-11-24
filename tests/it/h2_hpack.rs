@@ -1,4 +1,4 @@
-//! HPACK against RFC 7541 Appendix C, ported from nook src/sx/h2/hpack.test.ts.
+//! HPACK against RFC 7541 Appendix C, ported from an independent TypeScript implementation.
 use simplex_client::h2::{
     Headers, HpackDecoder, Huffman, decode_int, encode_headers, encode_int, huffman_encode,
 };

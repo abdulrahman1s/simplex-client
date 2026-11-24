@@ -1,9 +1,9 @@
-//! Tests of the double ratchet (src/ratchet): ported from nook's ratchet.test.ts and simplexmq's RatchetTests.hs, plus known answers from nook and the reference C KEM.
+//! Tests of the double ratchet (src/ratchet): ported from simplexmq's RatchetTests.hs, plus known answers from an independent TypeScript implementation and the reference C KEM.
 
 mod kem_vectors;
 mod legacy;
 mod limits;
-mod nook;
+mod ts_reference;
 mod order;
 mod params;
 mod persist;

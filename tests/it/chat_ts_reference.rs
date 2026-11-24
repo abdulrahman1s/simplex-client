@@ -1,4 +1,4 @@
-//! Ports of nook's protocol tests (src/sx/chat/protocol.test.ts) that apply to the Rust layer.
+//! Protocol tests ported from an independent TypeScript implementation, where they apply to the Rust layer.
 use serde_json::Value;
 use simplex_client::chat::version::VersionRange;
 use simplex_client::chat::{ChatEvent as E, parse_chat_elements, parse_chat_messages};
@@ -20,7 +20,7 @@ fn the_doc_example_without_a_version_reads_as_9() {
 }
 
 #[test]
-fn x_info_serializes_to_the_exact_bytes_nook_expects() {
+fn x_info_serializes_to_the_exact_bytes_the_reference_expects() {
     let j = r#"{"v":"1-22","event":"x.info","params":{"profile":{"displayName":"bob","fullName":"","preferences":{"voice":{"allow":"yes"}}}}}"#;
     let m = parse_chat_messages(j.as_bytes()).unwrap().remove(0);
     assert_eq!(m.v, Some(VersionRange::new(1, 22)));
@@ -63,7 +63,7 @@ fn image_message_with_an_xftp_file_invitation_round_trips_exactly() {
 }
 
 #[test]
-fn nooks_raw_binary_batch_has_a_signed_and_a_forwarded_element() {
+fn the_reference_raw_binary_batch_has_a_signed_and_a_forwarded_element() {
     let e1 = br#"{"v":"1-22","event":"x.ok","params":{}}"#.to_vec();
     let mut signed = vec![0x2f, 0x44, 1, 0x4d, 64];
     signed.extend([0u8; 64]);

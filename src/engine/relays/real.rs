@@ -142,7 +142,7 @@ impl RelayTester for SmpTester {
         let spawned = {
             let (server, post) = (server.clone(), post.clone());
             thread::Builder::new()
-                .name("zaun-relay-test".into())
+                .name("simplex-relay-test".into())
                 .spawn(move || {
                     let address = server.clone();
                     run_and_post(&address, |f| post(server, f));

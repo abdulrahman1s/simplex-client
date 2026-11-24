@@ -1,4 +1,4 @@
-//! E2E params with a version range, as put in connection links: binary and `v=..&x3dh=..&kem_key=..` forms (Ratchet.hs `E2ERatchetParamsUri`; nook ratchet/params.ts).
+//! E2E params with a version range, as put in connection links: binary and `v=..&x3dh=..&kem_key=..` forms (Ratchet.hs `E2ERatchetParamsUri`).
 use super::error::{RatchetError, Result};
 use super::kem::{KemCiphertext, KemPublicKey};
 use super::kem_params::KemParams;

@@ -1,4 +1,4 @@
-//! Port of nook's messages.test.ts, and a round trip of every envelope and agent message.
+//! A round trip of every envelope and agent message.
 use simplex_client::agent::links::ConnectionRequestUri;
 use simplex_client::agent::message::{
     AMessage, AMessageReceipt, APrivHeader, AgentMessage, AgentMessageType, RatchetInfo,

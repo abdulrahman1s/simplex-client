@@ -1,4 +1,4 @@
-//! XFTP server addresses `xftp://<keyHash>[:<basicAuth>]@host[,host2][:port]` (Protocol.hs `ProtocolServer`; nook xftp/address.ts).
+//! XFTP server addresses `xftp://<keyHash>[:<basicAuth>]@host[,host2][:port]` (Protocol.hs `ProtocolServer`).
 use std::cmp::Ordering;
 use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr};

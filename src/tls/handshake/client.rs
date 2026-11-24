@@ -1,4 +1,4 @@
-//! The blocking driver of the handshake (nook tls13.ts): writes the ClientHello, feeds records from the socket, writes the closing flight.
+//! The blocking driver of the handshake: writes the ClientHello, feeds records from the socket, writes the closing flight.
 use std::io::{Read, Write};
 
 use super::super::error::TlsError;

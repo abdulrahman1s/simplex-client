@@ -1,4 +1,4 @@
-//! Call and stream signalling (ADR-0035/0036): `x.call.*` both ways, the call key and the call lines (Commands.hs `APISendCallInvitation` …, Subscriber.hs `xCallInv` …).
+//! Call and stream signalling: `x.call.*` both ways, the call key and the call lines (Commands.hs `APISendCallInvitation` …, Subscriber.hs `xCallInv` …).
 
 mod inbound;
 mod key;

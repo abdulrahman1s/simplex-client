@@ -1,4 +1,4 @@
-//! Create a contact address: a contact-mode queue with its short link, made in one NEW (Agent.hs `prepareConnectionLink'`, `createConnectionForLink'`, `encryptContactLinkData`; fact sheet §10).
+//! Create a contact address: a contact-mode queue with its short link, made in one NEW (Agent.hs `prepareConnectionLink'`, `createConnectionForLink'`, `encryptContactLinkData`).
 use crate::crypto::{Alg, KeyPair, random_vec, sha256};
 use crate::encoding::VersionRange;
 use crate::smp::QueueIds;

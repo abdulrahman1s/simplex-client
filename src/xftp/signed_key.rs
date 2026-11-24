@@ -1,4 +1,4 @@
-//! The server's DH key signed by its leaf certificate: `SignedExact PubKey` (Crypto.hs `verifyX509`; nook crypto/identity.ts `parseSignedKey`).
+//! The server's DH key signed by its leaf certificate: `SignedExact PubKey` (Crypto.hs `verifyX509`).
 //!
 //! TODO(crypto): a copy of smp/signed_key.rs; one shared home next to the X.509 helpers of `crate::tls` when they export a DER reader.
 use crate::crypto::{PublicKey, Signature};

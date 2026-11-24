@@ -21,7 +21,7 @@ use crate::engine::records::friend::Feature;
 /// What chat messages are sized for on a post-quantum connection.
 const PQ: bool = true;
 
-/// What Zaun calls with: voice with the apps' frame encryption, or a stream's video without.
+/// What the engine calls with: voice with the apps' frame encryption, or a stream's video without.
 pub(super) fn call_type(kind: Kind) -> CallType {
     match kind {
         Kind::Voice => CallType {

@@ -1,4 +1,4 @@
-//! What the store can fail with; the helper maps `WrongKey` to exit code 3.
+//! What the store can fail with.
 
 use std::fmt;
 

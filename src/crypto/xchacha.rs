@@ -1,4 +1,4 @@
-//! XChaCha20-Poly1305 for the store's encrypted columns: `nonce(24) || ciphertext || tag` (nook uses noble `xchacha20poly1305`).
+//! XChaCha20-Poly1305 for the store's encrypted columns: `nonce(24) || ciphertext || tag`.
 use chacha20poly1305::{
     XChaCha20Poly1305,
     aead::{Aead, KeyInit, Payload},

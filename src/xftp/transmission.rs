@@ -1,4 +1,4 @@
-//! One command or response as a padded block (Protocol.hs `xftpEncodeAuthTransmission`, `xftpDecodeTClient`; nook xftp/transmission.ts).
+//! One command or response as a padded block (Protocol.hs `xftpEncodeAuthTransmission`, `xftpDecodeTClient`).
 use subtle::ConstantTimeEq;
 
 use crate::crypto::{PrivateKey, pad, unpad};

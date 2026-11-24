@@ -10,6 +10,7 @@ use super::seal::Sealer;
 
 const CHECK_AAD: &[u8] = b"meta";
 const CHECK_KEY: &str = "check";
+// Kept as is for compatibility with existing stores.
 const CHECK_PLAIN: &[u8] = b"zaun-chat store ok";
 
 pub struct Store {

@@ -185,7 +185,7 @@ pub enum ChatEvent {
         msg_id: SharedMsgId,
         chunk: FileChunk,
     },
-    /// Unknown names, and the channel and roster events (`x.grp.relay.*`, `x.grp.roster*`) that Zaun does not act on.
+    /// Unknown names, and the channel and roster events (`x.grp.relay.*`, `x.grp.roster*`) that the engine does not act on.
     Unknown {
         event: String,
         params: Map<String, Value>,

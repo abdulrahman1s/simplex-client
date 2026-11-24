@@ -1,4 +1,4 @@
-//! HKDF-SHA512 as `Crypto.hs hkdf salt ikm info n` (nook bytes.ts `hkdfSha512`).
+//! HKDF-SHA512 as `Crypto.hs hkdf salt ikm info n`.
 use hkdf::Hkdf;
 use sha2::Sha512;
 use zeroize::Zeroizing;

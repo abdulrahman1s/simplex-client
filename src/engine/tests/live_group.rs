@@ -1,5 +1,5 @@
 //! Groups against two official CLIs 7.1.4 (bob and carol): the engine as host, as a member a CLI
-//! invites, and joining by a group link. Same servers as `live_cli`, plus `ZAUN_TEST_CLI2` for the
+//! invites, and joining by a group link. Same servers as `live_cli`, plus `SIMPLEX_TEST_CLI2` for the
 //! second CLI (started with `--user-display-name carol`); the first is bob.
 
 use std::time::Duration;
@@ -23,8 +23,8 @@ impl World {
     fn start(dir: &Dir) -> World {
         World {
             n: Native::start(dir),
-            bob: Cli::open(var("ZAUN_TEST_CLI").parse().unwrap()),
-            carol: Cli::open(var("ZAUN_TEST_CLI2").parse().unwrap()),
+            bob: Cli::open(var("SIMPLEX_TEST_CLI").parse().unwrap()),
+            carol: Cli::open(var("SIMPLEX_TEST_CLI2").parse().unwrap()),
         }
     }
 

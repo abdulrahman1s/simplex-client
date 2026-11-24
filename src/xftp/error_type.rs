@@ -1,4 +1,4 @@
-//! The error a server answers with (Transport.hs `XFTPErrorType`, `CommandError`); nook xftp/commands.ts `decodeXFTPError`.
+//! The error a server answers with (Transport.hs `XFTPErrorType`, `CommandError`).
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

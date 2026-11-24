@@ -57,7 +57,7 @@ impl Dir {
         let mut id = [0u8; 8];
         getrandom::fill(&mut id).unwrap();
         let name: String = id.iter().map(|b| format!("{b:02x}")).collect();
-        let dir = std::env::temp_dir().join(format!("zaun-engine-{name}"));
+        let dir = std::env::temp_dir().join(format!("simplex-engine-{name}"));
         std::fs::create_dir_all(&dir).unwrap();
         Dir(dir)
     }

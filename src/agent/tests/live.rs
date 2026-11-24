@@ -1,5 +1,5 @@
 //! Two native agents through a real smp-server. Start a local smp-server and run
-//! `ZAUN_TEST_SMP=smp://<fingerprint>[:<password>]@127.0.0.1:<port> cargo test -p zaun-chat --lib agent::tests::live -- --ignored`.
+//! `SIMPLEX_TEST_SMP=smp://<fingerprint>[:<password>]@127.0.0.1:<port> cargo test -p simplex-client --lib agent::tests::live -- --ignored`.
 use super::support::pq_of;
 use std::sync::Arc;
 use std::time::Duration;
@@ -10,8 +10,8 @@ use crate::agent::testing::{Dir, Node};
 use crate::smp::{SmpServer, TlsConnector};
 
 pub fn live_server() -> SmpServer {
-    let Ok(addr) = std::env::var("ZAUN_TEST_SMP") else {
-        panic!("ZAUN_TEST_SMP is not set")
+    let Ok(addr) = std::env::var("SIMPLEX_TEST_SMP") else {
+        panic!("SIMPLEX_TEST_SMP is not set")
     };
     addr.parse().unwrap()
 }
@@ -29,7 +29,7 @@ pub fn live_node(dir: &Dir, name: &str) -> Node {
 }
 
 #[test]
-#[ignore = "needs a local smp-server; set ZAUN_TEST_SMP"]
+#[ignore = "needs a local smp-server; set SIMPLEX_TEST_SMP"]
 fn two_native_agents_connect_both_ways_exchange_receipts_and_survive_a_restart() {
     let dir = Dir::new();
     let (mut a, mut b) = (live_node(&dir, "a"), live_node(&dir, "b"));

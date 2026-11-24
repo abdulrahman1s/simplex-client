@@ -1,4 +1,4 @@
-//! Call signalling (ADR-0035): SDP and `candidate:…` lines, the codec's business.
+//! Call signalling: SDP and `candidate:…` lines, the codec's business.
 
 use serde::{Deserialize, Serialize};
 

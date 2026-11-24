@@ -1,6 +1,6 @@
 //! The session strings of a call (call.ts, Call.hs `WebRTCSession`): `{type, sdp}` and a candidate list, as JSON text.
 //!
-//! The apps compress that text with LZ-String (base64); plain JSON is still read (streams, and Zaun's earlier form).
+//! The apps compress that text with LZ-String (base64); plain JSON is still read (streams, and an earlier form).
 
 use serde_json::{Value, json};
 

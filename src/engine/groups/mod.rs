@@ -1,4 +1,4 @@
-//! Classic groups (Phase 4): members and introductions, messages and forwarding, links and admin events (simplex-chat 7.1.4 Subscriber.hs, Commands.hs, Internal.hs; fact sheet §11).
+//! Classic groups: members and introductions, messages and forwarding, links and admin events (simplex-chat 7.1.4 Subscriber.hs, Commands.hs, Internal.hs).
 
 mod add;
 mod admin;

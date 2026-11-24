@@ -1,5 +1,5 @@
 //! Against a real smp-server. Start a local smp-server and run
-//! `ZAUN_TEST_SMP=smp://<fingerprint>@127.0.0.1:<port> cargo test -p zaun-chat --lib smp::tests::live -- --ignored`.
+//! `SIMPLEX_TEST_SMP=smp://<fingerprint>@127.0.0.1:<port> cargo test -p simplex-client --lib smp::tests::live -- --ignored`.
 use std::time::Duration;
 
 use crossbeam_channel::{Receiver, bounded};
@@ -40,10 +40,10 @@ fn expect(r: Result<Response, SmpError>) -> Response {
 }
 
 #[test]
-#[ignore = "needs a local smp-server; set ZAUN_TEST_SMP"]
+#[ignore = "needs a local smp-server; set SIMPLEX_TEST_SMP"]
 fn queue_lifecycle_with_block_encryption_new_sub_skey_send_msg_ack_del() {
-    let Ok(addr) = std::env::var("ZAUN_TEST_SMP") else {
-        panic!("ZAUN_TEST_SMP is not set")
+    let Ok(addr) = std::env::var("SIMPLEX_TEST_SMP") else {
+        panic!("SIMPLEX_TEST_SMP is not set")
     };
     let server: SmpServer = addr.parse().unwrap();
     let (rcv, rcv_events) = open(&server);
@@ -88,7 +88,7 @@ fn queue_lifecycle_with_block_encryption_new_sub_skey_send_msg_ack_del() {
         Response::Ok
     );
 
-    let body = b"zaun live smp test".to_vec();
+    let body = b"simplex live smp test".to_vec();
     let send = |auth: Option<crate::crypto::PrivateKey>| {
         snd.call(Request::new(
             Command::Send {

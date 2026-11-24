@@ -1,4 +1,4 @@
-//! Transport block chain keys (Crypto.hs `sbcInit`, `sbcHkdf`; nook cryptobox.ts).
+//! Transport block chain keys (Crypto.hs `sbcInit`, `sbcHkdf`).
 use zeroize::Zeroizing;
 
 use super::{CbNonce, CryptoError, SbKey, hkdf_sha512};

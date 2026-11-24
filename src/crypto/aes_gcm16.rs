@@ -1,4 +1,4 @@
-//! AES-256-GCM with a 16-byte IV (J0 derived by GHASH), as the ratchet message encryption (Crypto.hs `encryptAEAD`, `decryptAEAD`; nook ratchet/crypto.ts).
+//! AES-256-GCM with a 16-byte IV (J0 derived by GHASH), as the ratchet message encryption (Crypto.hs `encryptAEAD`, `decryptAEAD`).
 use aes::Aes256;
 use aes_gcm::{
     AesGcm,

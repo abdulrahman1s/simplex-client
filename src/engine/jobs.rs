@@ -1,5 +1,5 @@
 //! Work done off the engine thread (XFTP transfers, relay tests), its results posted back
-//! here and handled one at a time like everything else (ADR-0012).
+//! here and handled one at a time like everything else.
 
 use crossbeam_channel::{Receiver, Sender, unbounded};
 

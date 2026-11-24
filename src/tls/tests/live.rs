@@ -34,9 +34,9 @@ fn check_server(host: &str, port: u16, fingerprint: &str) {
 }
 
 #[test]
-#[ignore = "needs a local smp-server: ZAUN_TEST_SMP=smp://FINGERPRINT@127.0.0.1:5223"]
+#[ignore = "needs a local smp-server: SIMPLEX_TEST_SMP=smp://FINGERPRINT@127.0.0.1:5223"]
 fn local_smp_server_handshake_pins_the_ca_and_session_id_is_tls_unique() {
-    let address = std::env::var("ZAUN_TEST_SMP").unwrap();
+    let address = std::env::var("SIMPLEX_TEST_SMP").unwrap();
     let rest = address.strip_prefix("smp://").unwrap();
     let (fingerprint, host_port) = rest.split_once('@').unwrap();
     let (host, port) = host_port.rsplit_once(':').unwrap();

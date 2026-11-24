@@ -1,5 +1,5 @@
 //! Against a real xftp-server. Start a local xftp-server and run
-//! `ZAUN_TEST_XFTP=xftp://<fingerprint>@127.0.0.1:<port> cargo test -p zaun-chat --test it xftp_live -- --ignored`.
+//! `SIMPLEX_TEST_XFTP=xftp://<fingerprint>@127.0.0.1:<port> cargo test -p simplex-client --test it xftp_live -- --ignored`.
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
@@ -14,14 +14,14 @@ use simplex_client::xftp::{
 };
 
 fn server() -> XftpServer {
-    let Ok(addr) = std::env::var("ZAUN_TEST_XFTP") else {
-        panic!("ZAUN_TEST_XFTP is not set")
+    let Ok(addr) = std::env::var("SIMPLEX_TEST_XFTP") else {
+        panic!("SIMPLEX_TEST_XFTP is not set")
     };
     addr.parse().unwrap()
 }
 
 fn dir(name: &str) -> PathBuf {
-    let d = std::env::temp_dir().join(format!("zaun-xftp-live-{}-{name}", std::process::id()));
+    let d = std::env::temp_dir().join(format!("simplex-xftp-live-{}-{name}", std::process::id()));
     let _ = fs::remove_dir_all(&d);
     fs::create_dir_all(&d).unwrap();
     d
@@ -117,25 +117,25 @@ fn round_trip(name: &str, size: usize) {
 }
 
 #[test]
-#[ignore = "needs a local xftp-server; set ZAUN_TEST_XFTP"]
+#[ignore = "needs a local xftp-server; set SIMPLEX_TEST_XFTP"]
 fn a_3_mib_file_goes_up_to_four_recipients_comes_down_and_is_deleted() {
     round_trip("three", 3 << 20);
 }
 
 #[test]
-#[ignore = "needs a local xftp-server; set ZAUN_TEST_XFTP"]
+#[ignore = "needs a local xftp-server; set SIMPLEX_TEST_XFTP"]
 fn a_5_mib_file_in_two_chunks_round_trips() {
     round_trip("five", 5 << 20 | 12345);
 }
 
 #[test]
-#[ignore = "needs a local xftp-server; set ZAUN_TEST_XFTP"]
+#[ignore = "needs a local xftp-server; set SIMPLEX_TEST_XFTP"]
 fn a_tiny_file_uses_one_small_chunk() {
     round_trip("tiny", 10);
 }
 
 #[test]
-#[ignore = "needs a local xftp-server; set ZAUN_TEST_XFTP"]
+#[ignore = "needs a local xftp-server; set SIMPLEX_TEST_XFTP"]
 fn ping_works_and_a_wrong_fingerprint_is_refused() {
     let s = server();
     let mut c = connect(&s, &ClientConfig::default()).unwrap();
@@ -163,7 +163,7 @@ fn ping_works_and_a_wrong_fingerprint_is_refused() {
 }
 
 #[test]
-#[ignore = "needs a local xftp-server; set ZAUN_TEST_XFTP"]
+#[ignore = "needs a local xftp-server; set SIMPLEX_TEST_XFTP"]
 fn a_cancelled_upload_stops_and_leaves_no_temp_file() {
     let (work, src) = (dir("cancel-work"), dir("cancel-src"));
     let source = src.join("f.bin");

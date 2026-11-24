@@ -237,7 +237,7 @@ fn zstd_cli(args: &[&str], stdin: Option<&[u8]>) -> Option<Vec<u8>> {
 
 #[cfg(feature = "native")]
 fn tmp(name: &str) -> std::path::PathBuf {
-    std::env::temp_dir().join(format!("zaun-chat-{}-{name}", std::process::id()))
+    std::env::temp_dir().join(format!("simplex-chat-{}-{name}", std::process::id()))
 }
 
 #[cfg(feature = "native")]

@@ -1,4 +1,4 @@
-//! Known answers from nook's ratchet (made by gen_nook_transcript.ts): params, X3DH output, and a sender's first messages must match byte for byte; its messages must decrypt here, in and out of order.
+//! Known answers from an independent TypeScript implementation of the ratchet (transcript in ts_reference_transcript.json): params, X3DH output, and a sender's first messages must match byte for byte; its messages must decrypt here, in and out of order.
 use crate::hex::unhex;
 use serde_json::Value;
 use simplex_client::crypto::{Alg, PrivateKey};
@@ -11,7 +11,7 @@ use simplex_client::ratchet::{
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_test::wasm_bindgen_test as test;
 
-const TRANSCRIPT: &str = include_str!("nook_transcript.json");
+const TRANSCRIPT: &str = include_str!("ts_reference_transcript.json");
 
 fn s<'a>(v: &'a Value, k: &str) -> &'a str {
     v[k].as_str().unwrap()
@@ -84,7 +84,7 @@ fn check(case: &Value) {
         assert_eq!(
             wire,
             unhex(m.as_str().unwrap()),
-            "sender output equals nook's"
+            "sender output equals the reference's"
         );
     }
 
@@ -102,13 +102,13 @@ fn check(case: &Value) {
 }
 
 #[test]
-fn params_x3dh_and_first_messages_match_nook_without_pq() {
+fn params_x3dh_and_first_messages_match_reference_without_pq() {
     let t: Value = serde_json::from_str(TRANSCRIPT).unwrap();
     check(&t["off"]);
 }
 
 #[test]
-fn params_x3dh_and_first_messages_match_nook_with_an_accepted_kem() {
+fn params_x3dh_and_first_messages_match_reference_with_an_accepted_kem() {
     let t: Value = serde_json::from_str(TRANSCRIPT).unwrap();
     check(&t["on"]);
 }

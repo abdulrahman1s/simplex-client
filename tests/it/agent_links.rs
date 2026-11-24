@@ -1,4 +1,4 @@
-//! Port of nook's links.test.ts: frozen links the live CLI printed must re-serialise byte for byte.
+//! Frozen links the live CLI printed must re-serialise byte for byte.
 use simplex_client::agent::links::{
     ConnShortLink, ConnectionLink, ConnectionRequestUri, ContactConnType, ShortLinkScheme,
     restore_short_link, shorten_short_link,

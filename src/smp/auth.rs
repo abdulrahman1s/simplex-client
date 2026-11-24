@@ -1,4 +1,4 @@
-//! Command authorisation: an Ed25519/Ed448 signature, or the X25519 `cbAuthenticate` form (Client.hs `authTransmission`; nook smp/transmission.ts).
+//! Command authorisation: an Ed25519/Ed448 signature, or the X25519 `cbAuthenticate` form (Client.hs `authTransmission`).
 use crate::crypto::{Alg, CbNonce, PrivateKey, PublicKey, cb_authenticate};
 
 use super::error::SmpError;

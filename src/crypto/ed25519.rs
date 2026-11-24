@@ -1,4 +1,4 @@
-//! Ed25519 on raw key bytes (Crypto.hs `Ed25519` instances, nook keys.ts); sizes in `alg.rs`.
+//! Ed25519 on raw key bytes (Crypto.hs `Ed25519` instances); sizes in `alg.rs`.
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 
 pub(super) fn public(seed: &[u8; 32]) -> [u8; 32] {

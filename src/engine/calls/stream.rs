@@ -1,4 +1,4 @@
-//! The user's stream requests: the same calls as video without the apps' encryption (ADR-0036); a stream has no line.
+//! The user's stream requests: the same calls as video without the apps' encryption; a stream has no line.
 
 use crate::types::Event;
 use crate::types::model::{StreamRequest, StreamSignal};

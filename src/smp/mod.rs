@@ -1,5 +1,5 @@
 //! SMP client, protocol v15 to v23: addresses, commands, responses, handshake with block encryption, and a reconnecting connection.
-//! Ported from simplexmq Protocol.hs, Transport.hs, Client.hs and nook src/sx/smp (AGPL-3.0-only).
+//! Ported from simplexmq Protocol.hs, Transport.hs, Client.hs (AGPL-3.0-only).
 
 mod address;
 mod auth;

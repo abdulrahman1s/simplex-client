@@ -87,7 +87,7 @@ mod tests {
         .parse()
         .unwrap();
         let prepared = Prepared {
-            path: PathBuf::from("/nonexistent/zaun-test"),
+            path: PathBuf::from("/nonexistent/simplex-test"),
             key: SbKey::new([1; 32]),
             nonce: CbNonce::new([2; 24]),
             digest: vec![3; 64],

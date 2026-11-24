@@ -1,4 +1,4 @@
-//! What a connection tells its owner besides command answers (nook smp/client.ts `ServerEvent`).
+//! What a connection tells its owner besides command answers.
 use std::sync::Arc;
 
 use super::address::SmpServer;

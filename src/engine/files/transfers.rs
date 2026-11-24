@@ -1,4 +1,4 @@
-//! What the engine asks of the network for a file, and how a result comes back (ADR-0012: never on the engine thread).
+//! What the engine asks of the network for a file, and how a result comes back (never on the engine thread).
 
 use std::path::PathBuf;
 use std::sync::Arc;

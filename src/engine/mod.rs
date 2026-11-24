@@ -1,4 +1,4 @@
-//! The native chat engine (ADR-0042): one thread owning state, store and agent, ported from
+//! The native chat engine: one thread owning state, store and agent, ported from
 //! simplex-chat's `Library/Commands.hs` and `Library/Subscriber.hs` (AGPL-3.0-only).
 
 mod address;

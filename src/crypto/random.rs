@@ -1,4 +1,4 @@
-//! The operating system's random source (Crypto.hs `randomBytes`, nook `randomBytes`).
+//! The operating system's random source (Crypto.hs `randomBytes`).
 use super::CryptoError;
 
 pub fn fill_random(buf: &mut [u8]) -> Result<(), CryptoError> {

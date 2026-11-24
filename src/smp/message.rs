@@ -1,4 +1,4 @@
-//! The server-to-recipient layer of MSG (Protocol.hs `clientRcvMsgBodyP`, Agent `decryptMessage`; nook smp/protocol.ts `decryptRcvMsg`).
+//! The server-to-recipient layer of MSG (Protocol.hs `clientRcvMsgBodyP`, Agent `decryptMessage`).
 use crate::crypto::{CbNonce, DhSecret, PrivateKey, PublicKey, cb_decrypt, dh};
 use crate::encoding::{Decode, DecodeError, Decoder, SysTime};
 

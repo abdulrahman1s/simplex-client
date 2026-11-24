@@ -53,7 +53,7 @@ fn taken() -> (T, i64, ConnId) {
 }
 
 #[test]
-fn a_video_invitation_from_zaun_is_a_stream_not_a_call() {
+fn a_video_invitation_from_this_client_is_a_stream_not_a_call() {
     let (mut t, bob, conn) = taken();
     stream_req(
         &mut t,

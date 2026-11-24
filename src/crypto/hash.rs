@@ -1,4 +1,4 @@
-//! SHA-2 and SHA-3 digests (Crypto.hs `sha256Hash`, `sha512Hash`, `sha3_256`, `sha3_384`; nook bytes.ts).
+//! SHA-2 and SHA-3 digests (Crypto.hs `sha256Hash`, `sha512Hash`, `sha3_256`, `sha3_384`).
 use sha2::{Digest, Sha256, Sha512};
 use sha3::{Sha3_256, Sha3_384};
 

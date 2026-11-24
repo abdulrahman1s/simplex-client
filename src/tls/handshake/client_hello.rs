@@ -1,4 +1,4 @@
-//! The ClientHello: TLS_CHACHA20_POLY1305_SHA256, x25519, Ed448 and Ed25519 signatures, no SNI (nook tls13.ts).
+//! The ClientHello: TLS_CHACHA20_POLY1305_SHA256, x25519, Ed448 and Ed25519 signatures, no SNI.
 use super::super::key_schedule::Transcript;
 use super::super::record::HANDSHAKE;
 use super::super::verify::{SIG_ED448, SIG_ED25519};

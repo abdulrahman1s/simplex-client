@@ -1,4 +1,4 @@
-//! X448 on raw key bytes (Crypto.hs `X448` instances, nook keys.ts).
+//! X448 on raw key bytes (Crypto.hs `X448` instances).
 use super::CryptoError;
 
 pub(super) fn public(secret: &[u8; 56]) -> Result<[u8; 56], CryptoError> {

@@ -1,4 +1,4 @@
-//! SimpleX's post-quantum double ratchet: X3DH on X448, header encryption, sntrup761, skipped keys (ported from simplexmq Crypto/Ratchet.hs and nook src/sx/ratchet, AGPL-3.0-only).
+//! SimpleX's post-quantum double ratchet: X3DH on X448, header encryption, sntrup761, skipped keys (ported from simplexmq Crypto/Ratchet.hs, AGPL-3.0-only).
 
 mod codec;
 mod decrypt;

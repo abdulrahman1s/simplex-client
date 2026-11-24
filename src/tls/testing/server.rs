@@ -1,4 +1,4 @@
-//! A TLS 1.3 server in a thread, built from the client's own key schedule, with fault injection (port of nook sx/tls/scripts/mockServer.ts).
+//! A TLS 1.3 server in a thread, built from the client's own key schedule, with fault injection.
 use std::io::Write;
 use std::thread::{self, JoinHandle};
 

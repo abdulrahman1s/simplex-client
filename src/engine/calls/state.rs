@@ -12,7 +12,7 @@ pub const RING_TTL_MS: i64 = 180_000;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
     Voice,
-    /// A shared game: video without the apps' frame encryption (ADR-0036); it has no line.
+    /// A shared game: video without the apps' frame encryption; it has no line.
     Stream,
 }
 

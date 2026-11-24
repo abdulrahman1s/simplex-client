@@ -1,4 +1,4 @@
-//! Ed448 on raw key bytes, empty context (Crypto.hs `Ed448` instances, nook keys.ts).
+//! Ed448 on raw key bytes, empty context (Crypto.hs `Ed448` instances).
 use ed448_goldilocks::{Signature, SigningKey, VerifyingKey};
 
 pub(super) fn public(seed: &[u8; 57]) -> [u8; 57] {

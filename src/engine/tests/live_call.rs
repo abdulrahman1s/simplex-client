@@ -56,7 +56,7 @@ fn signal<T>(n: &mut Native, f: impl Fn(&CallSignal) -> Option<T>) -> Option<T> 
 fn a_call_placed_from_here_and_one_from_the_cli_signal_end_to_end_with_the_same_key() {
     let dir = Dir::new();
     let mut n = Native::start(&dir);
-    let mut c = Cli::open(var("ZAUN_TEST_CLI").parse().unwrap());
+    let mut c = Cli::open(var("SIMPLEX_TEST_CLI").parse().unwrap());
     let (cid, bob) = connect(&mut n, &mut c);
 
     // Alice calls: bob's invitation carries the key, bob offers, alice answers.

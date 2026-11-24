@@ -21,7 +21,7 @@ fn ready_bobs(n: &Native) -> Vec<i64> {
 fn the_engine_and_the_official_cli_connect_through_each_others_address() {
     let dir = Dir::new();
     let mut n = Native::start(&dir);
-    let mut c = Cli::open(var("ZAUN_TEST_CLI").parse().unwrap());
+    let mut c = Cli::open(var("SIMPLEX_TEST_CLI").parse().unwrap());
 
     // The CLI asks through the engine's address; the user accepts.
     n.req(Request::CreateAddress);

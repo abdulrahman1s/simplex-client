@@ -1,4 +1,4 @@
-//! The two hello messages (Transport.hs `SMPServerHandshake`, `SMPClientHandshake`; nook smp/handshake.ts).
+//! The two hello messages (Transport.hs `SMPServerHandshake`, `SMPClientHandshake`).
 use crate::crypto::PublicKey;
 use crate::encoding::{
     Decode, DecodeError, Decoder, Encode, EncodeError, Large, NonEmpty, Version, VersionRange,

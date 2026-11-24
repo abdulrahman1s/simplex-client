@@ -1,4 +1,4 @@
-//! The binary encoding of SimpleX protocols (ADR-0042). Ported from simplexmq src/Simplex/Messaging/Encoding.hs and nook src/sx/encoding.ts (AGPL-3.0-only).
+//! The binary encoding of SimpleX protocols. Ported from simplexmq src/Simplex/Messaging/Encoding.hs (AGPL-3.0-only).
 
 mod base64;
 mod bytes;

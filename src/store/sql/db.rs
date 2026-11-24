@@ -1,4 +1,4 @@
-//! One SQLite connection and the private current-thread runtime that drives it (ADR-0017).
+//! One SQLite connection and the private current-thread runtime that drives it.
 
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;

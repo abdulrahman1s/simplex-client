@@ -196,7 +196,7 @@ fn base64url_round_trips_every_length() {
 }
 
 #[test]
-fn base64url_matches_nook_for_a_long_value() {
+fn base64url_matches_reference_for_a_long_value() {
     let ca = b64_decode("hpq7_4gGJiilmz5Rf-CswuU5kZGkm_zOIooSw6yALRg").unwrap();
     assert_eq!(ca.len(), 32);
     assert_eq!(

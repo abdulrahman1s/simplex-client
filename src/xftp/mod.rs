@@ -1,5 +1,5 @@
 //! The XFTP file transfer client: protocol 1 to 4 over HTTP/2 over our TLS, descriptions and file encryption.
-//! Ported from simplexmq FileTransfer/*.hs and nook src/sx/xftp (AGPL-3.0-only).
+//! Ported from simplexmq FileTransfer/*.hs (AGPL-3.0-only).
 
 mod address;
 mod chunks;

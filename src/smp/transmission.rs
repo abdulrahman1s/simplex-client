@@ -1,4 +1,4 @@
-//! Transmissions and batches inside a block (Protocol.hs `tEncode*`, `batchTransmissions`, `transmissionP`; nook smp/transmission.ts).
+//! Transmissions and batches inside a block (Protocol.hs `tEncode*`, `batchTransmissions`, `transmissionP`).
 //!
 //! A block's payload is `count(1) ‖ Large(transmission) × count`. A client transmission is
 //! `bs(authenticator) ‖ ['0' no service signature, v ≥ 16, only if authenticator ≠ ∅] ‖ bs(corrId) ‖ bs(entityId) ‖ command`.

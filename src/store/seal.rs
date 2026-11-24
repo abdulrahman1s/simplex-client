@@ -9,6 +9,7 @@ use zeroize::Zeroizing;
 
 use super::StoreError;
 
+// Kept as is for compatibility with existing stores.
 const INFO: &[u8] = b"zaun-chat store v1";
 const NONCE: usize = 24;
 const MIN_BUCKET: usize = 64;

@@ -1,4 +1,4 @@
-//! The engine: state, store and agent owned by one thread, and the events waiting to go out (ADR-0012).
+//! The engine: state, store and agent owned by one thread, and the events waiting to go out.
 
 use std::collections::VecDeque;
 use std::time::Duration;

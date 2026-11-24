@@ -1,4 +1,4 @@
-//! Cryptographic primitives SimpleX uses, on RustCrypto (ADR-0042). Ported from simplexmq src/Simplex/Messaging/Crypto.hs and nook src/sx/crypto (AGPL-3.0-only).
+//! Cryptographic primitives SimpleX uses, on RustCrypto. Ported from simplexmq src/Simplex/Messaging/Crypto.hs (AGPL-3.0-only).
 
 mod aes_gcm16;
 mod alg;

@@ -1,4 +1,4 @@
-//! X25519 on raw key bytes (Crypto.hs `X25519` instances, nook keys.ts).
+//! X25519 on raw key bytes (Crypto.hs `X25519` instances).
 use x25519_dalek::{PublicKey, StaticSecret};
 
 pub(super) fn public(secret: &[u8; 32]) -> [u8; 32] {

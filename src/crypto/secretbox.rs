@@ -1,4 +1,4 @@
-//! SimpleX crypto_box / secretbox: HSalsa20 pre-step then XSalsa20-Poly1305, `tag || ciphertext` (Crypto.hs `cryptoBox`, `sbEncrypt`; nook cryptobox.ts).
+//! SimpleX crypto_box / secretbox: HSalsa20 pre-step then XSalsa20-Poly1305, `tag || ciphertext` (Crypto.hs `cryptoBox`, `sbEncrypt`).
 use cipher::consts::U10;
 use salsa20::hsalsa;
 use subtle::ConstantTimeEq;
@@ -73,7 +73,7 @@ impl CbNonce {
     }
 }
 
-/// HSalsa20(secret, 0^16): the effective key for a raw DH output or an `SbKey` (nook `cryptoBoxKey`).
+/// HSalsa20(secret, 0^16): the effective key for a raw DH output or an `SbKey`.
 #[must_use]
 pub fn box_key(secret: &[u8; 32]) -> Zeroizing<[u8; 32]> {
     Zeroizing::new(hsalsa::<U10>(&(*secret).into(), &[0u8; 16].into()).into())

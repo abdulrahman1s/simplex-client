@@ -1,4 +1,4 @@
-//! nook's keepalive tests (smp/keepalive.unit.test.ts) with the same numbers scaled down: ping 30 -> 30 ms, timeout 15 -> 15 ms.
+//! Keepalive tests with the timings scaled down: ping 30 -> 30 ms, timeout 15 -> 15 ms.
 use std::thread::sleep;
 use std::time::Duration;
 

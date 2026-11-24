@@ -1,4 +1,4 @@
-//! SMP client tests: golden encodings from the Haskell `ServerTests.hs` syntax tests and nook's `smp.unit.test.ts`, then the connection against an in-memory server.
+//! SMP client tests: golden encodings from the Haskell `ServerTests.hs` syntax tests, then the connection against an in-memory server.
 mod auth;
 mod certs;
 mod commands;

@@ -1,4 +1,4 @@
-//! The HTTP/2 client against a scripted peer, ported from nook src/sx/h2/connection.test.ts.
+//! The HTTP/2 client against a scripted peer, ported from an independent TypeScript implementation.
 use std::time::Duration;
 
 use simplex_client::h2::frames::*;

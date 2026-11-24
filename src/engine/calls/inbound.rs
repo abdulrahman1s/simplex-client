@@ -15,7 +15,7 @@ use crate::engine::error::Result;
 use crate::engine::machine::Engine;
 use crate::engine::records::friend::Feature;
 
-/// A video call without the apps' encryption and without a key: a stream from another Zaun.
+/// A video call without the apps' encryption and without a key: a stream from another client.
 fn is_stream(inv: &CallInvitation) -> bool {
     let t = inv.call_type;
     t.media == CallMedia::Video && !t.capabilities.encryption && inv.call_dh_pub_key.is_none()
@@ -260,7 +260,7 @@ impl<A: AgentPort> Engine<A> {
         Ok(())
     }
 
-    /// Not plain SDP: not a stream from Zaun after all.
+    /// Not plain SDP: not a stream from another client after all.
     fn not_a_stream(&mut self, friend: i64) {
         if let Some(call) = self.state.calls.calls.remove(&friend) {
             self.send_end(friend, &call.id);

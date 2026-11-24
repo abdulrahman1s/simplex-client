@@ -1,4 +1,4 @@
-//! Out-of-order and skipped delivery (RatchetTests.hs `testSkippedMessages`; nook's skipped and fuzz tests).
+//! Out-of-order and skipped delivery (RatchetTests.hs `testSkippedMessages`).
 use super::support::{MODES, Pair, handshake, recv, recv_err, reload, send};
 use simplex_client::ratchet::RatchetError;
 #[cfg(target_arch = "wasm32")]

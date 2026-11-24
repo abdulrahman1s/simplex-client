@@ -1,4 +1,4 @@
-//! sntrup761 vectors made by simplexmq's C (.claude/spikes/kem harness): the Rust KEM and the ratchet agree with it.
+//! sntrup761 vectors made by simplexmq's C (the pinned reference sources, simplex-chat v7.1.4 and simplexmq fdbcb24d): the Rust KEM and the ratchet agree with it.
 use crate::hex::unhex;
 use std::collections::HashMap;
 use simplex_client::crypto::{Alg, KeyPair};

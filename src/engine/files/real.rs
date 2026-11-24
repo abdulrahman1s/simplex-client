@@ -55,7 +55,7 @@ impl Default for XftpTransfers {
 
 fn spawn(n: usize, rx: Receiver<Work>) {
     let started = thread::Builder::new()
-        .name(format!("zaun-xftp-{n}"))
+        .name(format!("simplex-xftp-{n}"))
         .spawn(move || rx.iter().for_each(|work| work()));
     // A thread that cannot start leaves the other to do the work, or `submit` to fail.
     drop(started);

@@ -1,4 +1,4 @@
-//! base64url as Haskell `U.encode` / `strP` (Encoding/String.hs) and nook `base64urlEncode`.
+//! base64url as Haskell `U.encode` / `strP` (Encoding/String.hs).
 use super::error::DecodeError;
 
 const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
@@ -36,7 +36,7 @@ fn sextet(c: u8) -> Result<u32, DecodeError> {
     Ok(u32::from(v))
 }
 
-/// Accepts padded and unpadded input, and the standard alphabet's '+' and '/' as nook does.
+/// Accepts padded and unpadded input, and the standard alphabet's '+' and '/'.
 pub fn b64_decode(s: &str) -> Result<Vec<u8>, DecodeError> {
     let digits = s.trim_end_matches('=').as_bytes();
     if digits.len() % 4 == 1 {

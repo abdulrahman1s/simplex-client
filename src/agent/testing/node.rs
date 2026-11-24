@@ -35,7 +35,7 @@ impl Dir {
             .iter()
             .map(|b| format!("{b:02x}"))
             .collect();
-        let dir = std::env::temp_dir().join(format!("zaun-agent-{name}"));
+        let dir = std::env::temp_dir().join(format!("simplex-agent-{name}"));
         std::fs::create_dir_all(&dir).unwrap();
         Self(dir)
     }

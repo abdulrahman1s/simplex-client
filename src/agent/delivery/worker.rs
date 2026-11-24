@@ -1,4 +1,4 @@
-//! Sending a connection's queued messages one at a time, in order, with retries (Agent.hs `runSmpQueueMsgDelivery`; fact sheet §13).
+//! Sending a connection's queued messages one at a time, in order, with retries (Agent.hs `runSmpQueueMsgDelivery`).
 use crate::smp::{Command, ErrorType, Request, Response, SmpError};
 use crate::store::Store;
 

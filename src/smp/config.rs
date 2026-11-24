@@ -1,4 +1,4 @@
-//! Timings and limits of one connection (nook smp/client.ts `SmpClientOptions`; Env/SQLite.hs reconnect interval 2 s to 180 s).
+//! Timings and limits of one connection (Env/SQLite.hs reconnect interval 2 s to 180 s).
 use std::time::Duration;
 
 use crate::encoding::{Version, VersionRange};

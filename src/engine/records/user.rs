@@ -1,4 +1,4 @@
-//! The user's profile record (Types.hs `Profile` as Zaun keeps it; the paper and status stay local).
+//! The user's profile record (Types.hs `Profile` as the engine keeps it; the paper and status stay local).
 
 use serde::{Deserialize, Serialize};
 use crate::types::model::{ChatProfile, MyStatus, Picture};

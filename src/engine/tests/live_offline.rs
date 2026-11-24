@@ -1,5 +1,5 @@
 //! Offline against a real relay: stopped under a running engine, then started again. Run with the
-//! `live_cli` servers plus `ZAUN_TEST_RELAY_STOP` and `ZAUN_TEST_RELAY_START`, shell commands that
+//! `live_cli` servers plus `SIMPLEX_TEST_RELAY_STOP` and `SIMPLEX_TEST_RELAY_START`, shell commands that
 //! stop the local smp-server and start it again (the second keeps running in the foreground).
 
 use std::time::Duration;
@@ -54,9 +54,9 @@ fn a_relay_that_goes_away_and_comes_back_is_reported_offline_once_and_online_onc
     });
     assert_eq!(offline_events(&n), Vec::<bool>::new(), "never offline yet");
 
-    shell(&var("ZAUN_TEST_RELAY_STOP")).wait().unwrap();
+    shell(&var("SIMPLEX_TEST_RELAY_STOP")).wait().unwrap();
     run_until(&mut n, "offline", 60, |n| offline_events(n) == [true]);
-    let mut relay = shell(&var("ZAUN_TEST_RELAY_START"));
+    let mut relay = shell(&var("SIMPLEX_TEST_RELAY_START"));
     run_until(&mut n, "online again", 120, |n| {
         offline_events(n) == [true, false]
     });

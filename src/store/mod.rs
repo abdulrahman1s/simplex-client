@@ -1,4 +1,4 @@
-//! The engine's sealed store behind a synchronous API: SQLite on disk, or memory with snapshots (ADR-0042, ADR-0017).
+//! The engine's sealed store behind a synchronous API: SQLite on disk, or memory with snapshots.
 
 mod error;
 mod files;

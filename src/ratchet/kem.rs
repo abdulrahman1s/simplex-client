@@ -1,4 +1,4 @@
-//! The sntrup761 KEM as simplexmq uses it: wire encodings and seeded keygen (Crypto/SNTRUP761/Bindings.hs; nook ratchet/sntrup761/kem.ts).
+//! The sntrup761 KEM as simplexmq uses it: wire encodings and seeded keygen (Crypto/SNTRUP761/Bindings.hs).
 // TODO(crypto): move to `crypto` if other modules need the KEM.
 use sntrup761::{Ciphertext, DecapsulationKey, EncapsulationKey, SharedSecret};
 use zeroize::Zeroizing;

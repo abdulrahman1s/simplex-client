@@ -1,4 +1,4 @@
-//! Plain TCP under the SMP and XFTP transports (ADR-0042); the socket seam keeps TLS testable.
+//! Plain TCP under the SMP and XFTP transports; the socket seam keeps TLS testable.
 
 mod connect;
 mod error;

@@ -34,7 +34,7 @@ fn record(call: &Call, over: Over, now: i64) -> CallRecord {
 }
 
 impl<A: AgentPort> Engine<A> {
-    /// Writes the line of a call that is over. A stream has none (ADR-0036); a failure to save
+    /// Writes the line of a call that is over. A stream has none; a failure to save
     /// is logged, as the call is over either way.
     pub(super) fn close_call(&mut self, friend: i64, call: &Call, over: Over) {
         if call.kind == Kind::Stream {

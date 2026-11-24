@@ -1,4 +1,4 @@
-//! Decides when silence means a dead connection (nook smp/client.ts `onTimeout`, `strikes`).
+//! Decides when silence means a dead connection.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Verdict {

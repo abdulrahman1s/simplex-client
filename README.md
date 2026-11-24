@@ -43,7 +43,7 @@ What that buys you:
 - **It runs where the official core can't:** browsers and edge runtimes, through
   wasm32. On Node it opens relay connections itself.
 - **Small enough to bundle.** A bot, a desktop app or a web page carries the client in a few
-  megabytes, and a sandboxed helper needs no Haskell runtime.
+  megabytes, and a sandboxed process needs no Haskell runtime.
 - **A small API.** Start a `Client`, read its events, call `send`, `reply` and `accept`.
   The protocol layers below stay public when you need them.
 - **Byte-compatible.** It is ported from simplex-chat v7.1.4 and simplexmq `fdbcb24d`,
@@ -126,13 +126,27 @@ RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo build --target wasm32-unknow
 ```
 
 ```js
-import init, { Client } from "./pkg/simplex_client.js";
+import init, { Client } from "simplex-client";
+
 await init();
-const client = await Client.start({ name: "Alice", key: "passphrase", tunnel: "wss://<worker>/v1" });
-client.on("message", (msg) => { if (!msg.mine) client.reply(msg, msg.text); });
-client.on("request", (req) => client.accept(req.id));
-console.log(await client.createAddress());
-const snapshot = client.save(); // sealed store bytes; pass back as `snapshot` to start again
+
+const client = await Client.start({
+  name: "Alice",
+  key: "passphrase",
+  tunnel: "wss://<your-worker>/v1",
+});
+
+client.on("request", (request) => client.accept(request.id));
+
+client.on("message", (message) => {
+  if (message.mine) return;
+  client.reply(message, `You said: ${message.text}`);
+});
+
+console.log("My address:", await client.createAddress());
+
+// Sealed store bytes. Pass them back as `snapshot` to pick up where you left off.
+const snapshot = client.save();
 ```
 
 [`examples/browser`](examples/browser) is a minimal chat page with the full JS API.
@@ -148,15 +162,27 @@ npm install github:abdulrahman1s/simplex-client
 ```
 
 ```js
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { Client } from "simplex-client";
 
-const saved = existsSync("bot.snapshot") ? new Uint8Array(readFileSync("bot.snapshot")) : undefined;
-const bot = await Client.start({ name: "Echo Bot", key: "passphrase", snapshot: saved });
-bot.on("request", (req) => bot.accept(req.id));
-bot.on("message", (msg) => { if (!msg.mine && msg.text) bot.reply(msg, msg.text); });
-bot.on("change", () => writeFileSync("bot.snapshot", bot.save()));
-console.log("my address:", await bot.createAddress());
+const SNAPSHOT = "bot.snapshot";
+
+const bot = await Client.start({
+  name: "Echo Bot",
+  key: "passphrase",
+  snapshot: existsSync(SNAPSHOT) ? readFileSync(SNAPSHOT) : undefined,
+});
+
+bot.on("request", (request) => bot.accept(request.id));
+
+bot.on("message", (message) => {
+  if (message.mine || !message.text) return;
+  bot.reply(message, message.text);
+});
+
+bot.on("change", () => writeFileSync(SNAPSHOT, bot.save()));
+
+console.log("My address:", await bot.createAddress());
 ```
 
 `transport: "tcp"` picks direct TCP explicitly; a `tunnel` URL uses the WebSocket tunnel

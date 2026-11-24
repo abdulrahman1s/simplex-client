@@ -1,4 +1,4 @@
-//! One SMP server connection: a manager/writer thread and a reader thread, reconnecting with back-off (ADR-0012; nook smp/client.ts).
+//! One SMP server connection: a manager/writer thread and a reader thread, reconnecting with back-off (simplexmq Client.hs).
 //!
 //! `send` never blocks; a command's answer arrives on the returned channel, or with `send_tagged` as an `SmpEventKind::Reply`
 //! on the event channel, so an owner thread can wait on one channel. Pushes and up/down changes go to the event channel,

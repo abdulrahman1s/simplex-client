@@ -90,7 +90,7 @@ impl<A: AgentPort> Engine<A> {
             | ChatEvent::CallExtra { .. }
             | ChatEvent::CallEnd { .. }) => self.on_call_event(friend, shared, e),
             ChatEvent::GrpInv(inv) => self.on_grp_inv(Via::Friend(friend), inv),
-            // Not carried yet, or never acted on in a direct chat (fact sheet §14): ignored.
+            // Not carried yet, or never acted on in a direct chat: ignored.
             ChatEvent::MsgDeleted
             | ChatEvent::Contact { .. }
             | ChatEvent::Member { .. }

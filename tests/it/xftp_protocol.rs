@@ -1,4 +1,4 @@
-//! XFTP wire formats: commands, blocks, responses, handshake, addresses; nook is the known-answer source for v3.
+//! XFTP wire formats: commands, blocks, responses, handshake, addresses; an independent TypeScript implementation is the known-answer source for v3.
 use simplex_client::crypto::{Alg, CbNonce, KeyPair, PrivateKey, PublicKey, sha256};
 use simplex_client::encoding::{Version, VersionRange, b64_encode};
 use simplex_client::xftp::{
@@ -40,7 +40,7 @@ fn fnew(storage_hours: Option<u32>, auth: Option<&str>) -> Command {
 }
 
 #[test]
-fn fnew_at_v3_is_nooks_encoding() {
+fn fnew_at_v3_is_the_reference_encoding() {
     assert_eq!(hex(&fnew(None, None).encode(3).unwrap()), FNEW_V3);
     assert_eq!(
         hex(&fnew(Some(24), None).encode(3).unwrap()),
@@ -67,7 +67,7 @@ fn fnew_at_v4_ends_with_the_requested_storage_time() {
 }
 
 #[test]
-fn the_other_commands_are_encoded_like_nook() {
+fn the_other_commands_are_encoded_like_the_reference() {
     let two = Command::AddRecipients {
         rcv_keys: vec![pubkey(RCV), pubkey(RCV)],
     };
@@ -105,7 +105,7 @@ fn the_sender_key_is_the_one_the_vectors_were_made_with() {
 }
 
 #[test]
-fn a_signed_transmission_block_is_nooks_block() {
+fn a_signed_transmission_block_is_the_reference_block() {
     let cmd = unhex(FNEW_V3);
     let block = encode_transmission(&seq(32, 5), &[], &cmd, Some(&sender_key())).unwrap();
     assert_eq!(block.len(), BLOCK_SIZE);
@@ -117,7 +117,7 @@ fn a_signed_transmission_block_is_nooks_block() {
 }
 
 #[test]
-fn an_unsigned_ping_block_is_nooks_block() {
+fn an_unsigned_ping_block_is_the_reference_block() {
     let block = encode_transmission(&seq(32, 5), &[], b"PING", None).unwrap();
     assert_eq!(
         hex(&sha256(&block)),
@@ -291,7 +291,7 @@ fn a_garbled_or_refusing_handshake_block_is_an_error() {
 }
 
 #[test]
-fn the_client_handshake_at_v3_is_nooks_and_at_v4_adds_no_entitlement() {
+fn the_client_handshake_at_v3_is_the_reference_and_at_v4_adds_no_entitlement() {
     let v3 = encode_client_handshake(3, &seq(32, 6)).unwrap();
     assert_eq!(
         hex(&sha256(&v3)),

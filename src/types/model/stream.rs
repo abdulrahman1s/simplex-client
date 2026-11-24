@@ -1,4 +1,4 @@
-//! Stream signalling (ADR-0036).
+//! Stream signalling.
 
 use serde::{Deserialize, Serialize};
 

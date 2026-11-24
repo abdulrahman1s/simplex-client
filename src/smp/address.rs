@@ -1,4 +1,4 @@
-//! SMP server addresses `smp://<keyHash>[:<basicAuth>]@host[,host2][:port]` (Protocol.hs `ProtocolServer` strP/strEncode; nook smp/address.ts).
+//! SMP server addresses `smp://<keyHash>[:<basicAuth>]@host[,host2][:port]` (Protocol.hs `ProtocolServer` strP/strEncode).
 use std::fmt;
 use std::str::FromStr;
 

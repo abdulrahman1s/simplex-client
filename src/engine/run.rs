@@ -1,4 +1,4 @@
-//! The engine thread's loop: requests, SMP events, the writer and the agent's timers, one at a time (ADR-0012).
+//! The engine thread's loop: requests, SMP events, the writer and the agent's timers, one at a time.
 
 use crossbeam_channel::{Receiver, Select, Sender, never};
 use crate::types::{Event, Request};
@@ -6,7 +6,7 @@ use crate::types::{Event, Request};
 use super::agent_port::AgentPort;
 use super::machine::{Engine, OUT_CAP};
 
-/// Runs until the requests end (stdin closed) or the writer is gone, then hands what is left
+/// Runs until the requests end (their sender dropped) or the writer is gone, then hands what is left
 /// to the writer. The agent's network is closed; dropping the engine closes the store.
 pub fn run<A: AgentPort>(
     mut engine: Engine<A>,

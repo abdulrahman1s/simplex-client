@@ -1,4 +1,4 @@
-//! The two handshake blocks (Transport.hs `XFTPServerHandshake`, `XFTPClientHandshake`; nook xftp/handshake.ts).
+//! The two handshake blocks (Transport.hs `XFTPServerHandshake`, `XFTPClientHandshake`).
 use crate::crypto::{pad, unpad};
 use crate::encoding::{Decode, Decoder, Encode, Large, NonEmpty, Version, VersionRange};
 
@@ -84,7 +84,7 @@ impl ServerHandshake {
     }
 }
 
-/// `(version, keyHash)`, and from v4 the entitlement proof, which Zaun never has (`'0'`); padded.
+/// `(version, keyHash)`, and from v4 the entitlement proof, which this client never has (`'0'`); padded.
 pub fn encode_client_handshake(version: u16, key_hash: &[u8]) -> Result<Vec<u8>, XftpError> {
     let mut out = Vec::new();
     version.encode(&mut out)?;

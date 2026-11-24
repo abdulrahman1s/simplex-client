@@ -340,12 +340,12 @@ fn channel_and_roster_events_are_kept_as_unknown_with_their_params() {
 
 #[test]
 fn unknown_events_are_kept_and_non_x_events_are_refused() {
-    let s = r#"{"v":"9","event":"x.nook.pin","params":{"k":1}}"#;
+    let s = r#"{"v":"9","event":"x.custom.pin","params":{"k":1}}"#;
     let m = parse_chat_messages(s.as_bytes()).unwrap().remove(0);
     assert_eq!(
         m.event,
         E::Unknown {
-            event: "x.nook.pin".into(),
+            event: "x.custom.pin".into(),
             params: Map::from_iter([("k".to_owned(), json!(1))])
         }
     );

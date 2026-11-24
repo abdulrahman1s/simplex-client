@@ -1,4 +1,4 @@
-//! File encryption, chunking and download hygiene: known answers from nook, Haskell's testDecryptChunks sizes.
+//! File encryption, chunking and download hygiene: known answers from an independent TypeScript implementation, Haskell's testDecryptChunks sizes.
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
@@ -14,7 +14,7 @@ use simplex_client::xftp::{
 use super::hex::hex;
 
 fn dir(name: &str) -> PathBuf {
-    let d = std::env::temp_dir().join(format!("zaun-xftp-test-{}-{name}", std::process::id()));
+    let d = std::env::temp_dir().join(format!("simplex-xftp-test-{}-{name}", std::process::id()));
     let _ = fs::remove_dir_all(&d);
     fs::create_dir_all(&d).unwrap();
     d
@@ -61,7 +61,7 @@ fn encrypt(src: &[u8], work: &Path, hdr: &[u8], enc_size: u64) -> Vec<u8> {
 }
 
 #[test]
-fn encrypting_matches_nooks_known_answers() {
+fn encrypting_matches_the_reference_known_answers() {
     let work = dir("kat");
     let hdr = header();
     for (len, size, sha, head, tag) in [

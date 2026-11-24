@@ -1,4 +1,4 @@
-//! Short link data: the key derivation, signing, encryption and checks of Crypto/ShortLink.hs, ported from simplexmq's ShortLinkTests.hs and nook's links.test.ts.
+//! Short link data: the key derivation, signing, encryption and checks of Crypto/ShortLink.hs, ported from simplexmq's ShortLinkTests.hs.
 use simplex_client::agent::AgentError;
 use simplex_client::agent::links::ConnectionMode;
 use simplex_client::agent::short_link::{

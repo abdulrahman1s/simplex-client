@@ -24,7 +24,7 @@ pub struct Profile {
     pub preferences: Option<Preferences>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub peer_type: Option<ChatPeerType>,
-    /// Badge proofs and domain claims are opaque to Zaun; kept for round trips.
+    /// Badge proofs and domain claims are opaque to the engine; kept for round trips.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub badge: Option<Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

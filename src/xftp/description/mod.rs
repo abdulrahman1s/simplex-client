@@ -1,4 +1,4 @@
-//! The YAML file description exchanged in chat, matching Haskell byte for byte (FileTransfer/Description.hs; nook xftp/description.ts, AGPL-3.0-only).
+//! The YAML file description exchanged in chat, matching Haskell byte for byte (FileTransfer/Description.hs).
 
 mod decode;
 mod file_size;

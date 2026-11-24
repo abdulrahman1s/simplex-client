@@ -1,4 +1,4 @@
-//! The engine's records in the store, namespace "chat", versioned JSON (ADR-0042).
+//! The engine's records in the store, namespace "chat", versioned JSON.
 
 pub mod address;
 pub mod conn;

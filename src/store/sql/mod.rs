@@ -1,4 +1,4 @@
-//! The SQLite backend: the store as a file, through ormlite (ADR-0017).
+//! The SQLite backend: the store as a file, through ormlite.
 
 mod db;
 mod dump;

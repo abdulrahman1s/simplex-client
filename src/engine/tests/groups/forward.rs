@@ -1,4 +1,4 @@
-//! Forwarding: what an admin passes on and how, and forwarded messages taken from their authors (Subscriber.hs `xGrpMsgForward`, delivery jobs; Messages/Batch.hs; fact sheet §11 "Forwarding").
+//! Forwarding: what an admin passes on and how, and forwarded messages taken from their authors (Subscriber.hs `xGrpMsgForward`, delivery jobs; Messages/Batch.hs).
 
 use crate::types::model::{ChatRef, MessageAuthor, MessageBody};
 

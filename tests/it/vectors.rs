@@ -1,4 +1,4 @@
-//! Known answers produced by running nook's own code (spike gen/gen.ts) and cross-checked with OpenSSL where noted.
+//! Known answers produced by an independent TypeScript implementation and cross-checked with OpenSSL where noted.
 pub const BOX_KEY: &str = "704aa444c9f0cc0219d0f5bb697d91cdccf86c086641776f84498499dc4e1398";
 pub const BOX_CT: &str = "415db28b3d32ed82fd3be445b4cb43474a147d545df463b32aa4a269ea947b7a5c5eb9d54ef28b56ede34fb9eed01b894da66aaab90a5255e9bb7de6629466c1f8a5c3e030c9833cfe6ba6afe74d50d1743920968524cb35d8a6904894ef3f4eb74a9bab932a75fee4a985a41bf56e27a73a5062";
 pub const X_SRV_PUB: &str = "bfe92a374483517d9c6ba4817c9e23e6e8918d7cc9cebdcbfdbc56504fe0190e";

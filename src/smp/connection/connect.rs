@@ -1,4 +1,4 @@
-//! One connect attempt over the server's hosts, in order (nook smp/client.ts `SmpClient.connect`).
+//! One connect attempt over the server's hosts, in order.
 use std::sync::Arc;
 
 use crate::smp::error::{HandshakeError, SmpError};

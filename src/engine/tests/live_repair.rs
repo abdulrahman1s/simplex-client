@@ -1,4 +1,4 @@
-//! A connection repaired and moved by the official CLI 7.1.4 (or 7.0.3 with `ZAUN_SIMPLEX_BIN=7.0`
+//! A connection repaired and moved by the official CLI 7.1.4 (or 7.0.3 with `SIMPLEX_TEST_BIN=7.0`
 //! for the CLI): its ratchet re-synced (`/_sync … force=on`), then its queue switched (`/_switch`),
 //! each followed by messages both ways. Same servers and variables as `live_cli`.
 
@@ -58,7 +58,7 @@ fn both_ways(n: &mut Native, c: &mut Cli, cid: i64, bob: i64, tag: &str) {
 fn a_connection_the_cli_resyncs_and_then_switches_keeps_working_with_a_new_agreed_code() {
     let dir = Dir::new();
     let mut n = Native::start(&dir);
-    let mut c = Cli::open(var("ZAUN_TEST_CLI").parse().unwrap());
+    let mut c = Cli::open(var("SIMPLEX_TEST_CLI").parse().unwrap());
     let (cid, bob) = connect(&mut n, &mut c);
     both_ways(&mut n, &mut c, cid, bob, "connecting");
     let (before, theirs) = codes(&mut n, &mut c, cid, bob);

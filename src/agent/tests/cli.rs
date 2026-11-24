@@ -1,4 +1,4 @@
-//! The official CLI driven over its WebSocket chat server (`-p <port>`), as nook's client.live.test.ts does.
+//! The official CLI driven over its WebSocket chat server (`-p <port>`).
 use std::time::Duration;
 
 use serde_json::{Value, json};

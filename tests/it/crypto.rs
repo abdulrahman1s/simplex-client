@@ -1,4 +1,4 @@
-//! Crypto tests: known answers from nook's own code, RFC vectors, and the rules of each primitive.
+//! Crypto tests: known answers from an independent TypeScript implementation, RFC vectors, and the rules of each primitive.
 use poly1305::{Poly1305 as CratePoly, universal_hash::KeyInit};
 use simplex_client::crypto::*;
 use simplex_client::encoding::{Decode, Encode};
@@ -21,7 +21,7 @@ fn msg() -> Vec<u8> {
 }
 
 #[test]
-fn ed25519_matches_rfc8032_vector_1_and_nook_signature() {
+fn ed25519_matches_rfc8032_vector_1_and_reference_signature() {
     let sk = PrivateKey::from_raw(
         Alg::Ed25519,
         &unhex("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60"),
@@ -47,7 +47,7 @@ fn ed25519_matches_rfc8032_vector_1_and_nook_signature() {
 }
 
 #[test]
-fn ed448_signature_equals_nook_and_openssl_and_rejects_tamper() {
+fn ed448_signature_equals_reference_and_openssl_and_rejects_tamper() {
     let sk = PrivateKey::from_raw(Alg::Ed448, &unhex(ED448_SEED)).unwrap();
     let pk = sk.public().unwrap();
     assert_eq!(hex(pk.as_bytes()), ED448_PUB);
@@ -118,7 +118,7 @@ fn x25519_matches_rfc7748_section_6_1() {
 }
 
 #[test]
-fn x448_matches_nook_and_rfc7748_section_6_2() {
+fn x448_matches_reference_and_rfc7748_section_6_2() {
     let a = PrivateKey::from_raw(Alg::X448, &unhex(X448_A_PRIV)).unwrap();
     let b = PrivateKey::from_raw(Alg::X448, &unhex(X448_B_PRIV)).unwrap();
     let (pa, pb) = (a.public().unwrap(), b.public().unwrap());
@@ -151,7 +151,7 @@ fn dh_of_mismatched_algorithms_fails() {
 }
 
 #[test]
-fn der_prefixes_and_sizes_match_nook() {
+fn der_prefixes_and_sizes_match_reference() {
     let ed = PrivateKey::from_raw(
         Alg::Ed25519,
         &unhex("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60"),
@@ -223,7 +223,7 @@ fn private_key_debug_does_not_print_the_secret() {
 }
 
 #[test]
-fn sha_family_matches_fips_and_nook() {
+fn sha_family_matches_fips_and_reference() {
     assert_eq!(
         hex(&sha256(b"abc")),
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
@@ -253,13 +253,13 @@ fn seq(n: usize, k: usize) -> Vec<u8> {
 }
 
 #[test]
-fn hkdf_sha512_equals_nook() {
+fn hkdf_sha512_equals_reference() {
     let out = hkdf_sha512::<88>(&seq(32, 2), &seq(32, 4), b"SimpleXSbChain").unwrap();
     assert_eq!(hex(&*out), HKDF);
 }
 
 #[test]
-fn sb_chain_derivation_equals_nook() {
+fn sb_chain_derivation_equals_reference() {
     let (c1, c2) = sbc_init(&seq(32, 5), &seq(32, 6)).unwrap();
     assert_eq!(
         format!("{}{}", hex(c1.as_bytes()), hex(c2.as_bytes())),
@@ -278,7 +278,7 @@ fn sb_chain_derivation_equals_nook() {
 }
 
 #[test]
-fn aes256_gcm_with_16_byte_iv_equals_nook_and_openssl() {
+fn aes256_gcm_with_16_byte_iv_equals_reference_and_openssl() {
     let k = AesKey::new(arr(KEY));
     let (iv, ad) = (arr::<16>(GCM_IV), unhex(GCM_AD));
     let m = &msg()[..100];
@@ -324,7 +324,7 @@ fn xchacha_seal_uses_a_fresh_nonce_each_time() {
 }
 
 #[test]
-fn hsalsa20_box_key_and_crypto_box_equal_nook() {
+fn hsalsa20_box_key_and_crypto_box_equal_reference() {
     assert_eq!(hex(&*box_key(&arr(KEY))), BOX_KEY);
     let m = &msg()[..100];
     let ct = crypto_box(&arr(KEY), &nonce(), m);
@@ -369,7 +369,7 @@ fn x25519_pair() -> (PublicKey, PrivateKey) {
 }
 
 #[test]
-fn cb_authenticate_equals_nook_and_is_80_bytes() {
+fn cb_authenticate_equals_reference_and_is_80_bytes() {
     let srv = PublicKey::from_raw(Alg::X25519, &unhex(X_SRV_PUB)).unwrap();
     let cli = PrivateKey::from_raw(Alg::X25519, &unhex(X_CLI_PRIV)).unwrap();
     assert_eq!(hex(dh(&srv, &cli).unwrap().as_bytes()), DH);
@@ -434,7 +434,7 @@ fn boxes_only_take_an_x25519_secret() {
 }
 
 #[test]
-fn streaming_secretbox_in_any_segments_equals_one_shot_and_nook() {
+fn streaming_secretbox_in_any_segments_equals_one_shot_and_reference() {
     let m = msg();
     let mut sb = SbState::new(&key(), &nonce());
     let mut out = Vec::new();

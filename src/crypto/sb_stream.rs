@@ -1,4 +1,4 @@
-//! Streaming secretbox: any segmentation gives the one-shot result; tag-last helpers for files (Crypto/Lazy.hs `sbInit`, `sbEncryptChunk`, `sbEncryptTailTag`; nook xftp/secretbox.ts).
+//! Streaming secretbox: any segmentation gives the one-shot result; tag-last helpers for files (Crypto/Lazy.hs `sbInit`, `sbEncryptChunk`, `sbEncryptTailTag`).
 use cipher::{KeyIvInit, StreamCipher};
 use salsa20::XSalsa20;
 use subtle::ConstantTimeEq;

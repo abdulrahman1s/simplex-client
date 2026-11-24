@@ -1,4 +1,4 @@
-//! Just enough DER to read an X.509 certificate: tbs, key and signature (nook sx/tls/der.ts).
+//! Just enough DER to read an X.509 certificate: tbs, key and signature.
 use thiserror::Error;
 
 use crate::crypto::{PublicKey, decode_public_der};

@@ -1,4 +1,4 @@
-//! Delivery receipts and queue-full notices, both directions (Agent.hs `messagesRcvd`, `ackMessage'`, `A_QCONT`; fact sheet §13).
+//! Delivery receipts and queue-full notices, both directions (Agent.hs `messagesRcvd`, `ackMessage'`, `A_QCONT`).
 use crate::store::Store;
 
 use super::receive::Handled;

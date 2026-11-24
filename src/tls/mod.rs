@@ -1,4 +1,4 @@
-//! A TLS 1.3 client for the SMP and XFTP transports (ADR-0042); ported from nook sx/tls (AGPL-3.0-only).
+//! A TLS 1.3 client for the SMP and XFTP transports (AGPL-3.0-only).
 
 mod alert;
 mod app_rx;

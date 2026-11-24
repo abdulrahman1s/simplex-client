@@ -1,4 +1,4 @@
-//! The client side of the TLS 1.3 handshake as a state machine fed one record at a time (RFC 8446 section 4; nook tls13.ts).
+//! The client side of the TLS 1.3 handshake as a state machine fed one record at a time (RFC 8446 section 4).
 use super::super::error::TlsError;
 use super::super::info::TlsInfo;
 use super::super::key_schedule::{Secret, Transcript};

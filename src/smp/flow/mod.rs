@@ -1,4 +1,4 @@
-//! The pure core of the command flow both drivers share: requests, waiters, liveness, routing, back-off (simplexmq Client.hs; nook smp/client.ts).
+//! The pure core of the command flow both drivers share: requests, waiters, liveness, routing, back-off (simplexmq Client.hs).
 
 mod backoff;
 mod liveness;

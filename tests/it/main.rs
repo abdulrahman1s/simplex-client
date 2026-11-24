@@ -10,7 +10,7 @@ mod chat_batch;
 mod chat_compress;
 mod chat_golden_grp;
 mod chat_golden_msg;
-mod chat_nook;
+mod chat_ts_reference;
 mod chat_roundtrip;
 mod chat_support;
 #[cfg(feature = "native")]

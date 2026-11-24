@@ -1,4 +1,4 @@
-//! What the engine asks of the network to test a relay, and how an answer comes back (ADR-0012: never on the engine thread).
+//! What the engine asks of the network to test a relay, and how an answer comes back (never on the engine thread).
 
 use crossbeam_channel::Sender;
 

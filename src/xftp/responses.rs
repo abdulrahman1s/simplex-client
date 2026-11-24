@@ -1,4 +1,4 @@
-//! The server's answers (Protocol.hs `FileResponse`, `protocolP`; nook xftp/commands.ts `decodeResponse`).
+//! The server's answers (Protocol.hs `FileResponse`, `protocolP`).
 use crate::crypto::{CbNonce, PublicKey};
 use crate::encoding::{Decode, DecodeError, Decoder, NonEmpty};
 

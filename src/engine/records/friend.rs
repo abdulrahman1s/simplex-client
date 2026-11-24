@@ -50,7 +50,7 @@ const fn pq_on() -> bool {
     true
 }
 
-/// The chat features whose preferences Zaun enforces or shows (Types/Preferences.hs `ChatFeature`).
+/// The chat features whose preferences the engine enforces or shows (Types/Preferences.hs `ChatFeature`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Feature {
     FullDelete,

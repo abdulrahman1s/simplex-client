@@ -1,4 +1,4 @@
-//! TLS 1.3 key schedule for SHA-256 suites (RFC 8446 section 7; nook sx/tls/keySchedule.ts).
+//! TLS 1.3 key schedule for SHA-256 suites (RFC 8446 section 7).
 use hkdf::Hkdf;
 use hmac::{Hmac, KeyInit, Mac};
 use sha2::{Digest, Sha256};

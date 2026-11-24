@@ -1,6 +1,6 @@
 //! Interop with the official CLI 7.1.4 over a local smp-server, both roles, full and short links, PQ off and on.
 //! Start the server and two CLIs with `-p <port> -s <server>`, then run with
-//! `ZAUN_TEST_SMP`, `ZAUN_TEST_CLI_A=<port of the CLI that invites>` and `ZAUN_TEST_CLI_B=<port of the one that joins>`.
+//! `SIMPLEX_TEST_SMP`, `SIMPLEX_TEST_CLI_A=<port of the CLI that invites>` and `SIMPLEX_TEST_CLI_B=<port of the one that joins>`.
 use super::support::pq_of;
 use std::time::Duration;
 
@@ -93,7 +93,7 @@ fn exchange(n: &mut Node, c: &mut Cli, conn: ConnId, cid: i64) {
         n.agent
             .ack(&mut n.store, conn, id, Some(Vec::new()))
             .unwrap();
-        let t2 = format!("from zaun {i} {} ✓ ünï", rnd());
+        let t2 = format!("from simplex {i} {} ✓ ünï", rnd());
         let sent = n
             .agent
             .send(&mut n.store, conn, pq_of(&n.agent, conn), x_msg(&t2))
@@ -127,14 +127,14 @@ fn exchange(n: &mut Node, c: &mut Cli, conn: ConnId, cid: i64) {
 #[test]
 #[ignore = "needs a local smp-server and the CLI; see the module docs"]
 fn the_cli_invites_and_we_join_by_full_and_short_link_then_text_both_ways() {
-    let mut c = cli("ZAUN_TEST_CLI_A");
+    let mut c = cli("SIMPLEX_TEST_CLI_A");
     let dir = Dir::new();
     let mut n = live_node(&dir, "joiner");
     for (i, (field, pq)) in [("connFullLink", false), ("connShortLink", true)]
         .into_iter()
         .enumerate()
     {
-        let name = format!("zaunj{i}{}", rnd());
+        let name = format!("simpj{i}{}", rnd());
         let inv = c.cmd("/_connect 1");
         assert_eq!(kind(&inv), "invitation", "{inv}");
         let link = inv
@@ -167,7 +167,7 @@ fn the_cli_invites_and_we_join_by_full_and_short_link_then_text_both_ways() {
 #[test]
 #[ignore = "needs a local smp-server and the CLI; see the module docs"]
 fn we_invite_and_the_cli_joins_by_full_and_short_link_then_text_both_ways() {
-    let mut c = cli("ZAUN_TEST_CLI_B");
+    let mut c = cli("SIMPLEX_TEST_CLI_B");
     let dir = Dir::new();
     let mut n = live_node(&dir, "inviter");
     // The last case: a short link with no profile in its data, as `create_invitation` makes.
@@ -179,7 +179,7 @@ fn we_invite_and_the_cli_joins_by_full_and_short_link_then_text_both_ways() {
     .into_iter()
     .enumerate()
     {
-        let name = format!("zauni{i}{}", rnd());
+        let name = format!("simpi{i}{}", rnd());
         let data = encode_short_link_data(&ContactShortLinkData::new(Profile::new(&name, "")));
         let data = if profile { data.unwrap().0 } else { Vec::new() };
         let conn = n

@@ -1,4 +1,4 @@
-//! A minimal synchronous HTTP/2 client for XFTP (RFC 9113, HPACK RFC 7541); ported from nook src/sx/h2 (AGPL-3.0-only).
+//! A minimal synchronous HTTP/2 client for XFTP (RFC 9113, HPACK RFC 7541), AGPL-3.0-only.
 
 mod connection;
 mod error;
