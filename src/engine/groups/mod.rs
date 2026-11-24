@@ -53,6 +53,7 @@ mod unknown;
 pub(crate) mod verify;
 
 #[cfg(test)]
+#[cfg(feature = "native")]
 pub(crate) use inbound::GroupCtx;
 pub(crate) use invitation::Via;
 pub(crate) use link_join::group_contact_info;

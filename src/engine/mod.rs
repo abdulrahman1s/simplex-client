@@ -23,12 +23,14 @@ mod quote;
 pub mod records;
 pub mod relays;
 mod requests;
+#[cfg(feature = "native")]
 pub mod run;
 mod start;
 pub mod state;
 mod time;
 
 #[cfg(test)]
+#[cfg(feature = "native")]
 pub(crate) mod tests;
 
 pub use agent_adapter::NativeAgent;

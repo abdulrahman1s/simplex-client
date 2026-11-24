@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use crate::types::Config;
 
-use super::{CHECK_DEADLINE, CHECK_EVERY, RelayDone, SmpTester};
+use super::{CHECK_DEADLINE, CHECK_EVERY, RelayDone};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::machine::Engine;
 use crate::smp::SmpServer;
@@ -41,7 +41,9 @@ impl<A: AgentPort> Engine<A> {
         rel.check = None;
         rel.last_check = None;
         rel.after.clear();
-        rel.tester.get_or_insert_with(|| Box::new(SmpTester));
+        // Without threads there is no tester, and `start_check` never starts a check.
+        #[cfg(feature = "native")]
+        rel.tester.get_or_insert_with(|| Box::new(super::SmpTester));
     }
 
     /// Starts a check unless one runs, one started less than `CHECK_EVERY` ago, or fewer than two

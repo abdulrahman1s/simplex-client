@@ -10,5 +10,6 @@ pub(crate) use crypto::DecryptFailure;
 pub use crypto::crypto_sync_state;
 pub(crate) use receive::BeforeDecrypt;
 #[cfg(test)]
+#[cfg(feature = "native")]
 pub(crate) use send::ratchet_info;
 pub use state::{RatchetSync, SyncState};

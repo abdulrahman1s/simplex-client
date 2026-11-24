@@ -12,4 +12,5 @@ mod webrtc;
 pub use state::CallState;
 
 #[cfg(test)]
+#[cfg(feature = "native")]
 pub(crate) use key::{media_key, public_b64};

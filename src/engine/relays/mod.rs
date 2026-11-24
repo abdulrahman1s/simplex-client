@@ -1,6 +1,7 @@
 //! Relay checks: which of the user's own relays answer, which take new queues, and the one retry after a network failure (the old codec's relay rules; Agent.hs `testProtocolServer`).
 
 mod check;
+#[cfg(feature = "native")]
 mod real;
 mod retry;
 mod tester;
@@ -9,6 +10,7 @@ use std::collections::{BTreeSet, HashSet};
 use std::time::Duration;
 
 use check::Check;
+#[cfg(feature = "native")]
 pub use real::SmpTester;
 pub(crate) use retry::Retry;
 pub use tester::{RelayDone, RelayTester};

@@ -16,19 +16,13 @@ mod queue_uri_parse;
 mod smp_server;
 mod smp_server_uri;
 
-#[cfg(feature = "native")]
 pub mod client;
-#[cfg(feature = "native")]
 pub mod connection;
-#[cfg(feature = "native")]
 pub mod delivery;
 pub mod links;
 pub mod message;
-#[cfg(feature = "native")]
 pub mod records;
-#[cfg(feature = "native")]
 pub mod resync;
-#[cfg(feature = "native")]
 pub mod rotation;
 pub mod short_link;
 #[cfg(test)]

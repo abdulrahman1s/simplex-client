@@ -1,18 +1,15 @@
 //! Setting files up at the start: the data folder, the file servers, and the transfers a restart cut short.
 
-use std::fs;
-
 use crate::types::{Config, has_file_servers};
 
-use super::real::XftpTransfers;
 use super::transfers::{chat_of, owner};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::machine::Engine;
 use crate::engine::records::file::{FileRecord, Way};
 use crate::engine::records::{NS, decode, keys};
 use crate::store::StoreError;
-use crate::xftp::{XftpServer, preset_servers};
 use crate::types::model::{ChatRef, FileState};
+use crate::xftp::{XftpServer, preset_servers};
 
 /// The file servers of a Config: its `xftp://` relays, the presets when it names no relay of
 /// its own, and none when it names own relays only (`has_file_servers`).
@@ -42,12 +39,9 @@ impl<A: AgentPort> Engine<A> {
     pub(crate) fn configure_files(&mut self, hello: &Config) -> Result<(), StoreError> {
         self.files.dir.clone_from(&hello.dir);
         self.files.servers = servers_of(&hello.relays);
-        self.files.transfers = Box::new(XftpTransfers::new());
-        if let Err(e) = fs::create_dir_all(self.files.dir.join("files")) {
-            self.log.line(format_args!("files folder not made: {e}"));
-        }
-        // Nothing resumes, so what a killed transfer left is only in the way.
-        let _ = fs::remove_dir_all(self.files.dir.join("xftp-tmp")); // not there is fine
+        // Without threads and a folder (a browser), transfers stay `NoTransfers`.
+        #[cfg(feature = "native")]
+        self.open_files_folder();
         for key in self.store.keys_with_prefix(NS, keys::FILE_PREFIX)? {
             let (Some((friend, item)), Some(bytes)) = (ids_of(&key), self.store.get(NS, &key)?)
             else {
@@ -59,6 +53,16 @@ impl<A: AgentPort> Engine<A> {
             }
         }
         Ok(())
+    }
+
+    #[cfg(feature = "native")]
+    fn open_files_folder(&mut self) {
+        self.files.transfers = Box::new(super::real::XftpTransfers::new());
+        if let Err(e) = std::fs::create_dir_all(self.files.dir.join("files")) {
+            self.log.line(format_args!("files folder not made: {e}"));
+        }
+        // Nothing resumes, so what a killed transfer left is only in the way.
+        let _ = std::fs::remove_dir_all(self.files.dir.join("xftp-tmp")); // not there is fine
     }
 
     fn end_cut_short(
@@ -83,6 +87,7 @@ impl<A: AgentPort> Engine<A> {
 }
 
 #[cfg(test)]
+#[cfg(feature = "native")]
 mod tests {
     use super::*;
 

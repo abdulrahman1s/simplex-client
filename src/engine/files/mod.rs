@@ -9,6 +9,7 @@ mod forget;
 mod inbound;
 mod locate;
 mod offer;
+#[cfg(feature = "native")]
 mod real;
 mod receive;
 mod send;
