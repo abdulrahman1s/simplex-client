@@ -56,6 +56,8 @@ x448 = "=0.14.0-pre.12"
 zeroize = "1"
 zstd = { version = "0.14.4", default-features = false, optional = true }
 lz-str = "0.2"
+# Unicode general categories for display-name rules (`mkValidName`).
+unicode-properties = { version = "0.1.5", default-features = false, features = ["general-category"] }
 wasm-bindgen = { version = "=0.2.130", optional = true }
 js-sys = { version = "0.3", optional = true }
 web-sys = { version = "0.3", optional = true, features = ["BinaryType", "CloseEvent", "Event", "MessageEvent", "WebSocket"] }

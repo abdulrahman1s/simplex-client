@@ -9,13 +9,31 @@ use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
 use crate::engine::profile::{MAX_PICTURE_URI, sent_profile};
 use crate::engine::records::UserRecord;
+use crate::limits::{MAX_BIO_BYTES, is_valid_name, json_len};
 
 impl<A: AgentPort> Engine<A> {
     /// The picture is not part of it (`SetPicture`), so the one set stays.
+    /// A changed name, trimmed, must be one upstream keeps as it is (Commands.hs
+    /// `updateProfile_`: `checkValidName` when the name changes); a changed bio fits 160 bytes.
     pub(crate) fn set_profile(&mut self, p: &ChatProfile) -> Result<()> {
+        let name = p.name.trim();
+        if name != self.state.user.name && !is_valid_name(name) {
+            return Err(fail(
+                Code::InvalidName,
+                format!("not a valid name: {name:?}"),
+            ));
+        }
+        let about = p.about.trim();
+        // The apps' bio field (`MAX_BIO_LENGTH_BYTES`); a longer one already kept may stay.
+        if about != self.state.user.about && json_len(about) > MAX_BIO_BYTES {
+            return Err(fail(
+                Code::TextTooLong,
+                "the line about the user is too long",
+            ));
+        }
         let user = UserRecord {
-            name: p.name.trim().to_owned(),
-            about: p.about.trim().to_owned(),
+            name: name.to_owned(),
+            about: about.to_owned(),
             paper: p.paper,
             status: p.status,
             picture: self.state.user.picture.clone(),
@@ -31,7 +49,7 @@ impl<A: AgentPort> Engine<A> {
             && image.0.len() > MAX_PICTURE_URI
         {
             return Err(fail(
-                Code::RequestFailed,
+                Code::PictureTooLarge,
                 format!("Profile image is too large {}", image.0.len()),
             ));
         }

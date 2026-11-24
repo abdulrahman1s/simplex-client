@@ -3,12 +3,12 @@
 use crate::types::model::ChatRef;
 
 use super::send::PQ;
-use crate::chat::group::GroupMemberRole;
 use crate::chat::{ChatMessage, encode_chat_message};
 use crate::engine::agent_port::{AgentMsgId, AgentPort, ConnId};
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::groups::policy;
 use crate::engine::machine::Engine;
+use crate::limits::ROLE_TO_SEND;
 
 impl<A: AgentPort> Engine<A> {
     /// A friend must be connected; in a group the user must be an author and files allowed
@@ -22,9 +22,9 @@ impl<A: AgentPort> Engine<A> {
             }
             ChatRef::Group(group) => {
                 let g = self.group(group)?;
-                Self::assert_my_role(&g, &GroupMemberRole::Author)?;
+                Self::assert_my_role(&g, &ROLE_TO_SEND)?;
                 if !policy::allowed(&g, policy::Feature::Files, &g.my_role) {
-                    return Err(fail(Code::RequestFailed, "feature not allowed: files"));
+                    return Err(fail(Code::NotAllowed, "feature not allowed: files"));
                 }
             }
         }

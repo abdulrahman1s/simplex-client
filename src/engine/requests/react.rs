@@ -4,24 +4,15 @@ use crate::types::model::{ChatRef, Reaction};
 
 use crate::chat::ChatEvent;
 use crate::chat::ids::SharedMsgId;
-use crate::chat::reaction::{MsgReaction, REACTION_EMOJI};
+use crate::chat::reaction::MsgReaction;
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::groups::policy;
 use crate::engine::machine::Engine;
 use crate::engine::records::friend::Feature;
+use crate::limits::{MAX_REACTIONS, wire_reaction};
 
 use super::change::has_content;
-
-/// Internal.hs `maxMsgReactions`.
-const MAX_REACTIONS: usize = 3;
-
-/// The page's emoji in the form it travels: ❤ without its variation selector, one of the eight.
-fn wire_emoji(emoji: &str) -> Option<char> {
-    let mut it = emoji.chars().filter(|&c| c != '\u{fe0f}');
-    let c = it.next()?;
-    (it.next().is_none() && REACTION_EMOJI.contains(c)).then_some(c)
-}
 
 /// The user's part of a reaction count, taken or given.
 fn react_mine(reactions: &mut Vec<Reaction>, emoji: String, on: bool) {
@@ -59,12 +50,12 @@ impl<A: AgentPort> Engine<A> {
 
     pub(crate) fn react(&mut self, chat: ChatRef, item: i64, emoji: &str, on: bool) -> Result<()> {
         if !self.reactions_on(chat)? {
-            return Err(fail(Code::RequestFailed, "feature not allowed: reactions"));
+            return Err(fail(Code::NotAllowed, "feature not allowed: reactions"));
         }
-        let c = wire_emoji(emoji).ok_or_else(|| {
+        let c = wire_reaction(emoji).ok_or_else(|| {
             fail(
-                Code::RequestFailed,
-                format!("not a reaction the engine carries: {emoji}"),
+                Code::ReactionNotAllowed,
+                format!("not one of the reactions: {emoji}"),
             )
         })?;
         let mut it = self
@@ -76,7 +67,7 @@ impl<A: AgentPort> Engine<A> {
         let full = on && mine.len() >= MAX_REACTIONS;
         let shared = match it.shared_id.clone() {
             Some(s) if has_content(&it.body) && had != on && !full => s,
-            Some(_) | None => return Err(fail(Code::RequestFailed, "reaction not allowed")),
+            Some(_) | None => return Err(fail(Code::ReactionNotAllowed, "reaction not allowed")),
         };
         // In a group the reaction names the item's author (Commands.hs `chatItemMember`).
         let member_id = match chat {

@@ -8,6 +8,19 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- `simplex_client::limits`: every limit and rule of the official SimpleX Chat 7.1.4 client in
+  one module, each with its upstream source (reactions, file sizes, message size, mentions,
+  names, bio, pictures, edit and delete windows, group roles), and `limits::check` for a
+  request.
+- The engine refuses what breaks them before sending, with new codes: `ReactionNotAllowed`,
+  `FileTooLarge`, `TextTooLong`, `TooManyMentions`, `InvalidName`, `NotAllowed` and
+  `PictureTooLarge` (`SX-CHT-018` to `024`); JS rejects with `reaction_not_allowed`,
+  `file_too_large`, `text_too_long`, `too_many_mentions`, `invalid_name`, `not_allowed` and
+  `picture_too_large`. `Client::request` fails at once for the rules that need no lookup.
+- Display and group names are checked as upstream's `mkValidName` does, at most 50
+  characters; a changed bio is at most 160 bytes; a new store's name is checked at start.
+- A friend's fourth reaction on a message, or one on a message without content, is ignored.
+
 - File transfers in the wasm build (browser, Node.js and Bun): `friend.sendFile`,
   `group.sendFile`, `message.download()` and the `fileProgress` event, over a sans-I/O XFTP
   session on a sans-I/O HTTP/2 client.
@@ -57,6 +70,15 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- JS rejections carry a snake-case `code` everywhere (`no_connection` instead of
+  `SX-CHT-004`); a file over the memory limit rejects with `file_too_large`, not `too_large`.
+- JS calls that queue a request (`send`, `react`, `edit`, `delete`, …) now reject when the
+  request breaks a limit, instead of resolving.
+- `setFileLimit` never goes above 1 GiB, the official client's file limit.
+- A message whose JSON is over 15 602 bytes is refused even when it would compress to fit,
+  as upstream refuses it.
+- `types::REACTION_EMOJI` is `limits::REACTIONS`, a slice; `chat::reaction::REACTION_EMOJI` is
+  gone.
 - **Breaking:** `simplex_client::Event` is now the high-level event: `Ready`, `Message`,
   `MessageUpdate`, `Request`, `FriendAdd`, `FriendRemove`, `GroupAdd`, `GroupRemove`,
   `GroupInvite`, `MemberAdd`, `Offline` and `Raw` for the rest. The engine's events stay at

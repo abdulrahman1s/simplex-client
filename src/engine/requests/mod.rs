@@ -15,5 +15,9 @@ mod react;
 mod read;
 mod remove;
 mod send;
+mod size;
 
 pub(crate) use change::has_content;
+#[cfg(feature = "native")]
+pub(crate) use kind::kind_of;
+pub(crate) use size::sized;

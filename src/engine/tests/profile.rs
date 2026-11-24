@@ -121,6 +121,7 @@ fn the_engine_refuses_a_picture_over_its_limit() {
             out.as_slice(),
             [Event::Failed {
                 request: RequestKind::SetProfile,
+                code: crate::types::ErrorCode::PictureTooLarge,
                 ..
             }]
         ),

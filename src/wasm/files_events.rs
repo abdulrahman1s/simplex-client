@@ -10,7 +10,7 @@ use super::outcome::{Outcome, Settled};
 use super::payload::Payload;
 use crate::engine::{Engine, NativeAgent};
 use crate::types::model::{ChatMessage, ChatRef, FileState, MessageBody};
-use crate::types::{Event, RequestKind};
+use crate::types::{ErrorCode, Event, RequestKind};
 
 /// The file of a message: where it is here and how far it got. A GIF that is here is its path.
 fn file_of(m: &ChatMessage) -> Option<(Option<&Path>, FileState)> {
@@ -57,10 +57,12 @@ impl Files {
             }
         }
         if let Event::Failed {
-            request, detail, ..
+            request,
+            code,
+            detail,
         } = e
         {
-            self.refused(*request, detail, out, engine);
+            self.refused(*request, (*code, detail), out, engine);
         }
     }
 
@@ -128,7 +130,7 @@ impl Files {
     fn refused(
         &mut self,
         request: RequestKind,
-        detail: &str,
+        (code, detail): (ErrorCode, &str),
         out: &mut Outcome,
         engine: &mut Engine<NativeAgent>,
     ) {
@@ -137,7 +139,7 @@ impl Files {
         {
             self.mem.take(&s.path);
             let (resolve, reject) = s.parts;
-            let result = Err(failure("request_failed", detail));
+            let result = Err(failure(code.name(), detail));
             out.settled.push(Settled {
                 resolve,
                 reject,
@@ -147,7 +149,7 @@ impl Files {
             && let Some(at) = (self.receiving.iter())
                 .position(|r| !r.started && !engine.file_wanted(r.chat, r.item))
         {
-            let why = error("request_failed", detail);
+            let why = error(code.name(), detail);
             settle_now(self.receiving.remove(at).parts, Err(why));
         }
     }

@@ -1,13 +1,17 @@
 //! What one run leaves for JS: handler calls and settled promises, delivered once no borrow is held.
+use std::collections::VecDeque;
 use std::rc::Rc;
 
 use serde_json::Value;
 use wasm_bindgen::JsValue;
 
-use super::convert::to_js;
+use super::convert::{failure, to_js};
+use super::files::Parts;
 use super::handlers::call;
 use super::payload::Payload;
 use super::shared::Shared;
+use crate::engine::error::EngineError;
+use crate::types::Request;
 
 /// A waiting call's answer: its promise's two functions and how it ends.
 pub(super) struct Settled {
@@ -24,6 +28,38 @@ pub(super) struct Outcome {
 }
 
 impl Outcome {
+    /// Requests that will never run: their promises fail with `closed`.
+    pub(super) fn closed(requests: VecDeque<(Request, Option<Parts>)>) -> Self {
+        let settled = requests.into_iter().filter_map(|(_, parts)| {
+            let (resolve, reject) = parts?;
+            let result = Err(failure("closed", "the client is closed"));
+            Some(Settled {
+                resolve,
+                reject,
+                result,
+            })
+        });
+        Self {
+            calls: Vec::new(),
+            settled: settled.collect(),
+        }
+    }
+
+    /// The engine's verdict on a request a promise waits for: taken, or refused by a limit.
+    /// Other failures still resolve it; they arrive as a `raw` `Failed` event, as before.
+    pub(super) fn verdict(&mut self, parts: Parts, done: &Result<(), EngineError>) {
+        let (resolve, reject) = parts;
+        let result = match done {
+            Err(e) if e.code.is_limit() => Err(failure(e.code.name(), &e.detail)),
+            Ok(()) | Err(_) => Ok(Payload::Nothing),
+        };
+        self.settled.push(Settled {
+            resolve,
+            reject,
+            result,
+        });
+    }
+
     pub(super) fn deliver(self, shared: &Rc<Shared>) {
         for s in self.settled {
             let (f, v) = match s.result {

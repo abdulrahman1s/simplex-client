@@ -47,7 +47,7 @@ fn send_file(
             let mut core = shared.core.borrow_mut();
             let files = &mut core.as_mut().ok_or_else(closed)?.files;
             let path =
-                (files.mem.put(name, bytes, false)).map_err(|e| error("too_large", e.detail))?;
+                (files.mem.put(name, bytes, false)).map_err(|e| error(e.code.name(), e.detail))?;
             files.sending.push_back(Sending {
                 path: path.clone(),
                 parts,
@@ -127,8 +127,9 @@ impl Message {
 
 #[wasm_bindgen]
 impl Client {
-    /// The largest file sent or received, in bytes; 64 MiB unless set. Memory holds at most
-    /// four times this in files waiting to go or to be taken.
+    /// The largest file sent or received, in bytes; 64 MiB unless set, and never above the
+    /// official client's 1 GiB (`limits::MAX_FILE_SIZE`). Memory holds at most four times this
+    /// in files waiting to go or to be taken.
     #[wasm_bindgen(js_name = setFileLimit)]
     pub fn set_file_limit(&self, bytes: f64) -> Result<(), JsValue> {
         if !(bytes.is_finite() && bytes >= 0.0) {

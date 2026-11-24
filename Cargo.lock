@@ -1694,6 +1694,7 @@ dependencies = [
  "subtle",
  "thiserror",
  "tokio",
+ "unicode-properties",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",

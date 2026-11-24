@@ -37,3 +37,5 @@ pub use agent_adapter::NativeAgent;
 pub use agent_port::{AgentEvent, AgentFailure, AgentMsgId, AgentPort, ConnId};
 pub use clock::{Clock, FakeClock, SystemClock};
 pub use machine::Engine;
+#[cfg(feature = "native")]
+pub(crate) use requests::kind_of;

@@ -54,6 +54,27 @@ pub enum ErrorCode {
     CallFailed,
     #[serde(rename = "SX-CHT-017")]
     StreamFailed,
+    /// Not one of the reactions there are, already given or taken back, or a fourth one.
+    #[serde(rename = "SX-CHT-018")]
+    ReactionNotAllowed,
+    /// A file over the 1 GiB the official client sends, or over the in-memory limit.
+    #[serde(rename = "SX-CHT-019")]
+    FileTooLarge,
+    /// A message, caption or bio longer than a message may carry.
+    #[serde(rename = "SX-CHT-020")]
+    TextTooLong,
+    /// More than three members mentioned in one message.
+    #[serde(rename = "SX-CHT-021")]
+    TooManyMentions,
+    /// A display or group name the official client would change.
+    #[serde(rename = "SX-CHT-022")]
+    InvalidName,
+    /// The user's group role, or the chat's preferences, do not allow it; or its time has passed.
+    #[serde(rename = "SX-CHT-023")]
+    NotAllowed,
+    /// A profile or group picture larger than a profile carries.
+    #[serde(rename = "SX-CHT-024")]
+    PictureTooLarge,
 }
 
 impl ErrorCode {
@@ -65,6 +86,52 @@ impl ErrorCode {
             Self::RequestFailed => "SX-CHT-006",
             Self::CallFailed => "SX-CHT-012",
             Self::StreamFailed => "SX-CHT-017",
+            Self::ReactionNotAllowed => "SX-CHT-018",
+            Self::FileTooLarge => "SX-CHT-019",
+            Self::TextTooLong => "SX-CHT-020",
+            Self::TooManyMentions => "SX-CHT-021",
+            Self::InvalidName => "SX-CHT-022",
+            Self::NotAllowed => "SX-CHT-023",
+            Self::PictureTooLarge => "SX-CHT-024",
+        }
+    }
+
+    /// The code as JS sees it in a rejection's `code`: `reaction_not_allowed`, `file_too_large`, …
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::NoConnection => "no_connection",
+            Self::BadLink => "bad_link",
+            Self::RequestFailed => "request_failed",
+            Self::CallFailed => "call_failed",
+            Self::StreamFailed => "stream_failed",
+            Self::ReactionNotAllowed => "reaction_not_allowed",
+            Self::FileTooLarge => "file_too_large",
+            Self::TextTooLong => "text_too_long",
+            Self::TooManyMentions => "too_many_mentions",
+            Self::InvalidName => "invalid_name",
+            Self::NotAllowed => "not_allowed",
+            Self::PictureTooLarge => "picture_too_large",
+        }
+    }
+
+    /// A limit or rule of the official client (`simplex_client::limits`) refused the request,
+    /// before anything was sent.
+    #[must_use]
+    pub const fn is_limit(self) -> bool {
+        match self {
+            Self::ReactionNotAllowed
+            | Self::FileTooLarge
+            | Self::TextTooLong
+            | Self::TooManyMentions
+            | Self::InvalidName
+            | Self::NotAllowed
+            | Self::PictureTooLarge => true,
+            Self::NoConnection
+            | Self::BadLink
+            | Self::RequestFailed
+            | Self::CallFailed
+            | Self::StreamFailed => false,
         }
     }
 }

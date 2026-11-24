@@ -6,13 +6,15 @@ use std::time::Duration;
 
 use crossbeam_channel::Receiver;
 
-use super::error::Result;
+use super::error::{Error, Result};
 use super::handle::Client;
+use super::spawn::STORE_FILE;
 use crate::engine::NativeAgent;
 use crate::engine::agent_port::AgentPort;
 use crate::engine::clock::{Clock, SystemClock};
 use crate::engine::log::Log;
-use crate::types::{Config, ProxyFallback, ProxyMode};
+use crate::limits::is_valid_name;
+use crate::types::{Config, ErrorCode, ProxyFallback, ProxyMode, RequestKind};
 
 /// Events kept for `events()` before the oldest are dropped.
 pub(super) const EVENTS_CAP: usize = 1024;
@@ -104,6 +106,16 @@ impl ClientBuilder {
         A: AgentPort + 'static,
         F: FnOnce(&Config, &Log) -> (A, Receiver<A::Smp>) + Send + 'static,
     {
+        // Only a new store's user takes this name (Commands.hs `CreateActiveUser`:
+        // `checkValidName`); an existing store keeps its own.
+        let new_store = !self.config.dir.join(STORE_FILE).exists();
+        if new_store && !is_valid_name(self.config.name.trim()) {
+            return Err(Error::Failed {
+                request: RequestKind::Start,
+                code: ErrorCode::InvalidName,
+                detail: format!("not a valid name: {:?}", self.config.name),
+            });
+        }
         Client::start(self, clock, agent)
     }
 }

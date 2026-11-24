@@ -4,16 +4,16 @@ use crate::types::{Event, RequestKind};
 
 use super::link_data::{client_data, link_data};
 use super::rank::assert_user_role;
-use crate::chat::group::GroupMemberRole;
 use crate::engine::agent_port::{AgentEvent, AgentFailure, AgentPort, ConnId};
 use crate::engine::error::{EngineError, Result};
 use crate::engine::machine::Engine;
 use crate::engine::records::{ConnKind, ConnRecord};
+use crate::limits::ROLE_TO_LINK;
 
 impl<A: AgentPort> Engine<A> {
     pub(crate) fn create_group_link(&mut self, group: i64) -> Result<()> {
         let mut g = self.group(group)?;
-        assert_user_role(&g, &GroupMemberRole::Admin)?;
+        assert_user_role(&g, &ROLE_TO_LINK)?;
         // A link the group has is read back, not made again (`SEDuplicateGroupLink`).
         if g.link_conn.is_some() {
             if g.link.is_some() {

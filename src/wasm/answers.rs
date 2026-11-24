@@ -57,8 +57,7 @@ pub(super) fn answer(e: &Event) -> Option<(Want, bool, Result<Payload, Value>)> 
                 | RequestKind::GroupLink
                 | RequestKind::Call => return None,
             };
-            let code = serde_json::to_value(code).unwrap_or(Value::Null);
-            let why = json!({ "code": code, "detail": detail });
+            let why = json!({ "code": code.name(), "detail": detail });
             Some((want, false, Err(why)))
         }
         Event::Features { .. }

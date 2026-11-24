@@ -8,18 +8,15 @@ use crate::chat::container::MsgMentions;
 use crate::chat::content::MsgContent;
 use crate::chat::group::GroupMemberRole;
 use crate::chat::ids::SharedMsgId;
-use crate::chat::{ChatEvent, ChatMessage, encode_chat_message};
+use crate::chat::{ChatEvent, ChatMessage};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
 use crate::engine::records::ItemRecord;
+use crate::limits::{EDIT_WINDOW_MS, ROLE_TO_SEND};
 
 use super::invite::PQ;
-
-const DAY_MS: i64 = 24 * 3600 * 1000;
-/// Messages.hs `deletable'`: a day to edit; deleting gets six hours more (`assertDeletable`).
-const EDIT_MS: i64 = DAY_MS;
-pub(super) const DELETE_MS: i64 = DAY_MS + 6 * 3600 * 1000;
+use super::size::{encode_sized, sized};
 
 /// Messages.hs `ciMsgContent`: what a message carries, not a notice, call line or deletion.
 pub(crate) fn has_content(body: &MessageBody) -> bool {
@@ -52,7 +49,7 @@ impl<A: AgentPort> Engine<A> {
         let own = it.author == MessageAuthor::Me && has_content(&it.body);
         match it.shared_id.clone() {
             Some(s) if own && fresh => Ok((it, s)),
-            Some(_) | None => Err(fail(Code::RequestFailed, "item can't change")),
+            Some(_) | None => Err(fail(Code::NotAllowed, "item can't change")),
         }
     }
 
@@ -61,7 +58,7 @@ impl<A: AgentPort> Engine<A> {
         if !f.reachable() {
             return Err(fail(Code::RequestFailed, "not connected"));
         }
-        let body = encode_chat_message(&ChatMessage::new(event)?, PQ)?;
+        let body = encode_sized(&ChatMessage::new(event)?, PQ)?;
         self.agent.send(&mut self.store, &f.conn, f.pq, body)?;
         Ok(())
     }
@@ -71,7 +68,9 @@ impl<A: AgentPort> Engine<A> {
         match chat {
             ChatRef::Direct(friend) => self.send_event(friend, event),
             ChatRef::Group(group) => {
-                self.send_to_group(group, &ChatMessage::new(event)?, None)?;
+                let msg = ChatMessage::new(event)?;
+                sized(&msg)?;
+                self.send_to_group(group, &msg, None)?;
                 Ok(())
             }
         }
@@ -93,13 +92,13 @@ impl<A: AgentPort> Engine<A> {
     }
 
     pub(crate) fn edit(&mut self, chat: ChatRef, item: i64, text: &str) -> Result<()> {
-        self.may_change(chat, &GroupMemberRole::Author)?;
-        let (mut it, shared) = self.own_item(chat, item, EDIT_MS)?;
+        self.may_change(chat, &ROLE_TO_SEND)?;
+        let (mut it, shared) = self.own_item(chat, item, EDIT_WINDOW_MS)?;
         if it.body == MessageBody::Text(text.to_owned()) {
             return Ok(());
         }
         let MessageBody::Text(_) = it.body else {
-            return Err(fail(Code::RequestFailed, "only text can be edited"));
+            return Err(fail(Code::NotAllowed, "only text can be edited"));
         };
         let in_group = matches!(chat, ChatRef::Group(_));
         self.send_to_chat(

@@ -11,6 +11,7 @@ pub mod crypto;
 pub mod encoding;
 pub mod engine;
 pub mod h2;
+pub mod limits;
 #[cfg(feature = "native")]
 pub mod net;
 pub mod ratchet;

@@ -1,10 +1,10 @@
 //! The structural limits of a description (Description.hs `validateFileDescription`); messages are Haskell's.
+use crate::limits::{
+    MAX_CHUNK_REPLICAS as MAX_REPLICAS_PER_CHUNK, MAX_FILE_REPLICAS as MAX_REPLICAS,
+};
 use crate::xftp::chunks::{CHUNK_SIZE_3, SERVER_CHUNK_SIZES};
 
 use super::model::FileDescription;
-
-const MAX_REPLICAS_PER_CHUNK: usize = 16;
-const MAX_REPLICAS: usize = 131_072;
 
 impl FileDescription {
     pub fn validate(&self) -> Result<(), String> {

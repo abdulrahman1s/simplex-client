@@ -7,9 +7,7 @@ use crate::chat::group_profile::GroupProfile;
 use crate::chat::ids::GroupLinkId;
 use crate::crypto::random_vec;
 use crate::engine::error::{Code, Result, fail};
-
-/// The most a short link's user data may hold (13784 bytes of link data).
-const MAX_LINK_DATA: usize = 13784;
+use crate::limits::MAX_LINK_DATA;
 
 /// Types.hs `GroupShortLinkData` without the channel part.
 #[derive(Serialize)]

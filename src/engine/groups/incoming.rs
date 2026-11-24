@@ -9,9 +9,7 @@ use crate::engine::error::Result;
 use crate::engine::machine::Engine;
 use crate::engine::quote::shown_quote;
 use crate::engine::records::GroupRecord;
-
-/// Internal.hs `maxRcvMentions`.
-const MAX_RECEIVED_MENTIONS: usize = 5;
+use crate::limits::MAX_RECEIVED_MENTIONS;
 
 impl<A: AgentPort> Engine<A> {
     /// The quote names its author by member id: the user, a member, or someone unknown here.

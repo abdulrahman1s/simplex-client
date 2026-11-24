@@ -6,15 +6,13 @@ use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
 use crate::engine::profile::sent_profile;
 use crate::engine::records::{ConnKind, ConnRecord, UserRecord, keys};
+use crate::limits::MAX_LINK_DATA;
 
 /// Invitations nobody answered are kept up to this many; a new one evicts the oldest.
 pub const MAX_INVITATIONS: usize = 16;
 
 /// Every invitation is made with post-quantum keys and a short link (as 7.1.4 does).
 pub const PQ: bool = true;
-
-/// The most a short link's user data may hold (`FixedLinkData`'s sibling field, 13784 bytes).
-const MAX_LINK_DATA: usize = 13784;
 
 /// `{"profile":…,"business":false}`; a picture that would not fit is left out, the name stays.
 fn link_data(user: &UserRecord) -> Result<Vec<u8>> {

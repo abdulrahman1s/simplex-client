@@ -2,6 +2,7 @@
 
 use super::agent_port::AgentFailure;
 use crate::chat::ChatError;
+use crate::limits::Refusal;
 use crate::store::StoreError;
 
 pub use crate::types::ErrorCode as Code;
@@ -27,6 +28,12 @@ pub fn fail(code: Code, detail: impl Into<String>) -> EngineError {
 #[must_use]
 pub fn not_yet(code: Code) -> EngineError {
     fail(code, "not yet")
+}
+
+impl From<Refusal> for EngineError {
+    fn from(r: Refusal) -> Self {
+        fail(r.code, r.detail)
+    }
 }
 
 impl From<StoreError> for EngineError {

@@ -9,6 +9,7 @@ use crate::chat::{ChatEvent, ChatMessage, Result, parse_chat_messages};
 use crate::engine::error::{Code, fail};
 use crate::engine::profile::sent_profile;
 use crate::engine::records::UserRecord;
+use crate::limits::MAX_LINK_DATA;
 
 /// The requester's profile and their `contactReqId`; `None` for anything chat does not take as a request.
 pub(super) fn parse_request(conn_info: &[u8]) -> Option<(Profile, Option<Vec<u8>>)> {
@@ -48,9 +49,6 @@ pub(super) fn hex(bytes: &[u8]) -> String {
         s
     })
 }
-
-/// The most a short link's user data may hold (13784 bytes of link data).
-const MAX_LINK_DATA: usize = 13784;
 
 /// `{"profile":…,"business":false}` as the address shows it; a picture that would not fit is left out, the name stays.
 pub(super) fn link_data(user: &UserRecord) -> crate::engine::error::Result<Vec<u8>> {

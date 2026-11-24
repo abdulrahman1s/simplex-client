@@ -15,9 +15,8 @@ use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
 use crate::engine::quote::outgoing;
 use crate::engine::records::{GroupRecord, ItemRecord, keys};
-
-/// Internal.hs `maxSndMentions`.
-const MAX_SENT_MENTIONS: usize = 3;
+use crate::engine::requests::sized;
+use crate::limits::{MAX_SENT_MENTIONS, ROLE_TO_SEND};
 
 impl<A: AgentPort> Engine<A> {
     /// Commands.hs `assertUserGroupRole`: the user is in the group with at least `min`; and,
@@ -30,10 +29,7 @@ impl<A: AgentPort> Engine<A> {
             ));
         }
         if !at_least(&g.my_role, min) {
-            return Err(fail(
-                Code::RequestFailed,
-                "the user's group role is too low",
-            ));
+            return Err(fail(Code::NotAllowed, "the user's group role is too low"));
         }
         Ok(())
     }
@@ -54,7 +50,7 @@ impl<A: AgentPort> Engine<A> {
         mentions: &[(String, i64)],
     ) -> Result<()> {
         let g = self.group(group)?;
-        Self::assert_my_role(&g, &GroupMemberRole::Author)?;
+        Self::assert_my_role(&g, &ROLE_TO_SEND)?;
         let wire_text = quote_mentions(text, mentions.iter().map(|(n, _)| n.as_str()));
         let msg_mentions = self.outgoing_mentions(&g, &wire_text, mentions)?;
         let content = MsgContent::Text { text: wire_text };
@@ -67,6 +63,7 @@ impl<A: AgentPort> Engine<A> {
         };
         container.mentions = msg_mentions;
         let msg = ChatMessage::new(ChatEvent::MsgNew(container))?;
+        sized(&msg)?;
         let sent = self.send_to_group(group, &msg, None)?;
         let now = self.clock.wall_ms();
         let mut item = ItemRecord::new(MessageAuthor::Me, MessageBody::Text(text.to_owned()), now);
@@ -95,6 +92,9 @@ impl<A: AgentPort> Engine<A> {
         wire_text: &str,
         mentions: &[(String, i64)],
     ) -> Result<MsgMentions> {
+        if mentions.len() > MAX_SENT_MENTIONS {
+            return Err(fail(Code::TooManyMentions, "more than 3 mentions"));
+        }
         let named = mentioned_names(wire_text);
         let mut out = MsgMentions::new();
         let mut members = Vec::with_capacity(mentions.len());
@@ -105,9 +105,6 @@ impl<A: AgentPort> Engine<A> {
             members.push(*member);
             let member_id = self.member_id_of(g, *member)?;
             out.insert(name.clone(), MsgMention { member_id });
-        }
-        if out.len() > MAX_SENT_MENTIONS {
-            return Err(fail(Code::RequestFailed, "invalid mention"));
         }
         Ok(out)
     }

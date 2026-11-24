@@ -14,6 +14,7 @@ use crate::engine::machine::Engine;
 use crate::engine::records::{
     ConnKind, ConnRecord, FriendRecord, ItemRecord, MemberCategory, MemberStatus, keys,
 };
+use crate::limits::ROLE_TO_ADD;
 
 /// Friends' connections are made with PQ keys (`requests/invite.rs`), so their limit is the PQ one.
 const FRIEND_PQ: bool = true;
@@ -37,8 +38,14 @@ impl<A: AgentPort> Engine<A> {
             return Err(fail(Code::RequestFailed, "the friend is not connected"));
         }
         // `assertUserGroupRole gInfo $ max GRAdmin memRole` (Commands.hs:2848).
-        if !at_least(&g.my_role, &GroupMemberRole::Admin) || !g.status.current() {
-            return Err(fail(Code::RequestFailed, "only an admin adds members"));
+        if !g.status.current() {
+            return Err(fail(
+                Code::RequestFailed,
+                "not a current member of the group",
+            ));
+        }
+        if !at_least(&g.my_role, &ROLE_TO_ADD) {
+            return Err(fail(Code::NotAllowed, "only an admin adds members"));
         }
         let existing = self
             .state
