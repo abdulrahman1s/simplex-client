@@ -133,7 +133,7 @@ await init();
 const client = await Client.start({
   name: "Alice",
   key: "passphrase",
-  tunnel: "wss://<your-worker>/v1",
+  tunnel: "wss://simplex-tunnel.citizen6775.workers.dev/v1",
 });
 
 client.on("request", (request) => client.accept(request.id));
@@ -193,7 +193,16 @@ instead. `scripts/build-js.sh` builds both packages (`pkg/web` and `pkg/node`), 
 
 Browsers cannot open raw TCP. [`worker/`](worker/README.md) is a small Cloudflare Worker that
 only pipes WebSocket frames to a relay's TCP port and back. It is the transport the browser
-build uses (`tunnel: "wss://…/v1"`).
+build uses.
+
+**A free public tunnel is running**, so you can start without deploying anything:
+
+```
+wss://simplex-tunnel.citizen6775.workers.dev/v1
+```
+
+It is offered as is, with no uptime promise, and with the per-IP limits below. For anything
+real, deploy your own (see below): it takes three commands and fits Cloudflare's free plan.
 
 - **The Worker sees only TLS ciphertext.** The client runs TLS 1.3 in wasm and pins the relay
   by the fingerprint in its `smp://` address. SMP queue encryption and the end-to-end double
@@ -205,7 +214,11 @@ build uses (`tunnel: "wss://…/v1"`).
   ClientHello with ALPN `smp/1` or `xftp/1` and no SNI. Every IP is rate-limited and has a cap
   on open tunnels.
 
-Deploy your own:
+Deploy your own and pass its URL as `tunnel`, with one click:
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/abdulrahman1s/simplex-client/tree/main/worker)
+
+or from the command line:
 
 ```sh
 cd worker && npm ci

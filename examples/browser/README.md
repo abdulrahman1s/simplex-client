@@ -35,7 +35,7 @@ Serve the folder over HTTP (modules do not load from `file://`):
 python3 -m http.server -d examples/browser 8000
 ```
 
-Open <http://localhost:8000>, enter your tunnel URL (`wss://<worker>/v1`), a name and a
+Open <http://localhost:8000>, enter a tunnel URL (the free public one, `wss://simplex-tunnel.citizen6775.workers.dev/v1`, or your own), a name and a
 passphrase, and press Start. The same passphrase opens the saved store next time; a wrong one
 is refused.
 
