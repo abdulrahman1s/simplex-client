@@ -3,6 +3,8 @@
 mod admin;
 mod admin_member;
 mod bad_signature;
+mod direct_accept;
+mod direct_inv;
 mod files;
 mod forward;
 mod forward_signed;

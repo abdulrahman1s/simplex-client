@@ -48,10 +48,12 @@ impl AddressRecord {
     }
 }
 
-/// Someone asked to connect: their profile as sent in `x.contact`, and the agent's name for the request.
+/// Someone asked to connect: their profile as sent in `x.contact`, and the agent's name for the
+/// request; or a group member's invitation, which names no agent request.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RequestRecord {
     pub id: i64,
+    /// Empty for a member's invitation.
     pub invitation: Vec<u8>,
     pub name: String,
     pub about: String,
@@ -60,4 +62,17 @@ pub struct RequestRecord {
     pub req_id: Option<String>,
     /// Milliseconds since the epoch.
     pub since: i64,
+    #[serde(default)]
+    pub member: Option<MemberInvite>,
+}
+
+/// A group member's invitation to talk directly (`x.grp.direct.inv`, Types.hs
+/// `GroupDirectInvitation`): not through the address; accepting joins `link`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MemberInvite {
+    pub group: i64,
+    pub member: i64,
+    pub link: String,
+    /// The text that came with it, put in the conversation once accepted.
+    pub text: Option<String>,
 }

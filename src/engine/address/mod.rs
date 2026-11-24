@@ -26,6 +26,6 @@ pub struct AddressState {
     pub record: Option<AddressRecord>,
     /// The address being made: one at a time.
     pub creating: Option<ConnId>,
-    /// Eviction: an answer removes one; `MAX_REQUESTS` rejects the oldest; deleting the address clears them.
+    /// Eviction: an answer removes one; `MAX_REQUESTS` rejects the oldest; deleting the address clears those that came through it.
     pub requests: BTreeMap<i64, RequestRecord>,
 }

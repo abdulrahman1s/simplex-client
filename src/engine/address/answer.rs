@@ -19,6 +19,9 @@ impl<A: AgentPort> Engine<A> {
 
     pub(crate) fn accept_request(&mut self, request: i64) -> Result<()> {
         let req = self.request_of(request)?;
+        if let Some(inv) = req.member.clone() {
+            return self.accept_member_invite(req, inv);
+        }
         let ours = conn_info(&self.state.user)?;
         let conn = self
             .agent
