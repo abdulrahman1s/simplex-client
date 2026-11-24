@@ -197,6 +197,9 @@ pub trait AgentPort {
     fn synchronize_ratchet(&mut self, store: &mut Store, conn: &ConnId)
     -> Result<(), AgentFailure>;
 
+    /// What tests relays for the checks: the network, for the real agent.
+    fn relay_tester(&self) -> Box<dyn super::relays::RelayTester>;
+
     /// Keeps new queues off the relays in `disabled` (addresses as the config gave them) while
     /// any other relay is configured; queues already on them stay. An empty list enables all.
     fn set_disabled_relays(&mut self, disabled: &[String]);

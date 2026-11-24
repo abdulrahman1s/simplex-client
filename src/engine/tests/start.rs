@@ -29,12 +29,7 @@ fn a_first_start_creates_the_user_with_the_given_name_and_a_later_one_keeps_it()
     }));
     drop(t.e);
     let store = crate::store::Store::open(&t.dir.0.join("chat.db"), super::KEY).unwrap();
-    let mut e = crate::engine::Engine::new(
-        store,
-        super::FakeAgent::default(),
-        Box::new(t.clock.clone()),
-        crate::engine::log::Log::discard(),
-    );
+    let (mut e, _) = super::relays_pass::engine(store, &t.clock);
     e.start(&t.dir.hello("someone else")).unwrap();
     e.pop_out();
     let Some(Event::Ready(p)) = e.pop_out() else {

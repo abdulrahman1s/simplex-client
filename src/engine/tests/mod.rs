@@ -23,6 +23,8 @@ mod profile;
 mod relays;
 mod relays_fake;
 mod relays_offline;
+mod relays_pass;
+mod relays_presets;
 mod relays_retry;
 mod restart;
 mod resync;
@@ -37,7 +39,6 @@ use crate::types::{Event, Config, Request};
 
 use super::agent_port::{AgentEvent, ConnId};
 use super::clock::FakeClock;
-use super::log::Log;
 use super::machine::Engine;
 use crate::chat::profile::Profile;
 use crate::chat::{ChatEvent, ChatMessage as XMessage, encode_chat_message};
@@ -74,6 +75,7 @@ pub struct T {
     pub e: Engine<FakeAgent>,
     pub clock: FakeClock,
     pub dir: Dir,
+    pub relays: relays_pass::Passing,
 }
 
 impl T {
@@ -82,13 +84,13 @@ impl T {
         let dir = Dir::new();
         let store = Store::open(&dir.0.join("chat.db"), KEY).unwrap();
         let clock = FakeClock::new(1_795_000_000_000);
-        let e = Engine::new(
-            store,
-            FakeAgent::default(),
-            Box::new(clock.clone()),
-            Log::discard(),
-        );
-        T { e, clock, dir }
+        let (e, relays) = relays_pass::engine(store, &clock);
+        T {
+            e,
+            clock,
+            dir,
+            relays,
+        }
     }
 
     /// Started, with what the start put out taken.
@@ -101,23 +103,33 @@ impl T {
 
     /// The same store with a new engine, started, a minute later; what the start put out taken.
     pub fn restarted(self) -> T {
-        let T { e, clock, dir } = self;
+        let T { e, clock, dir, .. } = self;
         drop(e);
         clock.advance(std::time::Duration::from_secs(60));
         let store = Store::open(&dir.0.join("chat.db"), KEY).unwrap();
-        let mut e = Engine::new(
-            store,
-            FakeAgent::default(),
-            Box::new(clock.clone()),
-            Log::discard(),
-        );
+        let (mut e, relays) = relays_pass::engine(store, &clock);
         e.start(&dir.hello("alice")).unwrap();
-        let mut t = T { e, clock, dir };
+        let mut t = T {
+            e,
+            clock,
+            dir,
+            relays,
+        };
         t.out();
         t
     }
 
+    /// What was put out, after the relay checks' answers are handed in.
     pub fn out(&mut self) -> Vec<Event> {
+        loop {
+            let done = self.relays.take();
+            if done.is_empty() {
+                break;
+            }
+            for d in done {
+                self.e.on_job(super::jobs::JobDone::Relay(d));
+            }
+        }
         std::iter::from_fn(|| self.e.pop_out()).collect()
     }
 

@@ -1,4 +1,4 @@
-//! A check: every own relay tested at once, the silent ones kept off new queues while another answers, and none answering is the network gone.
+//! A check: every relay in use tested at once, the silent ones kept off new queues while another answers, and none answering is the network gone.
 
 use std::collections::HashSet;
 

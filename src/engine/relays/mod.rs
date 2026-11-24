@@ -1,4 +1,4 @@
-//! Relay checks: which of the user's own relays answer, which take new queues, and the one retry after a network failure (the old codec's relay rules; Agent.hs `testProtocolServer`).
+//! Relay checks: which of the relays in use answer, which take new queues, and the one retry after a network failure (the old codec's relay rules; Agent.hs `testProtocolServer`).
 
 mod check;
 mod configure;
@@ -23,9 +23,10 @@ pub const CHECK_DEADLINE: Duration = Duration::from_secs(90);
 
 #[derive(Default)]
 pub struct Relays {
-    /// Injected before `start` by tests; the start puts the real one in when none is there.
+    /// Injected before `start` by tests; the start takes the agent's when none is there.
     pub(crate) tester: Option<Box<dyn RelayTester>>,
-    /// The user's own SMP relays from the config. Bounded by the config.
+    /// The relays checked: the user's own SMP relays from the config, or the default presets.
+    /// Bounded by the config or the presets.
     known: Vec<String>,
     /// Their hosts, the only ones whose Up and Down decide Offline; empty means every host.
     pub(crate) own_hosts: HashSet<String>,

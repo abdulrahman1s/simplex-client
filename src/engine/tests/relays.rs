@@ -4,7 +4,7 @@ use super::Call;
 use super::relays_fake::{DEAD, Fake, LIVE, THIRD, started};
 use crate::engine::clock::Clock;
 
-fn disabled_calls(t: &super::T) -> Vec<Vec<String>> {
+pub fn disabled_calls(t: &super::T) -> Vec<Vec<String>> {
     t.e.agent
         .calls
         .iter()
@@ -15,7 +15,7 @@ fn disabled_calls(t: &super::T) -> Vec<Vec<String>> {
         .collect()
 }
 
-fn servers(f: &Fake) -> Vec<String> {
+pub fn servers(f: &Fake) -> Vec<String> {
     let mut s: Vec<String> = f.asked().into_iter().map(|(s, _)| s).collect();
     s.sort();
     s
@@ -25,8 +25,6 @@ fn servers(f: &Fake) -> Vec<String> {
 fn a_check_tests_only_the_users_own_relays_after_the_start() {
     let (_, fake) = started(&[LIVE, DEAD]);
     assert_eq!(servers(&fake), vec![LIVE.to_owned(), DEAD.to_owned()]);
-    let (_, none) = started(&[]);
-    assert!(none.asked().is_empty(), "the presets are never contacted");
 }
 
 #[test]

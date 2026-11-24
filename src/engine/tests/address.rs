@@ -5,13 +5,11 @@ use std::time::Duration;
 use crate::types::model::{ChatNotice, MessageBody};
 use crate::types::{ErrorCode, Event, Request, RequestKind};
 
-use super::{Call, FakeAgent, KEY, T, messages, x_info};
+use super::{Call, KEY, T, messages, x_info};
 use crate::chat::ids::XContactId;
 use crate::chat::profile::Profile;
 use crate::chat::{ChatEvent, ChatMessage};
 use crate::engine::agent_port::{AgentEvent, AgentFailure, ConnId};
-use crate::engine::log::Log;
-use crate::engine::machine::Engine;
 use crate::store::Store;
 
 const SHORT: &str = "https://smp6.simplex.im/a#0sPWloEa5zFH0sfc_vANe4RUUebBQSGcvTKpKRH300s";
@@ -77,18 +75,18 @@ fn failed(out: &[Event]) -> (RequestKind, ErrorCode) {
 
 /// The same store with a new engine, started.
 fn restarted(t: T) -> (T, Vec<Event>) {
-    let T { e, clock, dir } = t;
+    let T { e, clock, dir, .. } = t;
     drop(e);
     clock.advance(Duration::from_secs(60));
     let store = Store::open(&dir.0.join("chat.db"), KEY).unwrap();
-    let mut e = Engine::new(
-        store,
-        FakeAgent::default(),
-        Box::new(clock.clone()),
-        Log::discard(),
-    );
+    let (mut e, relays) = super::relays_pass::engine(store, &clock);
     e.start(&dir.hello("alice")).unwrap();
-    let mut t = T { e, clock, dir };
+    let mut t = T {
+        e,
+        clock,
+        dir,
+        relays,
+    };
     let out = t.out();
     (t, out)
 }
