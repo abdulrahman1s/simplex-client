@@ -2,7 +2,7 @@
 
 use super::StoreError;
 use super::counters::Marks;
-use super::memory::Tables;
+use super::memory::{Memory, Tables};
 
 /// A sealed row of the kv table: its key and value.
 pub(super) type KvRow = (Vec<u8>, Vec<u8>);
@@ -46,4 +46,9 @@ pub(super) trait Rows: Send {
 
     /// Every row, as sealed as it is kept.
     fn dump(&mut self) -> Result<Tables, StoreError>;
+
+    /// The memory backend, the only one that saves by snapshot and delta.
+    fn memory(&mut self) -> Option<&mut Memory> {
+        None
+    }
 }

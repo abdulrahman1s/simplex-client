@@ -129,3 +129,41 @@ test("an empty key is refused: it would seal the store with nothing", async () =
     (e) => e.code === "bad_option" && /key/.test(e.detail),
   );
 });
+
+test("saveChanges carries only what changed, and a snapshot with its changes starts where it left off", async () => {
+  const relays = [await deadRelay()];
+  const client = await Client.start({ name: "Node", key: "k", relays });
+  let snapshot, club, first, second;
+  try {
+    assert.throws(() => client.saveChanges(), (e) => e.code === "store", "needs a whole save first");
+    snapshot = client.save();
+    club = await client.createGroup("Club");
+    first = client.saveChanges();
+    const hello = next(client, "message", (m) => m.text === "hello");
+    await club.send("hello");
+    await hello;
+    second = client.saveChanges();
+    assert.ok(second.length < client.save().length, "a delta is smaller than the whole store");
+  } finally {
+    client.close();
+  }
+
+  const again = await Client.start({ key: "k", snapshot, changes: [first, second], relays });
+  try {
+    assert.equal((await again.once("ready")).name, "Node");
+    assert.equal(again.groups.get(club.id)?.name, "Club");
+    const history = await again.groups.get(club.id).history({ limit: 10 });
+    assert.ok(history.some((m) => m.text === "hello"));
+  } finally {
+    again.close();
+  }
+
+  await assert.rejects(
+    Client.start({ key: "k", snapshot, changes: [second], relays }),
+    (e) => e.code === "changes_do_not_follow",
+  );
+  await assert.rejects(
+    Client.start({ key: "k", changes: [first], relays }),
+    (e) => e.code === "bad_option" && /snapshot/.test(e.detail),
+  );
+});

@@ -6,6 +6,41 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `client.saveChanges()` (JS) and `Store::export_changes` save only the rows written since the
+  last save, and `Client.start({snapshot, changes})` and `Store::open_snapshot_with_changes`
+  open a snapshot with the changes kept after it. A change costs what it wrote: with 30,000
+  messages in wasm, `save()` takes 95 ms for 22.5 MB, and `saveChanges()` after one message
+  under 1 ms for 1 KB. Each delta is MAC'd and chained to its snapshot and the delta before
+  it; a missing, repeated or reordered one is `StoreError::ChangesDoNotFollow` (JS
+  `changes_do_not_follow`), and deltas of an older snapshot are skipped. **Breaking:**
+  `StoreError` has this new variant, so an exhaustive `match` on it needs an arm. The README and the
+  Node bot example keep a log of changes instead of saving the whole store on every change.
+
+### Changed
+
+- Through the tunnel, the TLS ClientHello goes out right behind the tunnel hello instead of
+  waiting for `{"ok":true}`, so connecting to a relay or file server takes one round trip
+  less. The relay's bytes are still refused until the tunnel says yes.
+- File uploads in wasm keep up to 768 KiB unacknowledged instead of 256 KiB. The pinned XFTP
+  server grants about 1 MiB, so an upload moves three times as much per round trip.
+- Tunnel Worker: it looks the relay's name up while the per-IP counter decides, rather than
+  after. A refused tunnel still reads `rate_limited` or `too_many_tunnels`, and now costs a
+  DNS lookup too.
+- The JS packages are built with a `wasm-release` profile (fat LTO, one codegen unit) and
+  `wasm-opt -O3`: the module shrinks from 5.1 MB to 3.3 MB (1.5 MB to 1.3 MB gzipped),
+  Ed25519 signing and verifying get about 10% faster, and Ed448 key generation about 25%.
+  `scripts/build-js.sh` skips `wasm-opt` with a warning when binaryen is missing, except
+  under `REQUIRE_WASM_OPT`, which CI and the release set.
+- The SQLite store goes through rusqlite instead of ormlite (sqlx) on a private tokio runtime.
+  A sealed write takes about 20 µs instead of 80 µs and a read about 6 µs instead of 26 µs.
+  tokio, sqlx and rustls leave the native build: 156 crates in the lock file instead of 275,
+  and the stripped echo bot shrinks from 8.9 MB to 7.8 MB. Store files and their settings are
+  unchanged (WAL, `synchronous = NORMAL`, `secure_delete`, `foreign_keys`, a 5 s busy timeout).
+- A whole snapshot of a memory store is encoded from its rows in place instead of from a copy
+  of them: at 50,000 rows (30 MB) natively it takes 36 ms instead of 66 ms.
+
 ## [0.1.0] - 2026-11-24
 
 ### Security

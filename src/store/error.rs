@@ -11,6 +11,9 @@ pub enum StoreError {
     Sql(String),
     /// The caller passed something the store cannot keep (a bad namespace, a missing row).
     Invalid(&'static str),
+    /// Saved changes that do not follow the snapshot, or the changes, opened before them: one
+    /// is missing or out of order.
+    ChangesDoNotFollow,
 }
 
 impl fmt::Display for StoreError {
@@ -22,6 +25,9 @@ impl fmt::Display for StoreError {
             StoreError::Corrupt(e) => write!(f, "the chat store is damaged: {e}"),
             StoreError::Sql(e) => write!(f, "chat store query failed: {e}"),
             StoreError::Invalid(e) => write!(f, "invalid chat store request: {e}"),
+            StoreError::ChangesDoNotFollow => {
+                f.write_str("the saved changes do not follow the snapshot: one is missing")
+            }
         }
     }
 }
@@ -35,17 +41,12 @@ impl From<std::io::Error> for StoreError {
 }
 
 #[cfg(feature = "native")]
-impl From<ormlite::SqlxError> for StoreError {
-    fn from(e: ormlite::SqlxError) -> Self {
-        use ormlite::SqlxError as E;
+impl From<rusqlite::Error> for StoreError {
+    fn from(e: rusqlite::Error) -> Self {
         match e {
-            E::Io(io) => StoreError::Io(io),
-            E::Database(db) => {
-                let code: i64 = db.code().and_then(|c| c.parse().ok()).unwrap_or(0);
-                match code & 0xff {
-                    11 | 26 => StoreError::Corrupt(db.message().to_owned()),
-                    _ => StoreError::Sql(db.message().to_owned()),
-                }
+            // SQLITE_CORRUPT and SQLITE_NOTADB: the file is damaged or not a store.
+            rusqlite::Error::SqliteFailure(f, msg) if matches!(f.extended_code & 0xff, 11 | 26) => {
+                StoreError::Corrupt(msg.unwrap_or_else(|| f.to_string()))
             }
             other => StoreError::Sql(other.to_string()),
         }

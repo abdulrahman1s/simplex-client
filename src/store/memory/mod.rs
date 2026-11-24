@@ -1,8 +1,12 @@
 //! The in-memory backend: sealed rows in ordered maps, for the browser and for fast tests.
 
+mod changed;
 mod counters;
+mod delta;
 mod journal;
 mod tables;
+
+pub(super) use changed::Changed;
 
 use journal::{Undo, swap};
 pub(super) use tables::Tables;
@@ -15,11 +19,17 @@ pub(super) struct Memory {
     pub(super) t: Tables,
     /// The open transaction's writes, newest last. Eviction: emptied by `commit` and `rollback`.
     journal: Option<Vec<Undo>>,
+    /// Keys written since the last save; a rollback marks each key it restores from its row.
+    pub(super) changed: Changed,
 }
 
 impl Memory {
     pub(super) fn new(t: Tables) -> Self {
-        Self { t, journal: None }
+        Self {
+            t,
+            journal: None,
+            changed: Changed::default(),
+        }
     }
 
     fn note(&mut self, undo: impl FnOnce() -> Undo) {
@@ -45,7 +55,7 @@ impl Rows for Memory {
 
     fn rollback(&mut self) {
         for undo in self.journal.take().unwrap_or_default().into_iter().rev() {
-            undo.revert(&mut self.t);
+            undo.revert(&mut self.t, &mut self.changed);
         }
     }
 
@@ -55,6 +65,7 @@ impl Rows for Memory {
 
     fn meta_put(&mut self, k: &str, v: Vec<u8>) -> Result<(), StoreError> {
         let old = swap(&mut self.t.meta, k.to_owned(), Some(v));
+        self.changed.meta.note(k.to_owned(), old.is_some(), true);
         self.note(|| Undo::Meta(k.to_owned(), old));
         Ok(())
     }
@@ -65,12 +76,14 @@ impl Rows for Memory {
 
     fn kv_put(&mut self, k: Vec<u8>, v: Vec<u8>) -> Result<(), StoreError> {
         let old = swap(&mut self.t.kv, k.clone(), Some(v));
+        self.changed.kv.note(k.clone(), old.is_some(), true);
         self.note(|| Undo::Kv(k, old));
         Ok(())
     }
 
     fn kv_delete(&mut self, k: &[u8]) -> Result<(), StoreError> {
         let old = swap(&mut self.t.kv, k.to_vec(), None);
+        self.changed.kv.note(k.to_vec(), old.is_some(), false);
         self.note(|| Undo::Kv(k.to_vec(), old));
         Ok(())
     }
@@ -90,6 +103,7 @@ impl Rows for Memory {
             return Ok(false);
         };
         let old = std::mem::replace(row, v);
+        self.changed.items.note(key.clone(), true, true);
         self.note(|| Undo::Item(key, Some(old)));
         Ok(true)
     }
@@ -97,6 +111,7 @@ impl Rows for Memory {
     fn item_delete(&mut self, chat: &[u8], id: i64) -> Result<(), StoreError> {
         let key = (chat.to_vec(), id);
         let old = swap(&mut self.t.items, key.clone(), None);
+        self.changed.items.note(key.clone(), old.is_some(), false);
         self.note(|| Undo::Item(key, old));
         Ok(())
     }
@@ -121,12 +136,14 @@ impl Rows for Memory {
 
     fn file_put(&mut self, id: i64, v: Vec<u8>) -> Result<(), StoreError> {
         let old = swap(&mut self.t.files, id, Some(v));
+        self.changed.files.note(id, old.is_some(), true);
         self.note(|| Undo::File(id, old));
         Ok(())
     }
 
     fn file_delete(&mut self, id: i64) -> Result<(), StoreError> {
         let old = swap(&mut self.t.files, id, None);
+        self.changed.files.note(id, old.is_some(), false);
         self.note(|| Undo::File(id, old));
         Ok(())
     }
@@ -144,5 +161,9 @@ impl Rows for Memory {
 
     fn dump(&mut self) -> Result<Tables, StoreError> {
         Ok(self.t.clone())
+    }
+
+    fn memory(&mut self) -> Option<&mut Memory> {
+        Some(self)
     }
 }

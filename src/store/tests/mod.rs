@@ -1,9 +1,12 @@
 //! Store rules, each run on both backends: SQLite in a scratch folder, and memory saved by snapshot.
 mod atomic;
+mod changes;
 #[cfg(feature = "native")]
 mod disk;
 mod items;
 mod kdf;
+#[cfg(feature = "native")]
+mod pragmas;
 mod reopen;
 mod snapshot;
 mod tamper;

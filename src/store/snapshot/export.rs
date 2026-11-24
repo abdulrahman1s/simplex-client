@@ -1,8 +1,9 @@
-//! Saving and opening snapshots: a tag under the store key catches any change to the bytes.
+//! Saving and opening whole snapshots: a tag under the store key catches any change to the bytes.
 
 use subtle::ConstantTimeEq;
 
-use super::codec::{decode, encode};
+use super::codec::{TAG, decode, encode};
+use super::delta::Link;
 use crate::store::StoreError;
 use crate::store::handle::Store;
 use crate::store::memory::Memory;
@@ -13,10 +14,22 @@ const TAG_DOMAIN: &str = "snapshot";
 
 impl Store {
     /// Every row of the store, sealed, and a tag over all of it; either backend can be saved.
+    /// Deltas from `export_changes` follow it from now on.
     pub fn export_snapshot(&mut self) -> Result<Vec<u8>, StoreError> {
-        let mut out = encode(&self.rows.dump()?);
+        let mut out = match self.rows.memory() {
+            // Encoded where the rows lie, rather than from a copy of every row.
+            Some(m) => {
+                m.changed.clear();
+                encode(&m.t)
+            }
+            None => encode(&self.rows.dump()?),
+        };
         let tag = self.sealer.lookup(TAG_DOMAIN, &out);
         out.extend_from_slice(&tag);
+        self.chain = Some(Link {
+            base: tag,
+            prev: tag,
+        });
         Ok(out)
     }
 
@@ -29,12 +42,18 @@ impl Store {
         } else {
             Tagged::No
         };
-        let store = Store::with_rows(Box::new(Memory::new(d.tables)), key, tagged)?;
+        let mut store = Store::with_rows(Box::new(Memory::new(d.tables)), key, tagged)?;
         if let Some((signed, tag)) = d.tag {
             let want = store.sealer.lookup(TAG_DOMAIN, signed);
             if !bool::from(want.as_slice().ct_eq(tag)) {
                 return Err(StoreError::Corrupt("the snapshot was changed".into()));
             }
+            // A first-format snapshot starts no chain: its bytes were never authenticated.
+            let tag: [u8; TAG] = tag.try_into().map_err(|_| super::codec::short())?;
+            store.chain = Some(Link {
+                base: tag,
+                prev: tag,
+            });
         }
         Ok(store)
     }

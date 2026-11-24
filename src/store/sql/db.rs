@@ -1,19 +1,21 @@
-//! One SQLite connection and the private current-thread runtime that drives it.
+//! One SQLite connection, opened with the store's pragmas and its tables brought up to date.
 
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
+use std::time::Duration;
 
-use ormlite::sqlite::{
-    SqliteConnectOptions, SqliteConnection, SqliteJournalMode, SqliteSynchronous,
-};
-use ormlite::{ConnectOptions, Connection, Executor};
+use rusqlite::Connection;
 
 use super::migrate;
 use crate::store::StoreError;
 
+/// Every statement the backend runs is cached; there are about twenty distinct ones.
+const STATEMENT_CACHE: usize = 32;
+/// How long a write waits for another connection's lock (sqlx's default, kept).
+const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
+
 pub(in crate::store) struct Db {
-    rt: tokio::runtime::Runtime,
-    conn: Option<SqliteConnection>,
+    pub(in crate::store) conn: Connection,
 }
 
 impl Db {
@@ -25,45 +27,24 @@ impl Db {
             .append(true)
             .mode(0o600)
             .open(path)?;
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .build()
-            .map_err(|e| StoreError::Open(format!("runtime: {e}")))?;
-        let options = SqliteConnectOptions::new()
-            .filename(path)
-            .journal_mode(SqliteJournalMode::Wal)
-            .synchronous(SqliteSynchronous::Normal)
-            // As simplexmq: deleted rows are overwritten, not left in free pages.
-            .pragma("secure_delete", "ON");
-        let conn = rt.block_on(options.connect())?;
-        let mut db = Db {
-            rt,
-            conn: Some(conn),
-        };
-        db.run(migrate::run)?;
-        Ok(db)
+        let conn = Connection::open(path)?;
+        conn.busy_timeout(BUSY_TIMEOUT)?;
+        conn.set_prepared_statement_cache_capacity(STATEMENT_CACHE);
+        // As simplexmq: deleted rows are overwritten, not left in free pages. foreign_keys is
+        // what the sqlx connection had; no table declares one today.
+        conn.execute_batch(
+            "PRAGMA journal_mode = WAL;
+             PRAGMA synchronous = NORMAL;
+             PRAGMA secure_delete = ON;
+             PRAGMA foreign_keys = ON;",
+        )?;
+        migrate::run(&conn)?;
+        Ok(Db { conn })
     }
 
-    pub(super) fn run<R>(
-        &mut self,
-        f: impl AsyncFnOnce(&mut SqliteConnection) -> Result<R, StoreError>,
-    ) -> Result<R, StoreError> {
-        let conn = self
-            .conn
-            .as_mut()
-            .ok_or(StoreError::Invalid("store is closed"))?;
-        self.rt.block_on(f(conn))
+    /// Runs a statement without arguments, cached like the rest.
+    pub(super) fn exec(&self, sql: &str) -> Result<(), StoreError> {
+        self.conn.prepare_cached(sql)?.execute([])?;
+        Ok(())
     }
-}
-
-impl Drop for Db {
-    fn drop(&mut self) {
-        if let Some(conn) = self.conn.take() {
-            let _ = self.rt.block_on(conn.close()); // nothing to do about a failed close on exit
-        }
-    }
-}
-
-pub(super) async fn exec(c: &mut SqliteConnection, sql: &str) -> Result<(), StoreError> {
-    c.execute(ormlite::AssertSqlSafe(sql.to_owned())).await?;
-    Ok(())
 }

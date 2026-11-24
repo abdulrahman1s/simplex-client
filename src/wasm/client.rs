@@ -30,6 +30,7 @@ fn store_error(e: &StoreError) -> JsValue {
     let code = match e {
         StoreError::WrongKey => "wrong_key",
         StoreError::Corrupt(_) => "corrupt",
+        StoreError::ChangesDoNotFollow => "changes_do_not_follow",
         StoreError::Open(_) | StoreError::Io(_) | StoreError::Sql(_) | StoreError::Invalid(_) => {
             "store"
         }
@@ -101,13 +102,27 @@ impl Client {
         self.shared.profile().map_or(JsValue::NULL, |p| plain(&p))
     }
 
-    /// The whole store, sealed under the key, for `Client.start({snapshot})` later.
+    /// The whole store, sealed under the key, for `Client.start({snapshot})` later. Changes
+    /// from `saveChanges` follow this save from now on.
     pub fn save(&self) -> Result<Vec<u8>, JsValue> {
         let mut core = self.shared.core.try_borrow_mut().map_err(|_| closed())?;
         let core = core.as_mut().ok_or_else(closed)?;
         core.engine
             .store
             .export_snapshot()
+            .map_err(|e| store_error(&e))
+    }
+
+    /// Only what changed since the last `save` or `saveChanges`, sealed, to keep in order after
+    /// that save and pass back as `Client.start({snapshot, changes})`. Its cost follows what
+    /// changed, not the size of the store. Needs a `save` first, or a started `snapshot`.
+    #[wasm_bindgen(js_name = saveChanges)]
+    pub fn save_changes(&self) -> Result<Vec<u8>, JsValue> {
+        let mut core = self.shared.core.try_borrow_mut().map_err(|_| closed())?;
+        let core = core.as_mut().ok_or_else(closed)?;
+        core.engine
+            .store
+            .export_changes()
             .map_err(|e| store_error(&e))
     }
 
