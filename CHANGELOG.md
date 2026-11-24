@@ -18,4 +18,9 @@ All notable changes to this project are documented here. The format follows
   on by default).
 - `wasm` feature: the pure protocol core and small wasm-bindgen bindings for
   `wasm32-unknown-unknown`.
+- The full client on `wasm32-unknown-unknown`: a JS `Client` (`Client.start`, named events,
+  Promise-returning calls) on a single-threaded runtime, reaching relays through a WebSocket
+  byte tunnel with TLS inside wasm; `examples/browser` is a minimal chat page.
+- `store`: an in-memory backend beside SQLite, and `export_snapshot`/`open_snapshot` for a
+  sealed, versioned snapshot of either.
 - CI for formatting, clippy, tests, wasm, MSRV 1.95, cargo-deny and docs.

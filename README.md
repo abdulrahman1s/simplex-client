@@ -17,7 +17,7 @@ small, plain API.
 - Calls (signalling and frame crypto)
 - SQLite store sealed with a passphrase
 - A threaded engine and a high-level `Client`; no async runtime
-- A `wasm32-unknown-unknown` build of the pure protocol core
+- A `wasm32-unknown-unknown` build of the whole client, reaching relays through a WebSocket tunnel
 - Low-level modules stay public if you need to go below `Client`
 
 ## Quick start
@@ -66,15 +66,15 @@ The exact variants are listed in the crate docs (`cargo doc --open`).
 
 ## WebAssembly
 
-The `wasm` feature builds the pure protocol core for `wasm32-unknown-unknown`: encoding,
-crypto, the double ratchet, the chat message codec, SMP and agent link and envelope codecs,
-XFTP file crypto and descriptions, and small wasm-bindgen bindings (`src/wasm.rs`).
-
-**The browser cannot open SMP connections yet.** There is no raw TCP there, and the
-connection manager is threaded. Wasm gives you the codecs and crypto, not a working client.
+The `wasm` feature builds the whole client for `wasm32-unknown-unknown`: the engine, the
+agent and an in-memory store, driven by one `setTimeout` loop, plus the codec bindings
+(`src/wasm/`). A browser has no raw TCP, so relays are reached through a WebSocket tunnel, a
+Cloudflare Worker that only pipes bytes. TLS runs inside wasm, pinned by the relay's
+fingerprint, so the tunnel sees ciphertext only. Files (XFTP) stay native-only.
 
 ```sh
-cargo build --target wasm32-unknown-unknown --no-default-features --features wasm
+cargo build --lib --release --target wasm32-unknown-unknown --no-default-features --features wasm
+wasm-bindgen --target web --out-dir pkg target/wasm32-unknown-unknown/release/simplex_client.wasm
 ```
 
 `getrandom` 0.3 needs its JS backend on wasm. This repository sets it in `.cargo/config.toml`;
@@ -84,14 +84,17 @@ projects that depend on the crate must set it too:
 RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo build --target wasm32-unknown-unknown ...
 ```
 
-Sketch, after running `wasm-bindgen` on the output (see `src/wasm.rs` for the exported
-functions):
-
 ```js
-import init, * as simplex from "./pkg/simplex_client.js";
+import init, { Client } from "./pkg/simplex_client.js";
 await init();
-console.log(Object.keys(simplex)); // the exported codecs and crypto helpers
+const client = await Client.start({ name: "Alice", key: "passphrase", tunnel: "wss://<worker>/v1" });
+client.on("message", (msg) => { if (!msg.mine) client.reply(msg, msg.text); });
+client.on("request", (req) => client.accept(req.id));
+console.log(await client.createAddress());
+const snapshot = client.save(); // sealed store bytes; pass back as `snapshot` to start again
 ```
+
+[`examples/browser`](examples/browser) is a minimal chat page with the full JS API.
 
 ## Architecture
 
@@ -118,7 +121,7 @@ console.log(Object.keys(simplex)); // the exported codecs and crypto helpers
 | Feature | Default | What it enables |
 |---|---|---|
 | `native` | yes | Threads, TCP and TLS, the SQLite store, the engine and `Client` |
-| `wasm` | no | The pure protocol core and wasm-bindgen bindings; use with `--no-default-features` |
+| `wasm` | no | The client in a browser or node, through a WebSocket tunnel; use with `--no-default-features` |
 
 ## Protocol versions tracked
 
