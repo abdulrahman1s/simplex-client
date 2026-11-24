@@ -1,5 +1,6 @@
 //! Create a contact address: a contact-mode queue with its short link, made in one NEW (Agent.hs `prepareConnectionLink'`, `createConnectionForLink'`, `encryptContactLinkData`; fact sheet §10).
 use crate::crypto::{Alg, KeyPair, random_vec, sha256};
+use crate::encoding::VersionRange;
 use crate::smp::QueueIds;
 use crate::store::Store;
 
@@ -16,7 +17,7 @@ use crate::agent::short_link::{
     UserConnLinkData, UserContactData, UserLinkData, contact_short_link_kdf,
     encode_sign_fixed_data, encode_sign_user_data, encrypt_fixed_data, encrypt_user_data,
 };
-use crate::agent::version::{CURRENT_AGENT, supported_agent_range, supported_client_range};
+use crate::agent::version::supported_client_range;
 
 impl AgentClient {
     /// The links come in `AgentEvent::Address`. `user_data` goes into the short link (chat's `ContactShortLinkData`).
@@ -45,10 +46,11 @@ impl AgentClient {
             .cloned()
             .ok_or(AgentError::Prohibited("no SMP server configured"))?;
         let id = ConnId(store.next_id("agent.conn")?);
-        let mut rec = ConnRecord::new(id, ConnStatus::Addressing, CURRENT_AGENT, true);
+        let vr = self.cfg.agent_versions;
+        let mut rec = ConnRecord::new(id, ConnStatus::Addressing, vr.max(), true);
         let rq = new_rcv_queue(server)?;
         if short {
-            rec.new_link = Some(address_link(&rq, user_data, client_data.clone())?);
+            rec.new_link = Some(address_link(&rq, vr, user_data, client_data.clone())?);
         }
         rec.client_data = client_data;
         rec.rcv = Some(rq);
@@ -69,7 +71,8 @@ impl AgentClient {
         rq.snd_id = ids.snd_id.clone();
         rq.server_dh = Some(ids.rcv_dh_key);
         let rq = rq.clone();
-        let full = contact_uri(&rq, ids.snd_id.clone(), rec.client_data.clone())?.to_uri();
+        let (vr, data) = (self.cfg.agent_versions, rec.client_data.clone());
+        let full = contact_uri(&rq, vr, ids.snd_id.clone(), data)?.to_uri();
         let short = match rec.new_link.take() {
             Some(l) => {
                 if link_sender_id(&l.corr_id) != ids.snd_id {
@@ -105,12 +108,13 @@ impl AgentClient {
 /// `CRContactUri` of our queue; `sender_id` comes from IDS, or from the corrId for a short link.
 fn contact_uri(
     rq: &RcvQueue,
+    vr: VersionRange,
     sender_id: Vec<u8>,
     client_data: Option<String>,
 ) -> Result<ConnectionRequestUri> {
     let data = ConnReqUriData {
         scheme: ServiceScheme::Simplex,
-        agent_v_range: supported_agent_range(),
+        agent_v_range: vr,
         smp_queues: vec![SmpQueueUri {
             client_v_range: supported_client_range(),
             address: contact_address(rq, sender_id)?,
@@ -124,11 +128,15 @@ fn contact_uri(
 }
 
 /// The data the server stores for an address: signed by a root key whose hash is the link's entity id.
-fn address_link(rq: &RcvQueue, user_data: Vec<u8>, client_data: Option<String>) -> Result<NewLink> {
+fn address_link(
+    rq: &RcvQueue,
+    vr: VersionRange,
+    user_data: Vec<u8>,
+    client_data: Option<String>,
+) -> Result<NewLink> {
     let corr_id = random_vec(24)?;
     let root = KeyPair::generate(Alg::Ed25519)?;
-    let req = contact_uri(rq, link_sender_id(&corr_id), client_data)?;
-    let vr = supported_agent_range();
+    let req = contact_uri(rq, vr, link_sender_id(&corr_id), client_data)?;
     let entity_id = sha256(root.public.as_bytes()).to_vec();
     let (link_key, fixed) = encode_sign_fixed_data(&root.private, vr, &req, Some(entity_id))?;
     let user_link = UserConnLinkData::Contact(UserContactData {

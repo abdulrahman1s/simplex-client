@@ -4,6 +4,7 @@ use crate::chat::group::{GroupMemberRole, MemberInfo};
 use crate::chat::group_profile::GroupProfile;
 use crate::chat::ids::MemberId;
 use crate::chat::profile::Profile;
+use crate::chat::version::SUPPORTED_CHAT_VRANGE;
 use crate::engine::agent_port::ConnId;
 use crate::engine::clock::Clock;
 use crate::engine::records::{
@@ -70,7 +71,8 @@ impl T {
                 } else {
                     GroupMemberRole::Member
                 },
-                v: None,
+                // What a connected member offered in the handshake.
+                v: Some(SUPPORTED_CHAT_VRANGE),
                 profile: Profile::new(member, ""),
                 member_key: None,
             };

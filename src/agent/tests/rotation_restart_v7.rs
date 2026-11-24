@@ -1,10 +1,10 @@
 //! A restart at each stored step of a v7 switch: it resumes from the store and ends as one without a restart.
 use super::rotation_peer::Peer;
 use super::rotation_support::{
-    answer_qkey, as_v7, both_ways, move_offline, one_step, restart, step_of, wait_settled,
+    answer_qkey, assert_v7, both_ways, move_offline, one_step, restart, step_of, wait_settled,
     waiting_quse,
 };
-use super::support::{WAIT, connect, rig};
+use super::support::{WAIT, connect, rig, v7_agent};
 use crate::agent::message::AMessage;
 use crate::agent::rotation::Step;
 use crate::agent::testing::pump;
@@ -21,9 +21,10 @@ enum Stop {
 
 fn v7_restart_at(stop: Stop) {
     let r = rig();
+    r.pin("b", v7_agent());
     let (mut a, mut b) = (r.node("a"), r.node("b"));
     let (ca, cb) = connect(&mut a, &mut b, false, true);
-    as_v7(&mut a, ca);
+    assert_v7(&a, ca);
     let mut p = Peer::start(&r, &mut a, &mut b, cb);
     a.agent.hold_switch = stop == Stop::BeforeQkey;
     p.qadd(&mut b);
@@ -58,7 +59,7 @@ fn v7_restart_at(stop: Stop) {
         }
         Stop::BeforeMove => {
             one_step(&mut a, &mut b, ca);
-            assert_eq!(step_of(&a, ca), Some(Step::Ready));
+            assert_eq!(step_of(&a, ca), Some(Step::Tested));
             a = restart(&r, a, "a");
         }
         Stop::AfterMove => {

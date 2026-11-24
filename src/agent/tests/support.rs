@@ -1,4 +1,6 @@
 //! A fake server and two agents on it, and the invitation handshake between them.
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::AtomicI64;
 use std::time::Duration;
@@ -6,6 +8,7 @@ use std::time::Duration;
 use crate::agent::client::{AgentConfig, AgentEvent, ConnId};
 use crate::agent::links::ConnectionLink;
 use crate::agent::testing::{Dir, FakeConnector, FakeSmp, Node, TestClock, pump};
+use crate::encoding::{Version, VersionRange};
 use crate::smp::{ConnConfig, SmpServer};
 
 pub const WAIT: Duration = Duration::from_secs(10);
@@ -14,6 +17,13 @@ pub struct Rig {
     pub smp: Arc<FakeSmp>,
     pub dir: Dir,
     pub clock: Arc<TestClock>,
+    /// Agent versions a node speaks instead of ours, by name, kept across restarts.
+    pinned: RefCell<HashMap<String, VersionRange>>,
+}
+
+/// What a 7.0.x agent speaks: `QKEY`/`QUSE`/`QTEST` rotation, no `QEND`.
+pub fn v7_agent() -> VersionRange {
+    VersionRange::new(Version(6), Version(7)).unwrap()
 }
 
 pub fn server() -> SmpServer {
@@ -30,12 +40,21 @@ pub fn rig() -> Rig {
         smp: FakeSmp::new(),
         dir: Dir::new(),
         clock: Arc::new(TestClock(AtomicI64::new(1_000_000))),
+        pinned: RefCell::default(),
     }
 }
 
 impl Rig {
+    /// From now on the node `name` speaks only `versions`.
+    pub fn pin(&self, name: &str, versions: VersionRange) {
+        self.pinned.borrow_mut().insert(name.to_owned(), versions);
+    }
+
     pub fn node(&self, name: &str) -> Node {
         let mut cfg = AgentConfig::new(vec![server()]);
+        if let Some(vr) = self.pinned.borrow().get(name) {
+            cfg.agent_versions = *vr;
+        }
         cfg.smp = ConnConfig {
             ping_interval: Duration::ZERO,
             reconnect_min: Duration::from_millis(20),

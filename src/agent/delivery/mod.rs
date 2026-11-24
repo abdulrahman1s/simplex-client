@@ -1,5 +1,6 @@
 //! Message delivery: the per-queue layer, queued sends with retries, receiving, acks and receipts (Agent.hs, Agent/Client.hs; simplexmq 7.1.4, AGPL-3.0-only).
 mod client_msg;
+mod conn_version;
 mod enqueue;
 mod message;
 mod outcome;

@@ -51,12 +51,18 @@ impl AgentClient {
                         ..m
                     }))
                 }
-                // `AM_QTEST_`: the new queue takes our messages, so it becomes the one we send to.
-                Step::Confirming | Step::Testing { .. } => Some(Switch::Moving(Moving {
+                Step::Confirming => Some(Switch::Moving(Moving {
                     step: Step::Ready,
                     ..m
                 })),
-                Step::Qkey | Step::WaitingQuse | Step::Qtest | Step::Ready => return Ok(()),
+                // `AM_QTEST_`: the new queue takes our messages, so it becomes the one we send to.
+                Step::Testing { .. } => Some(Switch::Moving(Moving {
+                    step: Step::Tested,
+                    ..m
+                })),
+                Step::Qkey | Step::WaitingQuse | Step::Qtest | Step::Ready | Step::Tested => {
+                    return Ok(());
+                }
             },
             Switch::EndingOld { .. } => None,
         };
@@ -79,7 +85,7 @@ impl AgentClient {
                 Step::Securing | Step::Confirming | Step::Testing { .. } => {
                     self.give_up(store, id, err)
                 }
-                Step::Qkey | Step::WaitingQuse | Step::Qtest | Step::Ready => Ok(()),
+                Step::Qkey | Step::WaitingQuse | Step::Qtest | Step::Ready | Step::Tested => Ok(()),
             },
             Switch::EndingOld { .. } => self.give_up(store, id, err),
         }

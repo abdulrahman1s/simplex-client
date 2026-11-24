@@ -18,6 +18,8 @@ mod rotation_refuse;
 mod rotation_restart;
 mod rotation_restart_v7;
 mod rotation_support;
+mod rotation_upgrade;
 mod rotation_v7;
 mod support;
+mod version_upgrade;
 mod ws;

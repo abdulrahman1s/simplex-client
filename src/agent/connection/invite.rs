@@ -1,5 +1,6 @@
 //! Create a one-time invitation: queue keys and X3DH keys, NEW (with the short link's data), then the links (Agent.hs `newConn`, `newRcvConnSrv`; HANDSHAKE.md §1).
 use crate::crypto::{Alg, KeyPair, random_vec};
+use crate::encoding::VersionRange;
 use crate::ratchet::{PqSupport, generate_rcv_params};
 use crate::smp::QueueIds;
 use crate::store::Store;
@@ -18,7 +19,7 @@ use crate::agent::short_link::{
     UserConnLinkData, UserLinkData, encode_sign_fixed_data, encode_sign_user_data,
     encrypt_fixed_data, encrypt_user_data, inv_short_link_kdf,
 };
-use crate::agent::version::{CURRENT_AGENT, supported_agent_range, supported_client_range};
+use crate::agent::version::supported_client_range;
 
 impl AgentClient {
     /// The links come in `AgentEvent::Invitation` once the server has created the queue.
@@ -46,11 +47,12 @@ impl AgentClient {
             .cloned()
             .ok_or(AgentError::Prohibited("no SMP server configured"))?;
         let id = ConnId(store.next_id("agent.conn")?);
-        let mut rec = ConnRecord::new(id, ConnStatus::Creating, CURRENT_AGENT, pq);
+        let vr = self.cfg.agent_versions;
+        let mut rec = ConnRecord::new(id, ConnStatus::Creating, vr.max(), pq);
         rec.rcv = Some(new_rcv_queue(server)?);
         rec.x3dh = Some(generate_rcv_params(crate::ratchet::CURRENT_E2E_VERSION, PqSupport(pq))?.0);
         if short {
-            rec.new_link = Some(new_link(&rec, user_data)?);
+            rec.new_link = Some(new_link(&rec, vr, user_data)?);
         }
         self.save(store, rec, None, Batch::default())?;
         self.drive(store, id);
@@ -69,7 +71,7 @@ impl AgentClient {
         rq.snd_id = ids.snd_id.clone();
         rq.server_dh = Some(ids.rcv_dh_key);
         let server = rq.server.clone();
-        let full = invitation_uri(&rec, ids.snd_id.clone())?.to_uri();
+        let full = invitation_uri(&rec, self.cfg.agent_versions, ids.snd_id.clone())?.to_uri();
         let short = match rec.new_link.take() {
             Some(l) => {
                 let link_id = ids
@@ -101,7 +103,11 @@ impl AgentClient {
 }
 
 /// `CRInvitationUri` of our queue and X3DH keys; `sender_id` comes from IDS, or from the corrId for a short link.
-pub(super) fn invitation_uri(rec: &ConnRecord, sender_id: Vec<u8>) -> Result<ConnectionRequestUri> {
+pub(super) fn invitation_uri(
+    rec: &ConnRecord,
+    vr: VersionRange,
+    sender_id: Vec<u8>,
+) -> Result<ConnectionRequestUri> {
     let rq = rec.rcv.as_ref().ok_or(AgentError::Prohibited("no queue"))?;
     let x3dh = rec
         .x3dh
@@ -109,7 +115,7 @@ pub(super) fn invitation_uri(rec: &ConnRecord, sender_id: Vec<u8>) -> Result<Con
         .ok_or(AgentError::Prohibited("no X3DH keys"))?;
     let data = ConnReqUriData {
         scheme: ServiceScheme::Simplex,
-        agent_v_range: supported_agent_range(),
+        agent_v_range: vr,
         smp_queues: vec![SmpQueueUri {
             client_v_range: supported_client_range(),
             address: queue_address(rq, sender_id)?,
@@ -123,11 +129,10 @@ pub(super) fn invitation_uri(rec: &ConnRecord, sender_id: Vec<u8>) -> Result<Con
 }
 
 /// The data the server stores for an invitation short link (`prepareConnectionLink`, `encryptLinkData`).
-fn new_link(rec: &ConnRecord, user_data: Vec<u8>) -> Result<NewLink> {
+fn new_link(rec: &ConnRecord, vr: VersionRange, user_data: Vec<u8>) -> Result<NewLink> {
     let corr_id = random_vec(24)?;
     let root = KeyPair::generate(Alg::Ed25519)?;
-    let req = invitation_uri(rec, link_sender_id(&corr_id))?;
-    let vr = supported_agent_range();
+    let req = invitation_uri(rec, vr, link_sender_id(&corr_id))?;
     let (link_key, fixed) = encode_sign_fixed_data(&root.private, vr, &req, None)?;
     let user_link = UserConnLinkData::Invitation(UserLinkData(user_data));
     let user = encode_sign_user_data(&root.private, vr, user_link)?;

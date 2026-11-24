@@ -19,3 +19,12 @@ All notable changes to this project are documented here. The format follows
 - `wasm` feature: the pure protocol core and small wasm-bindgen bindings for
   `wasm32-unknown-unknown`.
 - CI for formatting, clippy, tests, wasm, MSRV 1.95, cargo-deny and docs.
+
+### Fixed
+
+- Connections agreed at agent version 7 move to version 8 once both sides speak it: every
+  message offers the highest agent version (`AgentConfig::agent_versions`), and a higher one
+  from the peer raises the stored version, as simplexmq's `updateConnVersion` does. A queue
+  switch started the v7 way still ends the v7 way.
+- A group member's chat version range follows each JSON message they send, not only the
+  handshake (`updateMemberChatVRange`).

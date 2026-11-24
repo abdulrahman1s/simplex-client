@@ -30,6 +30,7 @@ impl<A: AgentPort> Engine<A> {
             return Ok(None);
         }
         self.check_signature(group, sender, p.signed.as_ref())?;
+        self.refresh_member_range(group, sender, &p.message)?;
         let relay = self.relay_element(group, sender, &p);
         self.on_group_event(GroupCtx::direct(group, sender), p.message)?;
         Ok(relay)

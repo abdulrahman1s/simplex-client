@@ -3,7 +3,7 @@ use crate::store::Store;
 
 use super::addr::addr;
 use super::reseal::reseal;
-use super::state::{Moving, Switch};
+use super::state::{Moving, Step, Switch};
 use crate::agent::client::{AgentClient, AgentEvent, AgentMsgId, ConnId};
 use crate::agent::delivery::{agent_envelope, seal};
 use crate::agent::error::{AgentError, Result};
@@ -36,13 +36,15 @@ impl AgentClient {
         c.sends = ids.into();
         c.send.retry = None;
         c.send.next_at = 0;
-        if !fast_rotation(rec.agent_version) {
+        // A `Ready` stored before `Tested` existed may be a v7 one: the version tells, as it did then.
+        if m.step == Step::Tested || !fast_rotation(rec.agent_version) {
             // QTEST went already: the old queue is dropped (`AM_QTEST_`).
             rec.switch = None;
             return self.save(store, rec, None, b);
         }
         let mut ratchet = ratchet.ok_or(AgentError::Prohibited("no ratchet"))?;
-        let env = agent_envelope(&mut rec, &mut ratchet, AMessage::Qend(vec![addr(&old)]))?;
+        let qend = AMessage::Qend(vec![addr(&old)]);
+        let env = agent_envelope(&mut rec, &mut ratchet, qend, self.envelope_agent_version())?;
         // A message that never went on the old queue goes only on the new one; QEND after it on the
         // old queue would skip it in the peer's chain.
         rec.switch = if moved {

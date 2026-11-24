@@ -1,5 +1,5 @@
 //! Queue a message: ratchet-encrypt it as the next in our chain, seal it, and store body and ratchet together before the first attempt (Agent.hs `sendMessage'`, `enqueueMessageB`).
-use crate::encoding::Encode;
+use crate::encoding::{Encode, Version};
 use crate::ratchet::{Ratchet, e2e_enc_agent_msg_length};
 use crate::store::Store;
 
@@ -34,7 +34,8 @@ impl AgentClient {
             .snd
             .clone()
             .ok_or(AgentError::Prohibited("no send queue"))?;
-        let body = seal(&sq, &agent_envelope(&mut rec, &mut ratchet, msg)?, false)?;
+        let v = self.envelope_agent_version();
+        let body = seal(&sq, &agent_envelope(&mut rec, &mut ratchet, msg, v)?, false)?;
         let snd_msg_id = rec.chain.snd_id;
         let mut b = Batch::default();
         if kind == SendKind::Msg {
@@ -81,6 +82,7 @@ pub(crate) fn agent_envelope(
     rec: &mut ConnRecord,
     ratchet: &mut Ratchet,
     msg: AMessage,
+    agent_version: Version,
 ) -> Result<Vec<u8>> {
     let snd_msg_id = rec.chain.snd_id + 1;
     let header = APrivHeader {
@@ -94,7 +96,7 @@ pub(crate) fn agent_envelope(
     .to_bytes()?;
     let len = e2e_enc_agent_msg_length(ratchet.pq_support());
     let env = AgentMsgEnvelope::Message {
-        agent_version: rec.agent_version,
+        agent_version,
         enc_agent_message: ratchet.encrypt(&plain, len, None)?,
     };
     rec.chain.snd_id = snd_msg_id;

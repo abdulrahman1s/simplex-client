@@ -106,7 +106,12 @@ fn quse(rec: &mut ConnRecord, queues: Vec<(SndQAddr, bool)>) -> Result<()> {
     match m.step {
         // Both are `SSSendingQKEY` in Haskell, which sets it when QADD arrives.
         Step::Qkey | Step::WaitingQuse => {}
-        Step::Securing | Step::Confirming | Step::Qtest | Step::Testing { .. } | Step::Ready => {
+        Step::Securing
+        | Step::Confirming
+        | Step::Qtest
+        | Step::Testing { .. }
+        | Step::Ready
+        | Step::Tested => {
             return Err(AgentError::Prohibited("QUSE: unexpected switch status"));
         }
     }

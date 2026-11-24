@@ -1,10 +1,10 @@
 //! The peer's new queue on another server, as the CLI picks one when it can: a new SMP session that must stay open between the switch's requests.
 use super::rotation_peer::Peer;
 use super::rotation_support::{
-    answer_qkey, as_v7, both_ways, create_queue_on, other_server, switch_of, wait_settled,
+    answer_qkey, assert_v7, both_ways, create_queue_on, other_server, switch_of, wait_settled,
     waiting_quse,
 };
-use super::support::{WAIT, connect, rig};
+use super::support::{WAIT, connect, rig, v7_agent};
 use crate::agent::message::AMessage;
 use crate::agent::testing::pump;
 
@@ -32,9 +32,10 @@ fn a_v8_switch_to_a_queue_on_another_server_completes() {
 #[test]
 fn a_v7_switch_to_a_queue_on_another_server_completes() {
     let r = rig();
+    r.pin("b", v7_agent());
     let (mut a, mut b) = (r.node("a"), r.node("b"));
     let (ca, cb) = connect(&mut a, &mut b, false, true);
-    as_v7(&mut a, ca);
+    assert_v7(&a, ca);
     let mut p = Peer::start(&r, &mut a, &mut b, cb);
     p.new = create_queue_on(&r, other_server());
     p.qadd(&mut b);
