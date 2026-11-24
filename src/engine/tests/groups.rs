@@ -2,6 +2,7 @@
 
 mod admin;
 mod admin_member;
+mod bad_signature;
 mod files;
 mod forward;
 mod forward_signed;

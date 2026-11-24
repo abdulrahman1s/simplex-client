@@ -39,6 +39,7 @@ pub enum ChatNotice {
     FriendDeleted,
     GroupInvitation { group: String, sent: bool },
     CodeChanged,
+    BadSignature,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

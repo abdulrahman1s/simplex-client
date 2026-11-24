@@ -8,6 +8,7 @@ use crate::engine::inbound::asks_receipt;
 use crate::engine::machine::Engine;
 
 use super::invitation::Via;
+use super::verify::SigStatus;
 
 /// Where a group event came from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -18,6 +19,8 @@ pub(crate) struct GroupCtx {
     /// The member who wrote it: the sender, or the author a forward names.
     pub author: i64,
     pub forwarded: bool,
+    /// How its signature stood: `None` when it was not signed.
+    pub signed: Option<SigStatus>,
 }
 
 impl GroupCtx {
@@ -28,6 +31,7 @@ impl GroupCtx {
             sender,
             author: sender,
             forwarded: false,
+            signed: None,
         }
     }
 }

@@ -46,6 +46,7 @@ impl<A: AgentPort> Engine<A> {
         if item.body == MessageBody::Deleted {
             return Err(dropped("x.msg.update: invalid message update"));
         }
+        self.require_verified(&ctx, &item, Some(m.id), at)?;
         let g = self.group(ctx.group)?;
         let found = if m.blocked {
             Vec::new()
@@ -79,6 +80,7 @@ impl<A: AgentPort> Engine<A> {
             // A moderation of a message not received yet is not kept for later (`CIModeration`).
             return Ok(());
         };
+        self.require_verified(&ctx, &item, item.member, at)?;
         if item.body == MessageBody::Deleted {
             return Err(dropped("x.msg.del: already deleted"));
         }

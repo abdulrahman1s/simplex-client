@@ -267,6 +267,7 @@ fn roles_are_checked_on_the_author_of_a_forwarded_event_not_on_the_forwarder() {
         sender,
         author,
         forwarded: true,
+        signed: None,
     };
     // Carol, a plain member, forwards what the owner bob wrote.
     let msg = ChatMessage::new(del(dave.clone(), false)).unwrap();

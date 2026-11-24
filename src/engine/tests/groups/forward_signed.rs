@@ -1,8 +1,8 @@
 //! Signed (`/`) elements in a classic group: optional, but checked against the author's key when it is known (Subscriber.hs `withVerifiedMsg`, `verifyGroupSig`).
 
-use crate::types::model::MessageAuthor;
+use crate::types::model::{ChatNotice, MessageAuthor, MessageBody};
 
-use super::super::{T, messages};
+use super::super::T;
 use super::forward::{forwarded, from_host, fwd, json};
 use super::messages::{member_id, one};
 use crate::chat::ChatEvent;
@@ -14,7 +14,7 @@ use crate::chat::signed::{ChatBinding, MsgSignature, SignedMsg};
 use crate::crypto::{Alg, KeyPair};
 
 /// Gives member `member` a fresh key: the pair, to sign with.
-fn keyed(t: &mut T, g: i64, member: i64) -> KeyPair {
+pub fn keyed(t: &mut T, g: i64, member: i64) -> KeyPair {
     let kp = KeyPair::generate(Alg::Ed25519).unwrap();
     let mut m = t.e.state.members[&(g, member)].clone();
     m.key = Some(b64_encode(&kp.public.to_der()));
@@ -23,7 +23,7 @@ fn keyed(t: &mut T, g: i64, member: i64) -> KeyPair {
 }
 
 /// `body` signed by `kp` as `author` would (`'G' ‖ memberId ‖ key DER ‖ body`).
-fn signed(kp: &KeyPair, author: &MemberId, body: Vec<u8>) -> Vec<u8> {
+pub fn signed(kp: &KeyPair, author: &MemberId, body: Vec<u8>) -> Vec<u8> {
     let der = kp.public.to_der();
     let mut data = vec![u8::try_from(author.0.len()).unwrap()];
     data.extend_from_slice(&author.0);
@@ -41,12 +41,17 @@ fn signed(kp: &KeyPair, author: &MemberId, body: Vec<u8>) -> Vec<u8> {
     encode_signed_element(&sm).unwrap()
 }
 
-fn text(s: &str) -> Vec<u8> {
+/// `RGEMsgBadSignature`: what a rejected message leaves in the conversation.
+pub fn rejected() -> MessageBody {
+    MessageBody::Notice(ChatNotice::BadSignature)
+}
+
+pub fn text(s: &str) -> Vec<u8> {
     json(ChatEvent::MsgNew(MsgContainer::text(s)))
 }
 
 #[test]
-fn a_signature_from_a_member_whose_key_is_known_must_verify_or_the_message_is_dropped() {
+fn a_signature_from_a_member_whose_key_is_known_must_verify_or_the_message_is_rejected() {
     let mut t = T::started();
     let (g, ms) = t.group("team", &["bob", "carol"], GroupMemberRole::Member);
     let (carol, conn) = ms[1];
@@ -59,10 +64,10 @@ fn a_signature_from_a_member_whose_key_is_known_must_verify_or_the_message_is_dr
     // `/`, binding, count, `M`, length, then the 64 signature bytes.
     let mut bad = signed(&kp, &who, text("tampered"));
     bad[10] ^= 1;
-    assert!(messages(&from_host(&mut t, &conn, 2, bad)).is_empty());
+    assert_eq!(one(&from_host(&mut t, &conn, 2, bad)).body, rejected());
     let other = KeyPair::generate(Alg::Ed25519).unwrap();
     let forged = signed(&other, &who, text("forged"));
-    assert!(messages(&from_host(&mut t, &conn, 3, forged)).is_empty());
+    assert_eq!(one(&from_host(&mut t, &conn, 3, forged)).body, rejected());
 }
 
 #[test]
@@ -91,7 +96,9 @@ fn a_forwarded_signature_is_checked_with_the_authors_key_not_the_forwarders() {
     assert_eq!(m.author, MessageAuthor::Member("carol".into()));
     let other = KeyPair::generate(Alg::Ed25519).unwrap();
     let bad = forwarded(&f, &signed(&other, &who, text("not carol's")));
-    assert!(messages(&from_host(&mut t, &host.1, 2, bad)).is_empty());
+    let m = one(&from_host(&mut t, &host.1, 2, bad));
+    assert_eq!(m.body, rejected());
+    assert_eq!(m.author, MessageAuthor::Member("carol".into()));
 }
 
 #[test]

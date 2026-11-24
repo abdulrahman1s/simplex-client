@@ -17,11 +17,23 @@ impl<A: AgentPort> Engine<A> {
         member: Option<i64>,
         notice: ChatNotice,
     ) -> Result<()> {
+        let now = self.clock.wall_ms();
+        self.group_notice_at(group, member, notice, now)
+    }
+
+    /// `at`: when it happened, when that is not now (a forward's time).
+    pub(crate) fn group_notice_at(
+        &mut self,
+        group: i64,
+        member: Option<i64>,
+        notice: ChatNotice,
+        at: i64,
+    ) -> Result<()> {
         let author = match member.and_then(|m| self.state.members.get(&(group, m))) {
             Some(m) => MessageAuthor::Member(m.profile.display_name.clone()),
             None => MessageAuthor::Me,
         };
-        let mut item = ItemRecord::new(author, MessageBody::Notice(notice), self.clock.wall_ms());
+        let mut item = ItemRecord::new(author, MessageBody::Notice(notice), at);
         item.member = member;
         let m = self.add_item(ChatRef::Group(group), &item)?;
         self.emit(Event::Messages(vec![m]));
