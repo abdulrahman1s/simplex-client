@@ -2,7 +2,9 @@
 
 use std::time::Duration;
 
-use crate::types::model::{ChatMessage, ChatProfile, ChatRef};
+use crate::types::model::{
+    ChatMessage, ChatNotice, ChatProfile, ChatRef, MessageAuthor, MessageBody,
+};
 use crate::types::{ErrorCode, Event, Request, RequestKind};
 
 use super::profile::{pref, their_info};
@@ -12,7 +14,8 @@ use crate::chat::container::MsgContainer;
 use crate::chat::ids::SharedMsgId;
 use crate::chat::preferences::FeatureAllowed;
 use crate::chat::reaction::MsgReaction;
-use crate::limits::MAX_ENCODED_MSG_LENGTH;
+use crate::engine::records::ItemRecord;
+use crate::limits::{MAX_BIO_BYTES, MAX_ENCODED_MSG_LENGTH};
 
 /// The code `out` failed `kind` with.
 pub(super) fn code(out: &[Event], kind: RequestKind) -> Option<ErrorCode> {
@@ -153,4 +156,59 @@ fn a_changed_display_name_must_be_one_upstream_keeps() {
     let out = t.req(named("John Doe"));
     assert_eq!(code(&out, RequestKind::SetProfile), None);
     assert_eq!(t.e.state.user.name, "John Doe");
+}
+
+#[test]
+fn a_friends_reaction_on_an_item_without_content_is_ignored() {
+    let mut t = T::started();
+    let (bob, conn) = t.friend("bob");
+    let mut notice = ItemRecord::new(
+        MessageAuthor::Friend,
+        MessageBody::Notice(ChatNotice::Connected),
+        0,
+    );
+    notice.shared_id = Some(b"notice-1".to_vec());
+    t.e.add_item(ChatRef::Direct(bob), &notice).unwrap();
+    let out = t.peer_says(
+        &conn,
+        1,
+        ChatEvent::MsgReact {
+            msg_id: SharedMsgId(b"notice-1".to_vec()),
+            member_id: None,
+            scope: None,
+            reaction: MsgReaction::Emoji('👍'),
+            add: true,
+        },
+    );
+    assert!(messages(&out).is_empty(), "{out:?}");
+}
+
+#[test]
+fn a_changed_bio_over_160_bytes_is_refused_and_a_kept_one_stays() {
+    let mut t = T::started();
+    let name = t.e.state.user.name.clone();
+    let profile = |about: &str, paper| {
+        Request::SetProfile(ChatProfile {
+            name: name.clone(),
+            about: about.into(),
+            paper,
+            ..ChatProfile::default()
+        })
+    };
+    let long = "a".repeat(MAX_BIO_BYTES + 1);
+    let out = t.req(profile(&long, None));
+    assert_eq!(
+        code(&out, RequestKind::SetProfile),
+        Some(ErrorCode::TextTooLong)
+    );
+    let mut user = t.e.state.user.clone();
+    user.about.clone_from(&long);
+    t.e.save_user(user).unwrap();
+    let out = t.req(profile(&long, Some(2)));
+    assert_eq!(
+        code(&out, RequestKind::SetProfile),
+        None,
+        "unchanged, so kept"
+    );
+    assert_eq!(t.e.state.user.paper, Some(2));
 }

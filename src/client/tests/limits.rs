@@ -57,3 +57,13 @@ fn a_new_store_refuses_a_name_upstream_would_change() {
         })
     ));
 }
+
+#[test]
+fn an_existing_store_starts_whatever_name_the_builder_has() {
+    let dir = Dir::new();
+    let (client, _net) = start(builder(&dir), FakeAgent::default());
+    client.close();
+    let (again, _net) = start(builder(&dir).name("J.Doe"), FakeAgent::default());
+    assert_eq!(again.profile().name, "alice");
+    again.close();
+}

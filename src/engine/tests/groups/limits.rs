@@ -1,10 +1,11 @@
 //! The official client's limits in a group: roles, mentions and the picture, each refused with its own code.
 
-use crate::types::model::Picture;
-use crate::types::{ErrorCode, Request, RequestKind};
+use crate::types::model::{ChatRef, Picture};
+use crate::types::{ErrorCode, FileKind, Request, RequestKind};
 
 use super::messages::send;
 use crate::chat::group::GroupMemberRole;
+use crate::chat::group_prefs::{FeatureEnabled, GroupFeature, GroupPreferences};
 use crate::engine::tests::T;
 use crate::engine::tests::limits::code;
 use crate::limits::MAX_PICTURE_URI;
@@ -74,4 +75,29 @@ fn only_the_owner_changes_the_group_picture_and_never_past_the_limit() {
         Some(ErrorCode::PictureTooLarge)
     );
     assert_eq!(code(&t.req(set(mine, 64)), RequestKind::Group), None);
+}
+
+#[test]
+fn files_the_group_turned_off_are_refused_as_not_allowed() {
+    let mut t = T::started();
+    let (g, _) = t.group("club", &["bob"], GroupMemberRole::Member);
+    let mut group = t.e.state.groups[&g].clone();
+    let mut prefs = GroupPreferences::default_full();
+    prefs.files = Some(GroupFeature::new(FeatureEnabled::Off));
+    group.profile.group_preferences = Some(prefs);
+    t.e.save_group(group).unwrap();
+    let path = t.dir.0.join("files").join("a.pdf");
+    std::fs::write(&path, b"pdf").unwrap();
+    let out = t.req(Request::SendFile {
+        chat: ChatRef::Group(g),
+        path,
+        kind: FileKind::File,
+        preview: None,
+        duration: None,
+        text: String::new(),
+    });
+    assert_eq!(
+        code(&out, RequestKind::SendFile),
+        Some(ErrorCode::NotAllowed)
+    );
 }

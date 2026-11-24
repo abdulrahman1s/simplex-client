@@ -1,7 +1,6 @@
 //! The stateless checks, one rule each.
 
 use super::*;
-use crate::types::model::ChatProfile;
 
 fn code(r: &Request) -> Option<ErrorCode> {
     check(r).err().map(|e| e.code)
@@ -66,25 +65,5 @@ fn a_group_name_upstream_would_change_is_refused() {
         code(&Request::NewGroup(" Club ".into())),
         None,
         "trimmed first"
-    );
-}
-
-#[test]
-fn a_bio_over_160_json_bytes_is_refused() {
-    let profile = |about: &str| {
-        Request::SetProfile(ChatProfile {
-            name: "Alice".into(),
-            about: about.into(),
-            ..ChatProfile::default()
-        })
-    };
-    assert_eq!(code(&profile(&"a".repeat(160))), None);
-    assert_eq!(
-        code(&profile(&"a".repeat(161))),
-        Some(ErrorCode::TextTooLong)
-    );
-    assert_eq!(
-        code(&profile(&"ж".repeat(81))),
-        Some(ErrorCode::TextTooLong)
     );
 }

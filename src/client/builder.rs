@@ -8,6 +8,7 @@ use crossbeam_channel::Receiver;
 
 use super::error::{Error, Result};
 use super::handle::Client;
+use super::spawn::STORE_FILE;
 use crate::engine::NativeAgent;
 use crate::engine::agent_port::AgentPort;
 use crate::engine::clock::{Clock, SystemClock};
@@ -105,8 +106,10 @@ impl ClientBuilder {
         A: AgentPort + 'static,
         F: FnOnce(&Config, &Log) -> (A, Receiver<A::Smp>) + Send + 'static,
     {
-        // A new store's user takes this name (Commands.hs `CreateActiveUser`: `checkValidName`).
-        if !is_valid_name(self.config.name.trim()) {
+        // Only a new store's user takes this name (Commands.hs `CreateActiveUser`:
+        // `checkValidName`); an existing store keeps its own.
+        let new_store = !self.config.dir.join(STORE_FILE).exists();
+        if new_store && !is_valid_name(self.config.name.trim()) {
             return Err(Error::Failed {
                 request: RequestKind::Start,
                 code: ErrorCode::InvalidName,

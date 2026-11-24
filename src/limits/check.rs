@@ -3,10 +3,7 @@
 use crate::types::model::ChatRef;
 use crate::types::{ErrorCode, Request};
 
-use super::{
-    MAX_BIO_BYTES, MAX_ENCODED_MSG_LENGTH, MAX_SENT_MENTIONS, is_valid_name, json_len,
-    wire_reaction,
-};
+use super::{MAX_ENCODED_MSG_LENGTH, MAX_SENT_MENTIONS, is_valid_name, json_len, wire_reaction};
 
 /// Why a request breaks a limit: one of the limit codes, and words for a log.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -32,10 +29,9 @@ fn text_fits(text: &str) -> Result<(), Refusal> {
 }
 
 /// Checks what a request carries against the limits that need no state: the reaction set,
-/// text size, the mention count in a group, a new group's name (trimmed, as the engine keeps
-/// it) and the line about the user.
-/// The engine checks the rest (roles, preferences, the reactions already given, the edit
-/// window, file sizes, a changed display name) when it handles the request.
+/// text size, the mention count in a group and a new group's name (trimmed, as the engine
+/// keeps it). The engine checks the rest (roles, preferences, the reactions already given,
+/// the edit window, file sizes, a changed display name or bio) when it handles the request.
 pub fn check(request: &Request) -> Result<(), Refusal> {
     match request {
         Request::React { emoji, .. } => {
@@ -68,16 +64,8 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
             }
             Ok(())
         }
-        Request::SetProfile(p) => {
-            if json_len(&p.about) > MAX_BIO_BYTES {
-                return refuse(
-                    ErrorCode::TextTooLong,
-                    "the line about the user is too long",
-                );
-            }
-            Ok(())
-        }
-        Request::SetPicture(_)
+        Request::SetProfile(_)
+        | Request::SetPicture(_)
         | Request::SetGroupPicture { .. }
         | Request::CreateInvite
         | Request::Connect(_)

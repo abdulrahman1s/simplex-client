@@ -258,9 +258,9 @@ client.on("fileProgress", ({ percent, sending }) => {
 
 ## Limits
 
-The client keeps the same limits as the official SimpleX Chat 7.1.4 client, so nothing it
-sends is something other clients drop. `simplex_client::limits` has every one of them, each
-with its upstream source. The main ones:
+The client keeps the limits the official SimpleX Chat 7.1.4 client checks before it sends,
+so it refuses what that client would refuse. `simplex_client::limits` has them all, each with
+its upstream source. The main ones:
 
 | Limit | Value | Upstream |
 |---|---|---|
@@ -280,7 +280,11 @@ with its upstream source. The main ones:
 
 The chat's preferences apply as well: reactions, files or full deletion turned off by a
 friend or a group are refused. Received messages are held to the same rules, so a reaction
-outside the set or a fourth one from the same person is ignored.
+outside the set or a fourth one from the same person is ignored. Some values are listed for
+reference only, since the official apps use them as targets rather than refusals or this
+client has no request they apply to: the inline SMP file size, the image and preview sizes,
+voice length, auto-receive sizes and the roles to remove, moderate or block for everyone. The
+group preference on SimpleX links is not checked yet.
 
 A request that breaks a limit fails with its own code before anything is sent:
 

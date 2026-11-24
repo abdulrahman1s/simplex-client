@@ -18,7 +18,7 @@ All notable changes to this project are documented here. The format follows
   `file_too_large`, `text_too_long`, `too_many_mentions`, `invalid_name`, `not_allowed` and
   `picture_too_large`. `Client::request` fails at once for the rules that need no lookup.
 - Display and group names are checked as upstream's `mkValidName` does, at most 50
-  characters; a bio is at most 160 bytes; a new store's name is checked at start.
+  characters; a changed bio is at most 160 bytes; a new store's name is checked at start.
 - A friend's fourth reaction on a message, or one on a message without content, is ignored.
 
 - File transfers in the wasm build (browser, Node.js and Bun): `friend.sendFile`,

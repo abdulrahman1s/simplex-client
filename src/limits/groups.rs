@@ -3,7 +3,7 @@
 use crate::chat::group::GroupMemberRole;
 
 /// What a short link's user data holds at most, the profile shown before connecting: 13 784
-/// bytes (Agent/Protocol.hs `userDataPaddedLength`).
+/// bytes (Crypto/ShortLink.hs `userDataPaddedLength`).
 pub use crate::agent::USER_DATA_PADDED_LENGTH as MAX_LINK_DATA;
 
 /// Sending, replying, editing and files in a group need at least `author` (Commands.hs
@@ -14,11 +14,12 @@ pub const ROLE_TO_SEND: GroupMemberRole = GroupMemberRole::Author;
 /// `APIDeleteChatItem`).
 pub const ROLE_TO_DELETE_OWN: GroupMemberRole = GroupMemberRole::Observer;
 
-/// Deleting or blocking someone else's messages needs at least `moderator`, and at least the
-/// role of the member (Commands.hs `APIDeleteMemberChatItem`, `APIBlockMembersForAll`).
+/// Deleting someone else's messages for everyone needs at least `moderator` (Commands.hs
+/// `delGroupChatItemsForMembers`).
 pub const ROLE_TO_MODERATE: GroupMemberRole = GroupMemberRole::Moderator;
 
-/// Blocking a member for everyone: as [`ROLE_TO_MODERATE`].
+/// Blocking a member for everyone needs at least `moderator`, and at least the member's role
+/// (Commands.hs `APIBlockMembersForAll`).
 pub const ROLE_TO_BLOCK_FOR_ALL: GroupMemberRole = GroupMemberRole::Moderator;
 
 /// Adding a member needs at least `admin`, and at least the role given (Commands.hs `APIAddMember`).
