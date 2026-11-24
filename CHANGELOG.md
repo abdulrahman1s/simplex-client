@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-24
+
 ### Security
 
 - The HPACK integer decoder refuses a sixth continuation byte before shifting, so a 32-bit
@@ -200,3 +202,6 @@ All notable changes to this project are documented here. The format follows
   switch started the v7 way still ends the v7 way.
 - A group member's chat version range follows each JSON message they send, not only the
   handshake (`updateMemberChatVRange`).
+
+[Unreleased]: https://github.com/abdulrahman1s/simplex-client/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/abdulrahman1s/simplex-client/releases/tag/v0.1.0

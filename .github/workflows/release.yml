@@ -1,0 +1,77 @@
+name: Release
+
+# Pushing a tag `vX.Y.Z` that matches the versions in Cargo.toml and package.json tests the
+# tree once more, builds the JS packages and publishes a GitHub release with them.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.99.1"
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.130
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: The tag matches the versions
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          grep -qx "version = \"$v\"" Cargo.toml
+          test "$(node -p 'require("./package.json").version')" = "$v"
+          grep -q "^## \[$v\]" CHANGELOG.md
+
+      - name: Test
+        run: |
+          cargo test --locked
+          cargo test --locked --target wasm32-unknown-unknown --no-default-features --features wasm
+
+      - name: Build the JS packages
+        run: |
+          scripts/build-js.sh
+          npm test
+
+      - name: Package
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          mkdir dist
+          npm pack --ignore-scripts --pack-destination dist
+          cp pkg/web/simplex_client_bg.wasm "dist/simplex-client-$v.wasm"
+          tar -czf "dist/simplex-client-worker-$v.tar.gz" --exclude=node_modules worker
+          (cd dist && sha256sum * > SHA256SUMS)
+          ls -l dist
+
+      - name: Release notes from the changelog
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v v="$v" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          test -s notes.md
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file notes.md \
+            --verify-tag

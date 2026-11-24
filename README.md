@@ -95,7 +95,7 @@ The crate is not published on crates.io. Depend on it through git:
 
 ```toml
 [dependencies]
-simplex-client = { git = "https://github.com/abdulrahman1s/simplex-client" }
+simplex-client = { git = "https://github.com/abdulrahman1s/simplex-client", tag = "v0.1.0" }
 ```
 
 An echo bot:
@@ -200,13 +200,17 @@ a `Group`.
 ### Node.js and Bun
 
 The same build runs on Node.js 22+ and Bun. There no tunnel is needed: the client dials
-relays over direct TCP (`node:net`), and TLS still runs inside wasm. Install from git
-(building needs Rust with the `wasm32-unknown-unknown` target and `wasm-bindgen-cli` 0.2.130):
+relays over direct TCP (`node:net`), and TLS still runs inside wasm. Each
+[release](https://github.com/abdulrahman1s/simplex-client/releases) carries a ready-built
+package, so no Rust toolchain is needed:
 
 ```sh
-npm install github:abdulrahman1s/simplex-client
-bun add github:abdulrahman1s/simplex-client
+npm install https://github.com/abdulrahman1s/simplex-client/releases/download/v0.1.0/simplex-client-0.1.0.tgz
+bun add https://github.com/abdulrahman1s/simplex-client/releases/download/v0.1.0/simplex-client-0.1.0.tgz
 ```
+
+Installing from git (`npm install github:abdulrahman1s/simplex-client`) builds it instead,
+which needs Rust with the `wasm32-unknown-unknown` target and `wasm-bindgen-cli` 0.2.130.
 
 ```js
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
