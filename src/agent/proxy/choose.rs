@@ -36,15 +36,13 @@ impl AgentClient {
         }
     }
 
-    /// `knownHosts`: a relay of ours already sees our address, so it learns nothing new.
+    /// `knownHosts`: the user's servers, which in the chat keep every preset, disabled ones too.
     fn known(&self, dest: &SmpServer) -> bool {
         let Some(host) = transport_host(dest) else {
             return false;
         };
-        self.cfg
-            .servers
-            .iter()
-            .any(|s| s.hosts.iter().any(|h| h == host))
+        let mut ours = self.cfg.servers.iter().chain(&self.cfg.presets);
+        ours.any(|s| s.hosts.iter().any(|h| h == host))
     }
 
     /// The proxy `dest` goes through: the one chosen before, or a new pick.

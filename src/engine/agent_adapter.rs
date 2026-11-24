@@ -298,6 +298,26 @@ mod tests {
     }
 
     #[test]
+    fn routing_settings_and_disabled_relays_reach_the_agents_config() {
+        let mut a = agent(&[A, B]);
+        assert_eq!(
+            a.client.cfg.proxy_mode,
+            ProxyMode::Never,
+            "the agent's own default"
+        );
+        a.set_routing(ProxyMode::Always, ProxyFallback::Prohibit);
+        let cfg = &a.client.cfg;
+        assert_eq!(
+            (cfg.proxy_mode, cfg.proxy_fallback),
+            (ProxyMode::Always, ProxyFallback::Prohibit)
+        );
+        a.set_disabled_relays(&[A.to_owned()]);
+        assert_eq!(a.client.cfg.disabled, vec![A.parse::<SmpServer>().unwrap()]);
+        a.set_disabled_relays(&[]);
+        assert!(a.client.cfg.disabled.is_empty());
+    }
+
+    #[test]
     fn disabled_relays_come_last_and_enabling_restores_the_order() {
         let mut a = agent(&[A, B]);
         a.set_disabled_relays(&[A.to_owned()]);

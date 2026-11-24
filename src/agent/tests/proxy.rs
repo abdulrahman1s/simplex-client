@@ -64,3 +64,16 @@ fn a_session_the_proxy_lost_is_asked_for_again_and_the_message_goes() {
     );
     assert_eq!(net.b.count("PRXY"), asked + 1);
 }
+
+#[test]
+fn with_unknown_a_preset_relay_counts_as_our_own() {
+    let net = net();
+    let mut alice = net.node("alice", &[&net.a], ProxyMode::Unknown);
+    alice.agent.cfg.presets = vec![net.b.address()];
+    let mut bob = net.node("bob", &[&net.b], ProxyMode::Never);
+    let (ca, cb) = connect(&mut alice, &mut bob, false, false);
+    send(&mut alice, ca, b"to bob");
+    assert_eq!(next_msg(&mut [&mut alice, &mut bob], 1, cb).1, b"to bob");
+    assert!(net.b.lock().forwarded.is_empty());
+    assert_eq!(net.a.count("PRXY"), 0);
+}

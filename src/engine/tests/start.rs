@@ -1,6 +1,6 @@
 //! The start sequence (codec: start_up_…, a_first_start_…, requests_made_while_starting_…).
 
-use crate::types::{Event, Request};
+use crate::types::{Event, ProxyFallback, ProxyMode, Request};
 
 use super::{Call, T};
 use crate::engine::agent_port::AgentEvent;
@@ -66,4 +66,19 @@ fn changes_to_who_the_user_talks_to_read_the_list_once_more_at_most() {
         .filter(|e| matches!(e, Event::Chats { .. }))
         .count();
     assert_eq!(lists, 1, "one list for all the changes");
+}
+
+#[test]
+fn the_start_hands_the_configs_routing_to_the_agent_with_the_chats_defaults() {
+    let mut t = T::new();
+    t.e.start(&t.dir.hello("alice")).unwrap();
+    let chat = (ProxyMode::Unknown, ProxyFallback::AllowProtected);
+    assert_eq!(t.e.agent.routing, Some(chat));
+    let mut t = T::new();
+    let mut hello = t.dir.hello("alice");
+    hello.proxy_mode = ProxyMode::Always;
+    hello.proxy_fallback = ProxyFallback::Prohibit;
+    t.e.start(&hello).unwrap();
+    let set = (ProxyMode::Always, ProxyFallback::Prohibit);
+    assert_eq!(t.e.agent.routing, Some(set));
 }
