@@ -4,6 +4,7 @@ use super::rotation_support::{
     answer_qkey, assert_v7, both_ways, move_offline, one_step, restart, step_of, wait_settled,
     waiting_quse,
 };
+use super::support::pq_of;
 use super::support::{WAIT, connect, rig, v7_agent};
 use crate::agent::message::AMessage;
 use crate::agent::rotation::Step;
@@ -65,7 +66,9 @@ fn v7_restart_at(stop: Stop) {
         Stop::AfterMove => {
             one_step(&mut a, &mut b, ca);
             // Sent on the old queue and kept, so that the move leaves its copy waiting.
-            a.agent.send(&mut a.store, ca, b"two".to_vec()).unwrap();
+            a.agent
+                .send(&mut a.store, ca, pq_of(&a.agent, ca), b"two".to_vec())
+                .unwrap();
             pump(&mut [&mut a, &mut b], WAIT, |n| {
                 n[0].agent.conn(ca).unwrap().sends.is_empty().then_some(())
             });

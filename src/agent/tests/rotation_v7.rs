@@ -3,6 +3,7 @@ use super::rotation_peer::Peer;
 use super::rotation_support::{
     answer_qkey, assert_v7, both_ways, step_of, wait_settled, waiting_quse,
 };
+use super::support::pq_of;
 use super::support::{WAIT, connect, rig, v7_agent, wait_for};
 use crate::agent::client::AgentEvent;
 use crate::agent::error::AgentError;
@@ -24,7 +25,10 @@ fn a_v7_switch_sends_qkey_on_the_old_queue_then_qtest_alone_on_the_new_one_and_m
     pump(&mut [&mut a, &mut b], WAIT, |n| {
         waiting_quse(n[0], ca).then_some(())
     });
-    let one = a.agent.send(&mut a.store, ca, b"one".to_vec()).unwrap();
+    let one = a
+        .agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"one".to_vec())
+        .unwrap();
     wait_for(&mut [&mut a, &mut b], 0, |e| {
         (*e == AgentEvent::Sent {
             conn: ca,
@@ -42,7 +46,10 @@ fn a_v7_switch_sends_qkey_on_the_old_queue_then_qtest_alone_on_the_new_one_and_m
     a.agent.kick(&mut a.store, ca);
     a.agent.hold_switch = true;
     // QTEST is on its way; this one goes on the old queue, and again on the new one after QTEST.
-    let two = a.agent.send(&mut a.store, ca, b"two".to_vec()).unwrap();
+    let two = a
+        .agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"two".to_vec())
+        .unwrap();
     pump(&mut [&mut a, &mut b], WAIT, |n| {
         (step_of(n[0], ca) == Some(Step::Tested)).then_some(())
     });

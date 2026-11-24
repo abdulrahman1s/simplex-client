@@ -73,6 +73,11 @@ impl<A: AgentPort> Engine<A> {
             | ChatEvent::FileCancel { .. }
             | ChatEvent::FileChunk { .. }) => self.on_group_message_event(ctx, shared, e),
             ChatEvent::GrpMsgForward { fwd, msg } => self.on_group_forward_json(ctx, fwd, *msg),
+            ChatEvent::GrpDirectInv {
+                conn_req,
+                content,
+                scope,
+            } => self.on_grp_direct_inv(ctx, conn_req, content.as_ref(), scope.as_ref()),
             ChatEvent::GrpInv(inv) => self.on_grp_inv(
                 Via::Member {
                     group: ctx.group,
@@ -104,7 +109,6 @@ impl<A: AgentPort> Engine<A> {
             | ChatEvent::DirectDel
             | ChatEvent::GrpAcpt { .. }
             | ChatEvent::GrpLinkInv(_)
-            | ChatEvent::GrpDirectInv { .. }
             | ChatEvent::InfoProbe(_)
             | ChatEvent::InfoProbeCheck(_)
             | ChatEvent::InfoProbeOk(_)

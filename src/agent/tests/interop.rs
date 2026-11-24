@@ -1,6 +1,7 @@
 //! Interop with the official CLI 7.1.4 over a local smp-server, both roles, full and short links, PQ off and on.
 //! Start the server and two CLIs with `-p <port> -s <server>`, then run with
 //! `ZAUN_TEST_SMP`, `ZAUN_TEST_CLI_A=<port of the CLI that invites>` and `ZAUN_TEST_CLI_B=<port of the one that joins>`.
+use super::support::pq_of;
 use std::time::Duration;
 
 use serde_json::Value;
@@ -93,7 +94,10 @@ fn exchange(n: &mut Node, c: &mut Cli, conn: ConnId, cid: i64) {
             .ack(&mut n.store, conn, id, Some(Vec::new()))
             .unwrap();
         let t2 = format!("from zaun {i} {} ✓ ünï", rnd());
-        let sent = n.agent.send(&mut n.store, conn, x_msg(&t2)).unwrap();
+        let sent = n
+            .agent
+            .send(&mut n.store, conn, pq_of(&n.agent, conn), x_msg(&t2))
+            .unwrap();
         until(n, c, |_, c| {
             c.take(|e| received_text(e, cid).filter(|t| *t == t2))
         });

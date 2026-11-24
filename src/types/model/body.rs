@@ -65,6 +65,9 @@ pub enum ChatNotice {
         member: Option<String>,
     },
     BadSignature,
+    /// A member invited the user to talk directly (`RGEMemberCreatedContact`, "started direct
+    /// connection with you"); the invitation waits with the requests.
+    DirectInvitation,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

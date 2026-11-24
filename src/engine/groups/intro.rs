@@ -10,7 +10,7 @@ use crate::chat::{ChatEvent, ChatMessage};
 use crate::engine::agent_port::{AgentPort, ConnId};
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
-use crate::engine::records::{MemberCategory, MemberRecord, MemberRelation};
+use crate::engine::records::{GroupRecord, MemberCategory, MemberRecord, MemberRelation};
 
 fn shuffle<T>(v: &mut [T]) -> Result<()> {
     for i in (1..v.len()).rev() {
@@ -51,17 +51,19 @@ impl<A: AgentPort> Engine<A> {
             .filter(|r| !m.relations.contains_key(&r.id))
             .cloned()
             .collect();
+        let g = self.group(group)?;
         let new = ChatMessage::new(ChatEvent::GrpMemNew {
-            member_info: member_info(&m),
+            member_info: member_info(&g, &m),
             scope: None,
         })?;
         let ids: Vec<i64> = recipients.iter().map(|r| r.id).collect();
         self.send_to_members(group, &ids, &new)?;
-        self.send_intros(&m, conn, intro_order(recipients)?)
+        self.send_intros(&g, &m, conn, intro_order(recipients)?)
     }
 
     fn send_intros(
         &mut self,
+        g: &GroupRecord,
         m: &MemberRecord,
         conn: ConnId,
         told: Vec<MemberRecord>,
@@ -70,7 +72,7 @@ impl<A: AgentPort> Engine<A> {
         for r in &told {
             self.relate(m.group, m.id, r.id, MemberRelation::Introduced)?;
             let intro = ChatMessage::new(ChatEvent::GrpMemIntro {
-                member_info: member_info(r),
+                member_info: member_info(g, r),
                 restrictions: None,
             })?;
             elements.push(intro.to_json()?);
@@ -82,7 +84,8 @@ impl<A: AgentPort> Engine<A> {
                 .line(format_args!("{dropped} introductions too large to send"));
         }
         for body in bodies {
-            self.agent.send(&mut self.store, &conn, body)?;
+            self.agent
+                .send(&mut self.store, &conn, self.state.pq_of(&conn), body)?;
         }
         Ok(())
     }
@@ -110,7 +113,7 @@ impl<A: AgentPort> Engine<A> {
             return Ok(());
         };
         let fwd = ChatMessage::new(ChatEvent::GrpMemFwd {
-            member_info: member_info(&from),
+            member_info: member_info(&self.group(group)?, &from),
             intro,
         })?;
         self.send_to_members(group, &[to], &fwd)?;

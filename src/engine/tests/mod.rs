@@ -9,6 +9,7 @@ mod conn_events;
 mod contact;
 mod fake_agent;
 mod files;
+mod friend_pq;
 mod groups;
 mod handshake;
 mod inbound;

@@ -55,7 +55,7 @@ impl<A: AgentPort> Engine<A> {
         if member_key.is_some() {
             m.key.clone_from(member_key);
         }
-        apply_handshake(&mut m, &msg, profile.as_ref());
+        apply_handshake(&g, &mut m, &msg, profile.as_ref());
         self.save_member(m)?;
         self.state.chats_dirty = true;
         Ok(())

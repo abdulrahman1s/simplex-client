@@ -47,7 +47,7 @@ impl<A: AgentPort> Engine<A> {
         };
         let msg = ChatMessage::new(ChatEvent::MsgNew(container))?;
         let body = encode_chat_message(&msg, PQ)?;
-        let agent_id = self.agent.send(&mut self.store, &f.conn, body)?;
+        let agent_id = self.agent.send(&mut self.store, &f.conn, f.pq, body)?;
         let now = self.clock.wall_ms();
         let mut item = ItemRecord::new(MessageAuthor::Me, MessageBody::Text(text.to_owned()), now);
         item.reply = reply;

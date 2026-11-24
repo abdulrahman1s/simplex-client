@@ -1,15 +1,16 @@
-//! A host's verdict on a pending join: `x.grp.link.acpt` (Subscriber.hs `xGrpLinkAcpt`).
+//! A host's verdict on a pending join: `x.grp.link.acpt` (Subscriber.hs `xGrpLinkAcpt`, `introduceToRemainingMembers`).
 
 use crate::types::model::ChatNotice;
 
 use super::inbound::GroupCtx;
 use super::rank::{at_least, role_required_to_change};
+use super::role::history_on;
 use crate::chat::group::{GroupAcceptance, GroupMemberRole};
 use crate::chat::ids::MemberId;
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
-use crate::engine::records::MemberStatus;
+use crate::engine::records::{MemberCategory, MemberStatus};
 
 impl<A: AgentPort> Engine<A> {
     pub(crate) fn on_link_acpt(
@@ -45,8 +46,22 @@ impl<A: AgentPort> Engine<A> {
         } else {
             MemberStatus::Announced
         };
+        let (id, invitee) = (m.id, m.category == MemberCategory::Invitee);
         self.save_member(m)?;
         self.state.chats_dirty = true;
+        if invitee {
+            self.introduce_to_remaining(ctx.group, id)?;
+        }
+        Ok(())
+    }
+
+    /// `introduceToRemainingMembers`: the user's invitee, once admitted, meets the rest and gets
+    /// the history.
+    fn introduce_to_remaining(&mut self, group: i64, member: i64) -> Result<()> {
+        self.introduce_to_all(group, member)?;
+        if history_on(&self.group(group)?) {
+            self.send_history(group, member, &[])?;
+        }
         Ok(())
     }
 

@@ -5,10 +5,11 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicI64;
 use std::time::Duration;
 
-use crate::agent::client::{AgentConfig, AgentEvent, ConnId};
+use crate::agent::client::{AgentClient, AgentConfig, AgentEvent, ConnId};
 use crate::agent::links::ConnectionLink;
 use crate::agent::testing::{Dir, FakeConnector, FakeSmp, Node, TestClock, pump};
 use crate::encoding::{Version, VersionRange};
+use crate::ratchet::{PqEncryption, Ratchet};
 use crate::smp::{ConnConfig, SmpServer};
 
 pub const WAIT: Duration = Duration::from_secs(10);
@@ -139,4 +140,10 @@ pub fn next_msg(
 /// Waits for an event `f` picks on node `who`.
 pub fn wait_for<T>(n: &mut [&mut Node], who: usize, f: impl Fn(&AgentEvent) -> Option<T>) -> T {
     pump(n, WAIT, |n| n[who].take(&f))
+}
+
+/// What a send that keeps `conn`'s KEM as it is passes: its ratchet's current setting.
+pub fn pq_of(agent: &AgentClient, conn: ConnId) -> PqEncryption {
+    let ratchet = agent.conn(conn).ok().and_then(|c| c.ratchet.as_ref());
+    ratchet.map_or(PqEncryption::OFF, Ratchet::pq_enabled)
 }

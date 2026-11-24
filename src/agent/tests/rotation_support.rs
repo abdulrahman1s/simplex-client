@@ -1,5 +1,6 @@
 //! What the rotation tests share: the peer's new queue, our switch's state, restarts and stepping, the check that messages go both ways after.
 use super::rotation_peer::Peer;
+use super::support::pq_of;
 use super::support::{Rig, WAIT, next_msg, server};
 use crate::agent::client::ConnId;
 use crate::agent::message::{AMessage, SndQAddr};
@@ -102,11 +103,15 @@ pub fn both_ways(r: &Rig, a: &mut Node, b: Node, p: &Peer, ca: ConnId) -> Node {
     let mut b = b;
     p.adopt(&mut b);
     let mut b = restart(r, b, "b");
-    a.agent.send(&mut a.store, ca, b"after".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"after".to_vec())
+        .unwrap();
     let (id, body) = next_msg(&mut [&mut *a, &mut b], 1, p.cb);
     assert_eq!(body, b"after");
     b.agent.ack(&mut b.store, p.cb, id, None).unwrap();
-    b.agent.send(&mut b.store, p.cb, b"back".to_vec()).unwrap();
+    b.agent
+        .send(&mut b.store, p.cb, pq_of(&b.agent, p.cb), b"back".to_vec())
+        .unwrap();
     assert_eq!(next_msg(&mut [&mut *a, &mut b], 0, ca).1, b"back");
     let old = &r.smp.lock().queues.by_rcv[&p.old.rcv_id];
     assert!(old.msgs.is_empty(), "nothing more goes to the old queue");

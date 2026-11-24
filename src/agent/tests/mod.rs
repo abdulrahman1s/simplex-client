@@ -7,6 +7,7 @@ mod delivery;
 mod handshake;
 mod interop;
 mod live;
+mod pq_upgrade;
 mod restart;
 pub(crate) mod resync;
 mod resync_rules;

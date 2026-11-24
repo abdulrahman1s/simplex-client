@@ -6,13 +6,20 @@ use crate::chat::{ChatEvent, ChatMessage};
 use crate::engine::agent_port::{AgentFailure, AgentPort, ConnId};
 use crate::engine::error::Result;
 use crate::engine::machine::Engine;
-use crate::engine::records::{MemberCategory, MemberRecord, MemberStatus};
+use crate::engine::records::{GroupRecord, MemberCategory, MemberRecord, MemberStatus};
+
+use super::redact::member_profile;
 
 /// Their profile and range from a handshake (`processMemberProfileUpdate`, `updatePeerChatVRange`).
-pub(crate) fn apply_handshake(m: &mut MemberRecord, msg: &ChatMessage, profile: Option<&Profile>) {
+pub(crate) fn apply_handshake(
+    g: &GroupRecord,
+    m: &mut MemberRecord,
+    msg: &ChatMessage,
+    profile: Option<&Profile>,
+) {
     m.chat_v = Some(peer_range(msg));
     if let Some(p) = profile {
-        m.profile = p.clone();
+        m.profile = member_profile(g, m, p);
     }
 }
 
@@ -116,7 +123,7 @@ impl<A: AgentPort> Engine<A> {
             return Ok(());
         };
         let profile = profile.clone();
-        apply_handshake(&mut m, &msg, Some(&profile));
+        apply_handshake(&self.group(group)?, &mut m, &msg, Some(&profile));
         self.save_member(m)?;
         self.state.chats_dirty = true;
         Ok(())

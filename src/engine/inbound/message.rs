@@ -50,6 +50,10 @@ impl<A: AgentPort> Engine<A> {
                 }
             };
             receipt |= asks_receipt(&msg.event);
+            if let Err(e) = self.refresh_friend_range(friend, &msg) {
+                self.log
+                    .line(format_args!("a friend's range not kept: {}", e.detail));
+            }
             if let Err(e) = self.on_x(friend, msg) {
                 self.log
                     .line(format_args!("a chat event failed: {}", e.detail));

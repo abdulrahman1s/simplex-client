@@ -52,7 +52,13 @@ impl AgentClient {
         }
         let mut ratchet = ratchet.ok_or(AgentError::Prohibited("no ratchet"))?;
         let qend = AMessage::Qend(vec![addr(&old)]);
-        let env = agent_envelope(&mut rec, &mut ratchet, qend, self.envelope_agent_version())?;
+        let env = agent_envelope(
+            &mut rec,
+            &mut ratchet,
+            qend,
+            self.envelope_agent_version(),
+            None,
+        )?;
         // A message that never went on the old queue goes only on the new one; QEND after it on the
         // old queue would skip it in the peer's chain.
         rec.switch = if moved {

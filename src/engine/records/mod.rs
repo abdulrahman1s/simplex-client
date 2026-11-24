@@ -13,7 +13,7 @@ pub mod pending;
 pub mod settings;
 pub mod user;
 
-pub use address::{AddressRecord, RequestRecord};
+pub use address::{AddressRecord, MemberInvite, RequestRecord};
 pub use conn::{ConnKind, ConnRecord};
 pub use format::{NS, VERSION, decode, encode};
 pub use friend::FriendRecord;

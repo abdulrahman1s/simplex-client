@@ -3,10 +3,13 @@
 mod admin;
 mod admin_member;
 mod bad_signature;
+mod direct_accept;
+mod direct_inv;
 mod files;
 mod forward;
 mod forward_signed;
 mod history;
+mod history_accept;
 mod leave;
 mod links;
 mod links_host;
@@ -23,6 +26,7 @@ mod messages;
 mod messages_change;
 mod pending;
 mod picture;
+mod redaction;
 mod seed;
 
 use crate::types::model::{ChatRef, Membership, MessageAuthor, MessageBody};

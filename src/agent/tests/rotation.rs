@@ -1,6 +1,7 @@
 //! Following the peer to a new queue at agent v8: SKEY, the empty confirmation, the move, QEND (Agent.hs `qAddMsg`, `ICQSndSecure`).
 use super::rotation_peer::Peer;
 use super::rotation_support::{both_ways, move_offline, one_step, switch_of, wait_settled};
+use super::support::pq_of;
 use super::support::{WAIT, connect, rig, wait_for};
 use crate::agent::client::AgentEvent;
 use crate::agent::error::AgentError;
@@ -45,7 +46,11 @@ fn messages_queued_during_a_v8_switch_arrive_once_and_in_order() {
     });
     let sent: Vec<_> = [&b"one"[..], b"two"]
         .iter()
-        .map(|m| a.agent.send(&mut a.store, ca, m.to_vec()).unwrap())
+        .map(|m| {
+            a.agent
+                .send(&mut a.store, ca, pq_of(&a.agent, ca), m.to_vec())
+                .unwrap()
+        })
         .collect();
     for &msg_id in &sent {
         wait_for(&mut [&mut a, &mut b], 0, |e| {
@@ -54,7 +59,10 @@ fn messages_queued_during_a_v8_switch_arrive_once_and_in_order() {
     }
     // The old queue is full, so the third waits and moves to the new queue unsent.
     r.smp.lock().queues.quota = 2;
-    let third = a.agent.send(&mut a.store, ca, b"three".to_vec()).unwrap();
+    let third = a
+        .agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"three".to_vec())
+        .unwrap();
     wait_for(&mut [&mut a, &mut b], 0, |e| {
         matches!(e, AgentEvent::Mwarn { msg_id, .. } if *msg_id == third).then_some(())
     });
@@ -124,7 +132,12 @@ fn qadd_is_refused_while_a_ratchet_resync_this_side_started_waits_and_the_chain_
     assert_eq!(err, AgentError::Prohibited("ratchet is not synchronized"));
     assert_eq!(switch_of(&a, ca), None);
     b.agent
-        .send(&mut b.store, cb, b"still here".to_vec())
+        .send(
+            &mut b.store,
+            cb,
+            pq_of(&b.agent, cb),
+            b"still here".to_vec(),
+        )
         .unwrap();
     let integrity = wait_for(&mut [&mut a, &mut b], 0, |e| match e {
         AgentEvent::Msg {

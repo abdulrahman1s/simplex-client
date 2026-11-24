@@ -47,6 +47,13 @@ impl State {
         }
     }
 
+    /// The `pqEncryption` a message on `conn` goes with: a friend's own; group connections are PQ off.
+    #[must_use]
+    pub fn pq_of(&self, conn: &ConnId) -> bool {
+        let friend = self.friend_of(conn).and_then(|id| self.friends.get(&id));
+        friend.is_some_and(|f| f.pq)
+    }
+
     /// The (group, member) a group connection is with.
     #[must_use]
     pub fn member_of(&self, conn: &ConnId) -> Option<(i64, i64)> {

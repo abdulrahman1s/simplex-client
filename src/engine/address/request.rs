@@ -59,6 +59,7 @@ impl<A: AgentPort> Engine<A> {
             image: profile.image.map(|i| i.0),
             req_id,
             since: self.clock.wall_ms(),
+            member: None,
         };
         self.put(&keys::request(id), &rec)?;
         self.state.address.requests.insert(id, rec);
@@ -76,7 +77,7 @@ impl<A: AgentPort> Engine<A> {
     }
 
     /// Past `MAX_REQUESTS` the oldest is rejected: anyone can write to an address.
-    fn make_room(&mut self) -> Result<()> {
+    pub(crate) fn make_room(&mut self) -> Result<()> {
         while self.state.address.requests.len() >= MAX_REQUESTS {
             let Some((&oldest, _)) = self.state.address.requests.first_key_value() else {
                 break;
@@ -87,13 +88,13 @@ impl<A: AgentPort> Engine<A> {
     }
 
     /// Removes a request here, and at the agent when `drop` says it is not answered by a connection.
-    pub(super) fn forget_request(&mut self, id: i64, drop: bool) -> Result<()> {
+    pub(crate) fn forget_request(&mut self, id: i64, drop: bool) -> Result<()> {
         let Some(r) = self.state.address.requests.remove(&id) else {
             return Ok(());
         };
         self.store.delete(NS, &keys::request(id))?;
         self.state.chats_dirty = true;
-        if drop {
+        if drop && r.member.is_none() {
             self.drop_request(&r.invitation)?;
         }
         Ok(())

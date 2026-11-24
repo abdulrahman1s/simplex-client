@@ -1,4 +1,5 @@
 //! Restart from the store: subscriptions, queued sends and unacked messages come back; delete forgets everything.
+use super::support::pq_of;
 use std::time::Duration;
 
 use super::support::{WAIT, connect, next_msg, rig};
@@ -14,7 +15,9 @@ fn a_message_queued_before_a_restart_is_sent_after_it() {
     let (ca, cb) = connect(&mut a, &mut b, false, true);
     r.smp.refuse(true);
     r.smp.drop_links();
-    b.agent.send(&mut b.store, cb, b"queued".to_vec()).unwrap();
+    b.agent
+        .send(&mut b.store, cb, pq_of(&b.agent, cb), b"queued".to_vec())
+        .unwrap();
     b.agent.close();
     drop(b);
     let mut b = r.node("b");
@@ -27,7 +30,9 @@ fn an_unacked_message_is_handed_out_again_after_a_restart() {
     let r = rig();
     let (mut a, mut b) = (r.node("a"), r.node("b"));
     let (ca, cb) = connect(&mut a, &mut b, false, false);
-    a.agent.send(&mut a.store, ca, b"keep me".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"keep me".to_vec())
+        .unwrap();
     let first = next_msg(&mut [&mut a, &mut b], 1, cb);
     b.agent.close();
     drop(b);
@@ -35,7 +40,9 @@ fn an_unacked_message_is_handed_out_again_after_a_restart() {
     let again = next_msg(&mut [&mut a, &mut b], 1, cb);
     assert_eq!(again, first);
     b.agent.ack(&mut b.store, cb, again.0, None).unwrap();
-    a.agent.send(&mut a.store, ca, b"next".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"next".to_vec())
+        .unwrap();
     assert_eq!(next_msg(&mut [&mut a, &mut b], 1, cb).1, b"next");
 }
 
@@ -44,7 +51,9 @@ fn a_message_redelivered_after_its_ack_is_acked_without_a_second_msg() {
     let r = rig();
     let (mut a, mut b) = (r.node("a"), r.node("b"));
     let (ca, cb) = connect(&mut a, &mut b, false, false);
-    a.agent.send(&mut a.store, ca, b"once".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"once".to_vec())
+        .unwrap();
     let (id, _) = next_msg(&mut [&mut a, &mut b], 1, cb);
     r.smp.refuse(true);
     r.smp.drop_links();
@@ -64,7 +73,9 @@ fn a_message_redelivered_after_its_ack_is_acked_without_a_second_msg() {
         b.step(Duration::from_millis(5));
     }
     assert!(!b.events.iter().any(|e| matches!(e, AgentEvent::Msg { .. })));
-    a.agent.send(&mut a.store, ca, b"after".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"after".to_vec())
+        .unwrap();
     assert_eq!(next_msg(&mut [&mut a, &mut b], 1, cb).1, b"after");
 }
 
@@ -73,7 +84,9 @@ fn delete_forgets_the_connection_and_deletes_its_queue() {
     let r = rig();
     let (mut a, mut b) = (r.node("a"), r.node("b"));
     let (ca, _) = connect(&mut a, &mut b, false, false);
-    a.agent.send(&mut a.store, ca, b"x".to_vec()).unwrap();
+    a.agent
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"x".to_vec())
+        .unwrap();
     a.agent.delete(&mut a.store, ca).unwrap();
     pump(&mut [&mut a, &mut b], WAIT, |_| {
         (r.smp.count("DEL") == 1).then_some(())
@@ -81,7 +94,7 @@ fn delete_forgets_the_connection_and_deletes_its_queue() {
     assert_eq!(a.store.get(NS, &conn_key(ca)).unwrap(), None);
     assert!(a.store.keys_with_prefix(NS, b"").unwrap().is_empty());
     assert_eq!(
-        a.agent.send(&mut a.store, ca, vec![]),
+        a.agent.send(&mut a.store, ca, pq_of(&a.agent, ca), vec![]),
         Err(AgentError::ConnNotFound)
     );
     drop(a);

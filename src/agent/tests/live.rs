@@ -1,5 +1,6 @@
 //! Two native agents through a real smp-server. Start a local smp-server and run
 //! `ZAUN_TEST_SMP=smp://<fingerprint>[:<password>]@127.0.0.1:<port> cargo test -p zaun-chat --lib agent::tests::live -- --ignored`.
+use super::support::pq_of;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -36,7 +37,7 @@ fn two_native_agents_connect_both_ways_exchange_receipts_and_survive_a_restart()
     let (ba, ab) = connect(&mut b, &mut a, true, true);
 
     a.agent
-        .send(&mut a.store, ca, b"hello bob".to_vec())
+        .send(&mut a.store, ca, pq_of(&a.agent, ca), b"hello bob".to_vec())
         .unwrap();
     let (id, body) = next_msg(&mut [&mut a, &mut b], 1, cb);
     assert_eq!(body, b"hello bob");
@@ -48,7 +49,12 @@ fn two_native_agents_connect_both_ways_exchange_receipts_and_survive_a_restart()
     assert_eq!(rcvd, RcptStatus::Ok);
 
     b.agent
-        .send(&mut b.store, ba, b"over the pq link".to_vec())
+        .send(
+            &mut b.store,
+            ba,
+            pq_of(&b.agent, ba),
+            b"over the pq link".to_vec(),
+        )
         .unwrap();
     let (id, body) = next_msg(&mut [&mut a, &mut b], 0, ab);
     assert_eq!(body, b"over the pq link");
@@ -57,14 +63,24 @@ fn two_native_agents_connect_both_ways_exchange_receipts_and_survive_a_restart()
     b.agent.close();
     drop(b);
     a.agent
-        .send(&mut a.store, ca, b"while you were away".to_vec())
+        .send(
+            &mut a.store,
+            ca,
+            pq_of(&a.agent, ca),
+            b"while you were away".to_vec(),
+        )
         .unwrap();
     let mut b = live_node(&dir, "b");
     let (id, body) = next_msg(&mut [&mut a, &mut b], 1, cb);
     assert_eq!(body, b"while you were away");
     b.agent.ack(&mut b.store, cb, id, None).unwrap();
     b.agent
-        .send(&mut b.store, ba, b"back again".to_vec())
+        .send(
+            &mut b.store,
+            ba,
+            pq_of(&b.agent, ba),
+            b"back again".to_vec(),
+        )
         .unwrap();
     assert_eq!(next_msg(&mut [&mut a, &mut b], 0, ab).1, b"back again");
 }

@@ -10,6 +10,7 @@ impl<A: AgentPort> Engine<A> {
         let profile = received_profile(info)
             .ok_or_else(|| fail(Code::RequestFailed, "conn-info without a profile"))?;
         self.on_x_info(friend, &profile)?;
+        self.refresh_friend_range_from(friend, info)?;
         let ours = conn_info(&self.state.user)?;
         self.agent.allow(&mut self.store, conn, ours)?;
         Ok(())

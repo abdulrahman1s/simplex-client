@@ -11,6 +11,7 @@ use super::relays::RelayTester;
 use crate::agent::AgentError;
 use crate::agent::client::{AgentClient, AgentConfig};
 use crate::agent::links::ConnectionLink;
+use crate::ratchet::PqEncryption;
 use crate::smp::{SmpEvent, SmpServer};
 use crate::store::Store;
 
@@ -110,11 +111,12 @@ impl AgentPort for NativeAgent {
         &mut self,
         store: &mut Store,
         conn: &ConnId,
+        pq: bool,
         body: Vec<u8>,
     ) -> Result<AgentMsgId, AgentFailure> {
         let id = self
             .client
-            .send(store, native_conn(conn), body)
+            .send(store, native_conn(conn), PqEncryption(pq), body)
             .map_err(failed)?;
         Ok(id.0)
     }

@@ -19,12 +19,19 @@ impl<A: AgentPort> Engine<A> {
             ns: NS,
             key: keys::ADDRESS.to_vec(),
         }];
-        ops.extend(self.state.address.requests.keys().map(|id| Op::Delete {
+        // A group member's invitation did not come through the address, so it stays.
+        let requests = &mut self.state.address.requests;
+        let through: Vec<i64> = requests
+            .values()
+            .filter(|r| r.member.is_none())
+            .map(|r| r.id)
+            .collect();
+        ops.extend(through.iter().map(|id| Op::Delete {
             ns: NS,
             key: keys::request(*id),
         }));
         self.store.apply(ops)?;
-        self.state.address.requests.clear();
+        requests.retain(|_, r| r.member.is_some());
         self.state.chats_dirty = true;
         self.emit(Event::Address(None));
         Ok(())
