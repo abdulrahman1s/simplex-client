@@ -22,7 +22,7 @@ use super::size::{encode_sized, sized};
 pub(crate) fn has_content(body: &MessageBody) -> bool {
     match body {
         MessageBody::Text(_)
-        | MessageBody::Voice { .. }
+        | MessageBody::Voice(_)
         | MessageBody::Gif(_)
         | MessageBody::Image(_)
         | MessageBody::Video(_)

@@ -13,9 +13,11 @@ use crate::chat::ids::SharedMsgId;
 pub fn body_text(body: &MessageBody) -> &str {
     match body {
         MessageBody::Text(t) => t,
-        MessageBody::Image(m) | MessageBody::Video(m) | MessageBody::File(m) => &m.caption,
+        MessageBody::Image(m)
+        | MessageBody::Video(m)
+        | MessageBody::File(m)
+        | MessageBody::Voice(m) => &m.caption,
         MessageBody::Notice(_)
-        | MessageBody::Voice { .. }
         | MessageBody::Gif(_)
         | MessageBody::Call(_)
         | MessageBody::Stream(_)

@@ -28,9 +28,10 @@ pub(crate) struct HistoryFile {
 /// A file's name, size and caption as its item shows them.
 fn shown(body: &MessageBody) -> Option<(String, u64, &str)> {
     match body {
-        MessageBody::Image(m) | MessageBody::Video(m) | MessageBody::File(m) => {
-            Some((m.name.clone(), m.size, m.caption.as_str()))
-        }
+        MessageBody::Image(m)
+        | MessageBody::Video(m)
+        | MessageBody::File(m)
+        | MessageBody::Voice(m) => Some((m.name.clone(), m.size, m.caption.as_str())),
         MessageBody::Gif(p) => {
             let path = Path::new(p);
             let name = path.file_name()?.to_string_lossy().into_owned();
@@ -38,7 +39,6 @@ fn shown(body: &MessageBody) -> Option<(String, u64, &str)> {
         }
         MessageBody::Text(_)
         | MessageBody::Notice(_)
-        | MessageBody::Voice { .. }
         | MessageBody::Call(_)
         | MessageBody::Stream(_)
         | MessageBody::Deleted => None,
@@ -50,10 +50,10 @@ fn kind_of(body: &MessageBody) -> FileKind {
         MessageBody::Image(_) => FileKind::Image,
         MessageBody::Gif(_) => FileKind::Gif,
         MessageBody::Video(_) => FileKind::Video,
+        MessageBody::Voice(_) => FileKind::Voice,
         MessageBody::File(_)
         | MessageBody::Text(_)
         | MessageBody::Notice(_)
-        | MessageBody::Voice { .. }
         | MessageBody::Call(_)
         | MessageBody::Stream(_)
         | MessageBody::Deleted => FileKind::File,

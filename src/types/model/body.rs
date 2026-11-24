@@ -12,7 +12,8 @@ use super::conn_event::{DecryptError, IntegrityError, SwitchPhase, SyncStatus};
 pub enum MessageBody {
     Text(String),
     Notice(ChatNotice),
-    Voice { secs: u32, wave: Vec<u8> },
+    /// A voice message (`MCVoice`): its file, and its length in `duration`.
+    Voice(Media),
     Gif(String),
     Image(Media),
     Video(Media),

@@ -42,6 +42,8 @@ pub enum FileKind {
     Image,
     Gif,
     Video,
+    /// A voice message: its `duration` in seconds goes with it.
+    Voice,
     File,
 }
 

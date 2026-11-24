@@ -25,6 +25,7 @@ mod live_offline;
 mod live_prefs;
 mod live_repair;
 mod live_timed;
+mod live_voice;
 mod local;
 mod local_chat;
 mod msg_delete;

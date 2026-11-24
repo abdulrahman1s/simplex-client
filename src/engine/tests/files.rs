@@ -8,6 +8,7 @@ mod locate;
 mod receive;
 mod redirect;
 mod send;
+mod voice;
 
 use std::path::PathBuf;
 

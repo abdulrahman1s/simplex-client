@@ -69,6 +69,14 @@ All notable changes to this project are documented here. The format follows
   chat was cleared. **Breaking:** `Request`, `RequestKind` and `Event` have new variants, and
   `Friend`, `ChatGroup`, `ChatPreview` and `ChatProfile` new fields.
 
+- Voice messages: `FileKind::Voice` (JS `"voice"`) sends `MCVoice` with its length, refused
+  where the friend or the group does not allow the user's voice messages (Commands.hs
+  `featureAllowed SCFVoice forUser`, Internal.hs `prohibitedGroupContent`). Received ones show
+  as `MessageBody::Voice(Media)` with their `duration` instead of a plain file. JS `sendFile`
+  takes `{ caption, duration, preview }` as a fourth argument, which it could not send before.
+  **Breaking:** `MessageBody::Voice` holds a `Media` instead of `secs` and `wave`, and
+  `FileKind` has a new variant.
+
 ### Fixed
 
 - The profile sent to friends said disappearing messages were allowed, so an official app

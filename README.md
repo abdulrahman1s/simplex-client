@@ -274,10 +274,11 @@ changes that, up to the 1 GiB every client keeps to).
 
 ```js
 const photo = await fs.promises.readFile("cat.jpg"); // or new Uint8Array(await file.arrayBuffer())
-await friend.sendFile(photo, "cat.jpg");
+await friend.sendFile(photo, "cat.jpg", "image", { caption: "Mine", preview: smallJpeg });
+await friend.sendFile(recording, "note.m4a", "voice", { duration: 12 }); // seconds
 
 client.on("message", async (message) => {
-  if (!message.file) return; // { name, size, kind } or null
+  if (!message.file) return; // { name, size, kind } or null; kind "voice" for a voice message
   const { name, bytes } = await message.download();
   console.log(`got ${name}: ${bytes.length} bytes`);
 });

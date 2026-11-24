@@ -19,7 +19,7 @@ const PAGE: u32 = 200;
 const fn in_history(it: &ItemRecord) -> bool {
     match it.body {
         MessageBody::Text(_)
-        | MessageBody::Voice { .. }
+        | MessageBody::Voice(_)
         | MessageBody::Gif(_)
         | MessageBody::Image(_)
         | MessageBody::Video(_)

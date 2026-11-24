@@ -33,7 +33,7 @@ impl<A: AgentPort> Engine<A> {
         if self.files.servers.is_empty() {
             return Err(fail(Code::RequestFailed, "no file server"));
         }
-        self.may_send_file(chat)?;
+        self.may_send_file(chat, kind)?;
         self.room_for_transfer()?;
         let (source, size) = self.files.store.source(&self.files.dir, path)?;
         let name = source
