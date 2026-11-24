@@ -77,6 +77,11 @@ impl AgentClient {
                 }
                 self.schedule_retry(id, RetryMode::Slow);
             }
+            // Expiry is judged when the attempt fails, as `runSmpQueueMsgDelivery` does, not only
+            // when the retry comes round.
+            Err(e) if is_temporary(&e) && self.expired(id, &p, self.now()) => {
+                self.drop_send(store, id, &p, AgentError::Expired)?;
+            }
             Err(e) if is_temporary(&e) => self.schedule_retry(id, RetryMode::Fast),
             // AUTH and the other refusals: the queue will not take this message.
             Err(e) => self.drop_send(store, id, &p, e.into())?,
