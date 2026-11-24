@@ -8,6 +8,7 @@ use super::convert::{error, failure};
 use super::files::{Files, Parts};
 use super::outcome::{Outcome, Settled};
 use super::payload::Payload;
+use crate::engine::{Engine, NativeAgent};
 use crate::types::model::{ChatMessage, ChatRef, FileState, MessageBody};
 use crate::types::{Event, RequestKind};
 
@@ -45,7 +46,7 @@ pub(super) fn named(name: &str, bytes: &[u8]) -> JsValue {
 }
 
 impl Files {
-    pub(super) fn hear(&mut self, e: &Event, out: &mut Outcome) {
+    pub(super) fn hear(&mut self, e: &Event, out: &mut Outcome, engine: &mut Engine<NativeAgent>) {
         if let Event::Messages(list) = e {
             list.iter().for_each(|m| self.sent(m, out));
         }
@@ -59,7 +60,7 @@ impl Files {
             request, detail, ..
         } = e
         {
-            self.refused(*request, detail, out);
+            self.refused(*request, detail, out, engine);
         }
     }
 
@@ -101,8 +102,11 @@ impl Files {
     }
 
     /// A `download` resolves with `{name, bytes}` once the file is here; they leave memory then.
+    /// Only a waiting call takes them: other news of the message leaves memory alone.
     fn arrived(&mut self, m: &ChatMessage) {
         let Some((_, state)) = file_of(m) else { return };
+        let at = (self.receiving.iter()).position(|r| (r.chat, r.item) == (m.chat, m.id));
+        let Some(at) = at else { return };
         let result = match state {
             FileState::Received(path) => match self.mem.take(&path) {
                 Some((name, bytes)) => Ok(named(&name, &bytes)),
@@ -115,15 +119,19 @@ impl Files {
             | FileState::Sending { .. }
             | FileState::Sent => return,
         };
-        let at = (self.receiving.iter()).position(|r| (r.chat, r.item) == (m.chat, m.id));
-        if let Some(at) = at {
-            settle_now(self.receiving.remove(at).parts, result);
-        }
+        settle_now(self.receiving.remove(at).parts, result);
     }
 
-    /// The engine refused a file request; requests are handled in order, so it is the oldest
-    /// call of that kind still waiting to start.
-    fn refused(&mut self, request: RequestKind, detail: &str, out: &mut Outcome) {
+    /// The engine refused a file request. Requests are handled in order, so a refused send is
+    /// the oldest waiting; a refused download is the oldest whose file the engine did not take
+    /// on (a failed cancel or locate shares the kind, but leaves a started download alone).
+    fn refused(
+        &mut self,
+        request: RequestKind,
+        detail: &str,
+        out: &mut Outcome,
+        engine: &mut Engine<NativeAgent>,
+    ) {
         if request == RequestKind::SendFile
             && let Some(s) = self.sending.pop_front()
         {
@@ -136,7 +144,8 @@ impl Files {
                 result,
             });
         } else if request == RequestKind::File
-            && let Some(at) = self.receiving.iter().position(|r| !r.started)
+            && let Some(at) = (self.receiving.iter())
+                .position(|r| !r.started && !engine.file_wanted(r.chat, r.item))
         {
             let why = error("request_failed", detail);
             settle_now(self.receiving.remove(at).parts, Err(why));

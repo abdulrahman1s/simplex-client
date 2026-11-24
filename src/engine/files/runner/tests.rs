@@ -63,6 +63,7 @@ struct Rig {
     transfers: crate::engine::files::queued::QueuedTransfers,
     mem: MemFiles,
     now: u64,
+    source: PathBuf,
 }
 
 impl Rig {
@@ -84,6 +85,7 @@ impl Rig {
             transfers,
             mem,
             now: 1_000,
+            source: PathBuf::new(),
         }
     }
 
@@ -128,6 +130,7 @@ impl Rig {
         cancel: Arc<AtomicBool>,
     ) -> (FileDone, Vec<u8>) {
         let source = self.mem.put("cat.png", content.to_vec(), false).unwrap();
+        self.source = source.clone();
         let req = UploadReq {
             key: FileKey { friend: 1, item: 7 },
             members: None,
@@ -173,9 +176,7 @@ fn a_file_in_memory_goes_up_in_chunks_and_comes_back_through_the_runner() {
         "{seen:?}"
     );
     assert!(
-        rig.mem
-            .take(std::path::Path::new("/mem/1/cat.png"))
-            .is_none(),
+        rig.mem.take(&rig.source).is_none(),
         "the source left memory"
     );
     let fd = FileDescription::parse_valid(&sent.description).unwrap();
@@ -205,11 +206,7 @@ fn a_cancelled_upload_ends_with_cancelled_and_frees_its_source() {
         panic!("{done:?}")
     };
     assert!(e.contains("cancelled"), "{e}");
-    assert!(
-        rig.mem
-            .with_bytes(std::path::Path::new("/mem/1/cat.png"), |_| ())
-            .is_none()
-    );
+    assert!(rig.mem.with_bytes(&rig.source, |_| ()).is_none());
 }
 
 #[test]

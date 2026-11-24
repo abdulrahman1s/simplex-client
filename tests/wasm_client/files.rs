@@ -76,10 +76,11 @@ async fn send_file_hands_the_engine_a_memory_path_and_rejects_with_its_refusal()
         _ => None,
     });
     let (path, kind) = asked.unwrap();
-    assert_eq!(
-        (path.to_str().unwrap(), kind),
-        ("/mem/1/cat.png", FileKind::Image)
+    assert!(
+        path.starts_with("/mem") && path.ends_with("cat.png"),
+        "{path:?}"
     );
+    assert_eq!(kind, FileKind::Image);
     client.close();
 }
 

@@ -24,6 +24,13 @@ impl<A: AgentPort> Engine<A> {
         self.local_copy(chat, item).map(|(p, _)| p)
     }
 
+    /// Whether the user asked for the file of an item and the engine took the request on.
+    #[cfg(feature = "wasm")]
+    pub(crate) fn file_wanted(&mut self, chat: ChatRef, item: i64) -> bool {
+        let rec = self.file_record(chat, item).ok().flatten();
+        rec.is_some_and(|r| r.accepted || r.active)
+    }
+
     pub(crate) fn open_file(&mut self, chat: ChatRef, item: i64) -> Result<()> {
         let (path, kind) = self
             .local_copy(chat, item)

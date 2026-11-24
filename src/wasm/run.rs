@@ -73,7 +73,7 @@ impl Core {
         while let Some(e) = self.engine.pop_out() {
             out.settled.extend(self.waiters.answer(&e));
             self.hear(&e, &mut out);
-            self.files.hear(&e, &mut out);
+            self.files.hear(&e, &mut out, &mut self.engine);
         }
         out.settled.extend(self.waiters.expire(wall));
         let rev = self.engine.store.revision();

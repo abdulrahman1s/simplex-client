@@ -4,6 +4,8 @@ use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use super::store::{FileStore, size_allowed};
+use crate::crypto::random_array;
+use crate::encoding::b64_encode;
 use crate::engine::error::{Code, Result, fail};
 use crate::xftp::{MB, safe_file_name};
 
@@ -25,19 +27,22 @@ struct Inner {
     files: BTreeMap<u64, Entry>,
     limit: u64,
     next: u64,
+    /// In every path, so a path kept in a restored store never names a file of this run.
+    token: String,
 }
 
 /// One store shared by the engine (as its `FileStore`) and the transfers.
 #[derive(Clone)]
 pub struct MemFiles(Arc<Mutex<Inner>>);
 
-fn id_of(path: &Path) -> Option<u64> {
+/// The file number in `/mem/<token>/<n>/<name>`, when the path is one of this store's.
+fn id_of(path: &Path, token: &str) -> Option<u64> {
     let mut parts = path.components();
     let (Some(Component::RootDir), Some(Component::Normal(root))) = (parts.next(), parts.next())
     else {
         return None;
     };
-    (root == "mem").then_some(())?;
+    (root == "mem" && parts.next()?.as_os_str() == token).then_some(())?;
     parts.next()?.as_os_str().to_str()?.parse().ok()
 }
 
@@ -48,6 +53,7 @@ impl MemFiles {
             files: BTreeMap::new(),
             limit,
             next: 0,
+            token: b64_encode(&random_array::<9>().unwrap_or_default(), false),
         })))
     }
 
@@ -65,7 +71,7 @@ impl MemFiles {
         self.inner().limit = bytes;
     }
 
-    /// Keeps `bytes` under a path of its own, `/mem/<n>/<name>`.
+    /// Keeps `bytes` under a path of its own, `/mem/<token>/<n>/<name>`.
     pub fn put(&self, name: &str, bytes: Vec<u8>, received: bool) -> Result<PathBuf> {
         let mut g = self.inner();
         let size = bytes.len() as u64;
@@ -85,7 +91,7 @@ impl MemFiles {
         }
         g.next += 1;
         let (id, name) = (g.next, safe_file_name(name));
-        let path = PathBuf::from(format!("/mem/{id}/{name}"));
+        let path = PathBuf::from(format!("/mem/{}/{id}/{name}", g.token));
         g.files.insert(
             id,
             Entry {
@@ -100,12 +106,14 @@ impl MemFiles {
     /// Runs `f` on the bytes of `path` while they are held.
     pub fn with_bytes<R>(&self, path: &Path, f: impl FnOnce(&[u8]) -> R) -> Option<R> {
         let g = self.inner();
-        g.files.get(&id_of(path)?).map(|e| f(&e.bytes))
+        g.files.get(&id_of(path, &g.token)?).map(|e| f(&e.bytes))
     }
 
     /// Hands the file over: its name and bytes, no longer held here.
     pub fn take(&self, path: &Path) -> Option<(String, Vec<u8>)> {
-        let e = self.inner().files.remove(&id_of(path)?)?;
+        let mut g = self.inner();
+        let id = id_of(path, &g.token)?;
+        let e = g.files.remove(&id)?;
         Some((e.name, e.bytes))
     }
 }
@@ -125,8 +133,9 @@ impl FileStore for MemFiles {
     }
 
     fn remove(&self, _dir: &Path, path: &Path) -> std::result::Result<(), String> {
-        if let Some(id) = id_of(path) {
-            self.inner().files.remove(&id);
+        let mut g = self.inner();
+        if let Some(id) = id_of(path, &g.token) {
+            g.files.remove(&id);
         }
         Ok(())
     }
@@ -159,7 +168,14 @@ mod tests {
         assert_eq!(p.file_name().unwrap(), "y.txt");
         assert_eq!(mem.source(Path::new(""), &p).unwrap(), (p.clone(), 1));
         assert!(!mem.exists(Path::new("/etc/passwd")));
-        assert!(!mem.exists(Path::new("/mem/99/y.txt")));
+        let unknown = p.parent().unwrap().with_file_name("99").join("y.txt");
+        assert!(!mem.exists(&unknown));
+        let other = MemFiles::new(10);
+        other.put("y.txt", vec![2], false).unwrap();
+        assert!(
+            !other.exists(&p),
+            "a path of another run names nothing here"
+        );
         mem.remove(Path::new(""), &p).unwrap();
         assert!(mem.source(Path::new(""), &p).is_err());
     }
