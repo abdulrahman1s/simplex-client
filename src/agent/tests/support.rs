@@ -75,7 +75,15 @@ impl Rig {
 
 /// Runs the handshake: `a` invites, `b` joins. Returns both connection ids.
 pub fn connect(a: &mut Node, b: &mut Node, pq: bool, short: bool) -> (ConnId, ConnId) {
-    let ca = a.agent.create_invitation(&mut a.store, pq, short).unwrap();
+    connect_pq(a, b, [pq, pq], short)
+}
+
+/// `connect` with the inviter's and the joiner's own PQ setting.
+pub fn connect_pq(a: &mut Node, b: &mut Node, pq: [bool; 2], short: bool) -> (ConnId, ConnId) {
+    let ca = a
+        .agent
+        .create_invitation(&mut a.store, pq[0], short)
+        .unwrap();
     let (full, short_link) = pump(&mut [&mut *a, &mut *b], WAIT, |n| {
         n[0].take(|e| match e {
             AgentEvent::Invitation { full, short, .. } => Some((full.clone(), short.clone())),
@@ -90,7 +98,7 @@ pub fn connect(a: &mut Node, b: &mut Node, pq: bool, short: bool) -> (ConnId, Co
     let link = ConnectionLink::parse(&text).unwrap();
     let cb = b
         .agent
-        .join(&mut b.store, &link, b"bob info".to_vec(), pq)
+        .join(&mut b.store, &link, b"bob info".to_vec(), pq[1])
         .unwrap();
     let conf = pump(&mut [&mut *a, &mut *b], WAIT, |n| {
         n[0].take(|e| match e {

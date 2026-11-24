@@ -80,7 +80,8 @@ impl AgentClient {
             .x3dh
             .take()
             .ok_or(AgentError::Prohibited("no X3DH keys"))?;
-        let pq = PqSupport(rec.pq && snd.kem.is_some());
+        // `initRcvRatchet_` keeps the connection's setting even when the reply brings no KEM.
+        let pq = PqSupport(rec.pq);
         let init = pq_x3dh_rcv(&x3dh, &snd)?;
         let mut ratchet = Ratchet::init_rcv(RatchetVersions::new(snd.version), x3dh.pk2, init, pq);
         let plain = ratchet.decrypt(&conf.enc_conn_info)?;
