@@ -1,9 +1,9 @@
 //! Chat items. `chat` is `HMAC(chat ref)`; each value is sealed against its chat and row id.
 
-use super::StoreError;
 use super::handle::Store;
 use super::rows::Rows;
 use super::seal::Sealer;
+use super::{StoreError, counters};
 
 fn chat_key(s: &Sealer, chat_ref: &[u8]) -> [u8; 32] {
     s.lookup("chat", chat_ref)
@@ -37,6 +37,7 @@ pub(super) fn insert(
     let chat = chat_key(s, chat_ref);
     // The id is part of the AAD, so it must exist before the value is sealed.
     let id = rows.item_new(&chat)?;
+    counters::bump_item(rows, s, id)?;
     seal_row(rows, s, &chat, id, v)?;
     Ok(id)
 }

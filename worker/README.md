@@ -57,8 +57,9 @@ does. If that matters to you, deploy your own Worker, or put it behind a network
    - On any failure, it sends `{"ok":false,"error":"<code>"}` and closes with code 1008
      (policy) or 1011 (upstream).
 4. After that, **binary** frames in both directions carry raw TCP bytes. Your first binary
-   bytes must be a TLS ClientHello that offers ALPN `smp/1` or `xftp/1` and has no SNI (see
-   below). A text frame after the first one closes the tunnel.
+   bytes must be a TLS ClientHello that offers ALPN `smp/1` or `xftp/1` and has no SNI, and
+   so must every record you send until the relay's first encrypted record (see below). A text
+   frame after the first one closes the tunnel.
 5. Closing either side closes the other. When the relay closes, the WebSocket closes with
    1000. A relay error closes it with 1011 `upstream`. Reaching the maximum lifetime closes it
    with 1000 `lifetime`; reconnect.
@@ -69,19 +70,25 @@ One tunnel is one TCP socket.
 |---|---|---|
 | `bad_request` | 1008 | The first frame is not valid JSON of the right shape; binary before it, a text frame after it, an oversized frame, or no first frame within `HELLO_TIMEOUT_SECONDS` |
 | `forbidden_port` | 1008 | The port is not in `ALLOWED_PORTS` |
-| `forbidden_host` | 1008 | A private, loopback, link-local, CGNAT or otherwise non-public address; a local name; or a host outside `ALLOWED_HOSTS` |
+| `forbidden_host` | 1008 | A host that is neither a preset relay nor in `ALLOWED_HOSTS`; or, under `ALLOWED_HOSTS=*`, a private, loopback, link-local, CGNAT or otherwise non-public address or a local name |
 | `unauthorized` | 1008 | The token is missing or wrong |
-| `not_tls` | 1008 | The first bytes are not a SimpleX ClientHello, or the ClientHello did not arrive within `HELLO_TIMEOUT_SECONDS` of `{"ok":true}` |
+| `not_tls` | 1008 | A record before the relay's first encrypted record is not a SimpleX ClientHello or a compatibility ChangeCipherSpec, or the ClientHello did not arrive within `HELLO_TIMEOUT_SECONDS` of `{"ok":true}` |
 | `connect_failed` | 1011 | The relay's name did not resolve, or the relay could not be reached within 10 s |
 | `idle` | 1008 | No bytes either way for `IDLE_TIMEOUT_SECONDS` |
 | `too_many_tunnels` | 1008 | This IP already has `MAX_TUNNELS_PER_IP` tunnels open |
 | `quota` | 1008 | The tunnel used up `MAX_BYTES_PER_TUNNEL` |
-| `rate_limited` | 1008, or HTTP 429 | More than `MAX_NEW_TUNNELS_PER_MINUTE` new tunnels from this IP. The fast first gate answers the upgrade with HTTP 429 before any WebSocket exists, so the browser only sees a failed connection |
+| `rate_limited` | 1008, or HTTP 429 | More than `MAX_NEW_TUNNELS_PER_MINUTE` new tunnels from this IP, or the limits could not be checked. The fast first gate answers the upgrade with HTTP 429 before any WebSocket exists, so the browser only sees a failed connection |
 
 ## Not an open proxy
 
 - **Ports.** Only `ALLOWED_PORTS` (default `5223,443`).
 - **Hosts.**
+  - By default only the preset SimpleX relays are allowed: the clearnet names of the SMP
+    relays in `src/engine/presets.rs` and the XFTP servers in `src/xftp/servers.rs`
+    (`smpN.simplex.im`, `smpN.simplexonflux.com`, `xftpN.simplex.im`,
+    `xftpN.simplexonflux.com`). A test keeps the list equal to the Rust presets.
+  - `ALLOWED_HOSTS` adds exact names or `*.example.com` patterns. `ALLOWED_HOSTS=*` allows
+    any public host; the checks below still apply to every host.
   - IP literals in private, loopback, link-local, CGNAT, multicast and other non-public ranges
     are refused, for both IPv4 and IPv6. This includes IPv4 embedded in IPv6 (mapped, NAT64,
     6to4).
@@ -91,15 +98,20 @@ One tunnel is one TCP socket.
     resolved address goes through the same range checks. The Worker dials exactly that
     address, so a public name pointing at a private network is refused as well.
 - **TLS check.**
-  - The first TLS record must be a ClientHello offering only `smp/1` or `xftp/1` as ALPN, with
-    no `server_name` (SNI) and no encrypted-client-hello extension. SimpleX clients contact
-    relays without SNI.
-  - The Worker buffers up to 16 KiB until the whole record has arrived, parses only what it
-    needs, and forwards the buffered bytes once they pass.
-  - A server that sends bytes before the ClientHello closes the tunnel.
-  - This keeps out HTTP, SSH and other protocols, and HTTPS to web sites, which needs SNI. It
-    does not stop a determined client from opening TLS to any public host on an allowed port.
-    For that, set `ALLOWED_HOSTS` or `TUNNEL_TOKEN`.
+  - Until the relay sends its first encrypted record (type 23), every record the client sends
+    must be a ClientHello offering only `smp/1` or `xftp/1` as ALPN, with no `server_name`
+    (SNI) and no encrypted-client-hello extension, or a one-byte compatibility
+    ChangeCipherSpec. The first record must be a ClientHello, and a second one after a
+    HelloRetryRequest is checked like the first. SimpleX clients contact relays without SNI.
+  - The Worker holds back a record until it has all of it (at most 16 KiB), parses only what
+    it needs, and forwards each record once it passes. Bytes after a record are checked as the
+    next record.
+  - A server that sends bytes before the ClientHello, or answers with anything but TLS
+    records, closes the tunnel.
+  - This keeps out HTTP, SSH and other protocols. It does not stop a client that controls a
+    server on an allowed host from speaking anything once that server sends one encrypted
+    record, which is why the host allowlist is the real limit. Web servers that accept a
+    ClientHello without SNI may be reachable under `ALLOWED_HOSTS=*`.
 - **Token.** When the `TUNNEL_TOKEN` secret is set, the first frame must carry the same
   `token`. It is compared in constant time.
 - **Origins.** When `ALLOWED_ORIGINS` is set, the upgrade's `Origin` header must be one of
@@ -137,8 +149,9 @@ One tunnel is one TCP socket.
     30 minutes.
   - The counter deletes all of its storage, the hash included, once it has no open tunnels
     and no starts in the last minute.
-- **Failing open.** If the counter or the rate limiter cannot be reached, the tunnel is
-  allowed, so an outage there does not cut people off from their chats.
+- **Failing closed.** If the counter or the rate limiter fails, the tunnel is refused with
+  `rate_limited`, so an outage there cannot turn the limits off. A deployment without the
+  `TUNNELS` or `TUNNEL_RL` binding has no such limit.
 
 Values that are missing, malformed or not positive fall back to the default. On the Workers
 Free plan, each tunnel costs one request against the daily request allowance and one DNS
@@ -152,7 +165,7 @@ renewals per hour while it stays open.
 | Variable | Default | Meaning |
 |---|---|---|
 | `ALLOWED_PORTS` | `5223,443` | Ports a tunnel may connect to |
-| `ALLOWED_HOSTS` | empty (any public host) | Comma list of exact names or `*.example.com` patterns |
+| `ALLOWED_HOSTS` | empty (the preset relays only) | Comma list of exact names or `*.example.com` patterns allowed besides the preset relays; `*` allows any public host |
 | `ALLOWED_ORIGINS` | empty (any) | Comma list of allowed `Origin` values, such as `https://chat.example.org` |
 | `MAX_TUNNELS_PER_IP`, `MAX_NEW_TUNNELS_PER_MINUTE`, `HELLO_TIMEOUT_SECONDS`, `IDLE_TIMEOUT_SECONDS`, `MAX_LIFETIME_SECONDS`, `MAX_BYTES_PER_TUNNEL`, `MAX_FRAME_BYTES` | see [Limits](#limits) | |
 

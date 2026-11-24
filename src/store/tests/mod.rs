@@ -3,8 +3,12 @@ mod atomic;
 #[cfg(feature = "native")]
 mod disk;
 mod items;
+mod kdf;
 mod reopen;
 mod snapshot;
+mod tamper;
+#[cfg(feature = "native")]
+mod tamper_file;
 
 use super::{Store, StoreError};
 

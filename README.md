@@ -34,6 +34,7 @@ can make it stricter:
 use simplex_client::{Client, ProxyMode};
 
 let client = Client::builder("./data")
+    .key("store passphrase")
     .private_routing(ProxyMode::Always) // Always, Unknown (default), Never
     .allow_direct(false)                // never fall back to sending directly (default)
     .start()?;
@@ -328,9 +329,12 @@ real, deploy your own (see below): it takes three commands and fits Cloudflare's
 - **Cloudflare can see** your IP, the relay host and port, and the timing and sizes of the
   fixed 16 KiB SMP blocks.
 - **Cloudflare cannot see** message content, keys, contacts or which queues you use.
-- **It is not an open proxy.** It allows only ports 5223 and 443, public hosts, and a TLS
-  ClientHello with ALPN `smp/1` or `xftp/1` and no SNI. Every IP is rate-limited and has a cap
-  on open tunnels.
+- **It is not an open proxy.** By default it reaches only the preset SimpleX relays (SMP and
+  XFTP), on ports 5223 and 443. Every record the client sends before the relay's first
+  encrypted one must be a TLS ClientHello with ALPN `smp/1` or `xftp/1` and no SNI. Every IP
+  is rate-limited and has a cap on open tunnels, and when the limits cannot be checked the
+  tunnel is refused. Your own relays need a Worker of your own with them in `ALLOWED_HOSTS`
+  (`*` allows any public host).
 
 Deploy your own and pass its URL as `tunnel`, with one click:
 
@@ -345,6 +349,22 @@ npx wrangler deploy
 ```
 
 The protocol, limits and settings are in [worker/README.md](worker/README.md).
+
+## Security notes
+
+- **The store key is required.** `ClientBuilder::start` fails without `.key(…)`, and JS
+  `Client.start` refuses a missing or empty `key`. The passphrase goes through Argon2id
+  (19 MiB, 2 passes, 1 lane) with a random salt per store, kept in clear in the store; opening
+  takes about 13 ms natively and 25 ms in wasm. A long random passphrase is still best.
+- **Older stores** (sealed before Argon2id) still open with their old unsalted HKDF key, and
+  their key is not upgraded in place. They get the counter checks and the snapshot MAC on
+  their first open, but someone holding a copy from before that open can still roll rows back.
+  To move one to Argon2id, start a new store.
+- **Tampering at rest.** A snapshot carries a MAC over all of its bytes, so a changed,
+  dropped or rolled-back row or a rewound id counter is refused when it opens. Swapping in a
+  whole older snapshot is not caught. The SQLite store checks its id counters against a sealed
+  copy and overwrites deleted rows (`secure_delete`).
+- **Limitation:** in SQLite, putting back an older sealed row (one row, or the counters' sealed copy with its counters) is not detected, because nothing MACs the whole file.
 
 ## Architecture
 

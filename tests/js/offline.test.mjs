@@ -122,3 +122,10 @@ test("what breaks one of the official client's limits rejects with the limit's c
     (e) => e.code === "invalid_name",
   );
 });
+
+test("an empty key is refused: it would seal the store with nothing", async () => {
+  await assert.rejects(
+    Client.start({ key: "", transport: "tcp" }),
+    (e) => e.code === "bad_option" && /key/.test(e.detail),
+  );
+});

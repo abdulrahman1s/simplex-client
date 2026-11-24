@@ -1,4 +1,4 @@
-//! The SQLite file holds no plaintext.
+//! The SQLite file holds no plaintext, and deleted rows leave no ciphertext behind.
 use super::Dir;
 use crate::store::Store;
 
@@ -34,4 +34,17 @@ fn values_on_disk_contain_no_plaintext() {
         "namespace tags are the documented clear part"
     );
     assert!(!contains(&closed, b"MARKER"));
+}
+
+#[test]
+fn a_deleted_row_is_overwritten_in_the_file() {
+    let d = Dir::new();
+    let sealed;
+    {
+        let mut s = Store::open(&d.db(), "k").unwrap();
+        s.put_file(1, &[7u8; 300]).unwrap();
+        sealed = s.rows.file_get(1).unwrap().unwrap();
+        s.delete_file(1).unwrap();
+    }
+    assert!(!contains(&disk_bytes(&d), &sealed[..64]));
 }

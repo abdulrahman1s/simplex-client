@@ -12,7 +12,7 @@ import {
   type Policy,
 } from "../src/validate";
 
-const open: Policy = { ports: parsePorts(undefined), hosts: [] };
+const open: Policy = { ports: parsePorts(undefined), hosts: ["*"] };
 const target = (host: string, port = 5223, policy = open) => checkTarget(host, port, policy);
 
 describe("parseHello", () => {
@@ -102,6 +102,11 @@ describe("checkTarget hosts", () => {
     for (const host of ["", "a..b", "-a.com", "a-.com", "a b.com", "a_b.com", "x".repeat(64) + ".com"]) {
       expect(target(host), host).toEqual({ error: "bad_request" });
     }
+  });
+
+  it("allows no host at all under an empty list", () => {
+    const none: Policy = { ports: parsePorts(undefined), hosts: [] };
+    expect(target("smp4.simplex.im", 5223, none)).toEqual({ error: "forbidden_host" });
   });
 
   it("limits targets to ALLOWED_HOSTS when set, with wildcard subdomains", () => {

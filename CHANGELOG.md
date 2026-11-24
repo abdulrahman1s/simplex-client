@@ -111,3 +111,30 @@ All notable changes to this project are documented here. The format follows
   switch started the v7 way still ends the v7 way.
 - A group member's chat version range follows each JSON message they send, not only the
   handshake (`updateMemberChatVRange`).
+
+### Security
+
+- The HPACK integer decoder refuses a sixth continuation byte before shifting, so a 32-bit
+  (wasm) build no longer shifts past its word size on a hostile header block.
+- The HTTP/2 frame reader drops taken bytes once per read instead of once per frame, so a
+  server that sends many tiny frames costs linear time, not quadratic.
+- Tunnel Worker: a lease renewal that reaches the per-IP counter after the tunnel's release no
+  longer takes the slot back for up to 30 minutes.
+- A snapshot whose item or id counter is at its maximum is refused as damaged when the counter
+  would move, instead of panicking (debug) or wrapping to a negative id (release).
+- **Breaking:** the store key is required: `ClientBuilder::start` fails without `.key(…)`
+  (it used to default to an empty key that anyone could open), and JS `Client.start` refuses
+  an empty `key`. A new store derives its key with Argon2id (19 MiB, 2 passes, 1 lane) over
+  the passphrase and a random per-store salt kept in its `kdf` meta row, instead of one
+  unsalted HKDF. Stores made before still open with their old key and are not upgraded.
+- Snapshots are authenticated as a whole: format 2 ends with an HMAC over every byte, so a
+  changed, deleted or rolled-back row or a rewound counter is refused on open. The id counters
+  are checked against a sealed copy in both backends, which a store from before gets on its
+  first open, and SQLite overwrites deleted rows (`secure_delete`). In SQLite, putting back an
+  older sealed row is still not detected.
+- **Breaking (tunnel Worker):** it is no longer an open TCP proxy by default. Without
+  `ALLOWED_HOSTS` it reaches only the preset SimpleX SMP and XFTP relays; `ALLOWED_HOSTS` adds
+  hosts and `ALLOWED_HOSTS=*` allows any public host. Every record the client sends before the
+  relay's first encrypted record is checked (a second ClientHello after a HelloRetryRequest
+  too), the relay must answer in TLS records, and the per-IP limits fail closed when the
+  counter or the rate limiter errors.

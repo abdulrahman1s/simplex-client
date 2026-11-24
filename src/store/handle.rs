@@ -1,23 +1,19 @@
-//! `Store`: a backend of sealed rows, the sealer, and the sealed check row that proves the key.
+//! `Store`: a backend of sealed rows and the sealer, with its one way to write: `atomic`.
 
 #[cfg(feature = "native")]
 use std::path::Path;
 
 use super::StoreError;
 use super::memory::{Memory, Tables};
+use super::open::Tagged;
 use super::rows::Rows;
 use super::seal::Sealer;
-
-const CHECK_AAD: &[u8] = b"meta";
-const CHECK_KEY: &str = "check";
-// Kept as is for compatibility with existing stores.
-const CHECK_PLAIN: &[u8] = b"zaun-chat store ok";
 
 pub struct Store {
     pub(super) rows: Box<dyn Rows>,
     pub(super) sealer: Sealer,
     /// Counts committed writes, so an owner can tell the store changed.
-    rev: u64,
+    pub(super) rev: u64,
 }
 
 impl Store {
@@ -25,40 +21,20 @@ impl Store {
     /// `WrongKey`. Dropping the store closes it.
     #[cfg(feature = "native")]
     pub fn open(path: &Path, key: &str) -> Result<Store, StoreError> {
-        Self::with_rows(Box::new(super::sql::Db::open(path)?), key, true)
+        Self::with_rows(
+            Box::new(super::sql::Db::open(path)?),
+            key,
+            Tagged::NotASnapshot,
+        )
     }
 
     /// A new, empty store held in memory; `export_snapshot` is how it outlives the process.
     pub fn open_memory(key: &str) -> Result<Store, StoreError> {
-        Self::with_rows(Box::new(Memory::new(Tables::default())), key, true)
-    }
-
-    /// `create`: write the check row when there is none, as a new store does.
-    pub(super) fn with_rows(
-        rows: Box<dyn Rows>,
-        key: &str,
-        create: bool,
-    ) -> Result<Store, StoreError> {
-        let mut store = Store {
-            rows,
-            sealer: Sealer::new(key),
-            rev: 0,
-        };
-        let aad: [&[u8]; 2] = [CHECK_AAD, CHECK_KEY.as_bytes()];
-        match store.rows.meta_get(CHECK_KEY)? {
-            Some(sealed) => store
-                .sealer
-                .open(&aad, &sealed)
-                .map(drop)
-                .map_err(|_| StoreError::WrongKey)?,
-            None if create => {
-                let sealed = store.sealer.seal(&aad, CHECK_PLAIN)?;
-                store.atomic(|rows, _| rows.meta_put(CHECK_KEY, sealed))?;
-            }
-            None => return Err(StoreError::Corrupt("no key check row".into())),
-        }
-        store.rev = 0;
-        Ok(store)
+        Self::with_rows(
+            Box::new(Memory::new(Tables::default())),
+            key,
+            Tagged::NotASnapshot,
+        )
     }
 
     /// How many writes have been committed since the store was opened.

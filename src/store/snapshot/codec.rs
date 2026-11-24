@@ -1,28 +1,22 @@
-//! A store as one byte string: every sealed row in a versioned, length-prefixed format.
+//! The snapshot byte format: every sealed row in a versioned, length-prefixed layout.
 
 // `MAGIC || version (u32 LE) || meta || kv || items || files || seq || last item id`, each table
 // a count and its rows, each blob a u32 LE length and its bytes. Values stay sealed, so the
-// bytes hold what the SQLite file holds: namespaces, counters and ciphertext.
+// bytes hold what the SQLite file holds: namespaces, counters and ciphertext. Version 2 ends
+// with a 32-byte tag over every byte before it; version 1 has none.
 
-use super::StoreError;
-use super::handle::Store;
-use super::memory::{Memory, Tables};
+use crate::store::StoreError;
+use crate::store::memory::Tables;
 
 const MAGIC: &[u8; 8] = b"SXCSTORE";
-const VERSION: u32 = 1;
+const UNTAGGED: u32 = 1;
+const TAGGED: u32 = 2;
+pub(super) const TAG: usize = 32;
 
-impl Store {
-    /// Every row of the store, sealed, in the snapshot format; either backend can be saved.
-    pub fn export_snapshot(&mut self) -> Result<Vec<u8>, StoreError> {
-        Ok(encode(&self.rows.dump()?))
-    }
-
-    /// A memory store from `export_snapshot` bytes. A key that does not open the check row is
-    /// `WrongKey`; bytes that are not a whole snapshot are `Corrupt`.
-    pub fn open_snapshot(bytes: &[u8], key: &str) -> Result<Store, StoreError> {
-        let tables = decode(bytes)?;
-        Store::with_rows(Box::new(Memory::new(tables)), key, false)
-    }
+/// The tables, and for a tagged snapshot the bytes its tag covers and the tag.
+pub(in crate::store) struct Decoded<'a> {
+    pub tables: Tables,
+    pub tag: Option<(&'a [u8], &'a [u8])>,
 }
 
 fn blob(out: &mut Vec<u8>, b: &[u8]) {
@@ -34,9 +28,10 @@ fn count(out: &mut Vec<u8>, n: usize) {
     out.extend_from_slice(&(n as u32).to_le_bytes());
 }
 
-pub(super) fn encode(t: &Tables) -> Vec<u8> {
+/// Everything but the tag, which the caller appends.
+pub(in crate::store) fn encode(t: &Tables) -> Vec<u8> {
     let mut out = MAGIC.to_vec();
-    out.extend_from_slice(&VERSION.to_le_bytes());
+    out.extend_from_slice(&TAGGED.to_le_bytes());
     count(&mut out, t.meta.len());
     t.meta.iter().for_each(|(k, v)| {
         blob(&mut out, k.as_bytes());
@@ -115,16 +110,32 @@ impl<'a> Reader<'a> {
     }
 }
 
-pub(super) fn decode(bytes: &[u8]) -> Result<Tables, StoreError> {
+pub(in crate::store) fn decode(bytes: &[u8]) -> Result<Decoded<'_>, StoreError> {
     let mut r = Reader(bytes);
     if r.take(MAGIC.len()).ok() != Some(MAGIC.as_slice()) {
         return Err(StoreError::Corrupt("not a store snapshot".into()));
     }
-    if r.u32()? != VERSION {
-        return Err(StoreError::Corrupt(
-            "the snapshot was written by another version".into(),
-        ));
-    }
+    let tag = match r.u32()? {
+        UNTAGGED => None,
+        TAGGED => {
+            let split = bytes.len().checked_sub(TAG).ok_or_else(short)?;
+            let (signed, tag) = bytes.split_at_checked(split).ok_or_else(short)?;
+            r.0 = r.0.get(..r.0.len().saturating_sub(TAG)).ok_or_else(short)?;
+            Some((signed, tag))
+        }
+        _ => {
+            return Err(StoreError::Corrupt(
+                "the snapshot was written by another version".into(),
+            ));
+        }
+    };
+    Ok(Decoded {
+        tables: tables(&mut r)?,
+        tag,
+    })
+}
+
+fn tables(r: &mut Reader<'_>) -> Result<Tables, StoreError> {
     let meta = r.rows(|r| Ok((r.text()?, r.blob()?)))?;
     let kv = r.rows(|r| Ok((r.blob()?, r.blob()?)))?;
     let items = r.rows(|r| Ok(((r.blob()?, r.i64()?), r.blob()?)))?;

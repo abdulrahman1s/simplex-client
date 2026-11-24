@@ -76,7 +76,7 @@ fn every_cut_or_damaged_snapshot_is_corrupt_and_never_panics() {
 #[test]
 fn a_snapshot_of_another_version_is_refused() {
     let mut bytes = filled("k").export_snapshot().unwrap();
-    bytes[8] = 2;
+    bytes[8] = 3;
     assert!(matches!(
         Store::open_snapshot(&bytes, "k"),
         Err(StoreError::Corrupt(_))

@@ -11,6 +11,7 @@ use super::StoreError;
 
 // Kept as is for compatibility with existing stores.
 const INFO: &[u8] = b"zaun-chat store v1";
+const INFO_STRETCHED: &[u8] = b"simplex-client store v2";
 const NONCE: usize = 24;
 const MIN_BUCKET: usize = 64;
 
@@ -21,10 +22,20 @@ pub(super) struct Sealer {
 }
 
 impl Sealer {
-    pub(super) fn new(key: &str) -> Sealer {
+    /// The keys of a store from before the KDF row: the passphrase straight into HKDF.
+    pub(super) fn legacy(key: &str) -> Sealer {
+        Self::split(key.as_bytes(), INFO)
+    }
+
+    /// The keys from an Argon2id output.
+    pub(super) fn stretched(master: &[u8; 32]) -> Sealer {
+        Self::split(master, INFO_STRETCHED)
+    }
+
+    fn split(ikm: &[u8], info: &[u8]) -> Sealer {
         let mut okm = Zeroizing::new([0u8; 64]);
         // 64 bytes is far below HKDF-SHA512's limit, so this cannot fail.
-        let _ = Hkdf::<Sha512>::new(None, key.as_bytes()).expand(INFO, &mut *okm);
+        let _ = Hkdf::<Sha512>::new(None, ikm).expand(info, &mut *okm);
         let mut enc = Zeroizing::new([0u8; 32]);
         let mut mac = Zeroizing::new([0u8; 32]);
         enc.copy_from_slice(&okm[..32]);

@@ -116,7 +116,9 @@ impl Options {
         }
         Ok(Self {
             name,
-            key: text(o, "key")?.ok_or_else(|| need("key"))?,
+            key: text(o, "key")?
+                .filter(|k| !k.is_empty())
+                .ok_or_else(|| need("key"))?,
             transport: transport(o)?,
             token: text(o, "tunnelToken")?,
             relays,
