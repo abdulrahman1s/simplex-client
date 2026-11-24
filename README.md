@@ -93,6 +93,32 @@ await init();
 console.log(Object.keys(simplex)); // the exported codecs and crypto helpers
 ```
 
+## Browser tunnel (Cloudflare Worker)
+
+Browsers cannot open raw TCP. [`worker/`](worker/README.md) is a small Cloudflare Worker that
+only pipes WebSocket frames to a relay's TCP port and back. It is the transport the browser
+build needs; the client side of it is not in the crate yet.
+
+- **The Worker sees only TLS ciphertext.** The client runs TLS 1.3 in wasm and pins the relay
+  by the fingerprint in its `smp://` address. SMP queue encryption and the end-to-end double
+  ratchet sit on top of that.
+- **Cloudflare can see** your IP, the relay host and port, and the timing and sizes of the
+  fixed 16 KiB SMP blocks.
+- **Cloudflare cannot see** message content, keys, contacts or which queues you use.
+- **It is not an open proxy.** It allows only ports 5223 and 443, public hosts, and a TLS
+  ClientHello with ALPN `smp/1` or `xftp/1` and no SNI. Every IP is rate-limited and has a cap
+  on open tunnels.
+
+Deploy your own:
+
+```sh
+cd worker && npm ci
+npx wrangler login
+npx wrangler deploy
+```
+
+The protocol, limits and settings are in [worker/README.md](worker/README.md).
+
 ## Architecture
 
 ```
@@ -110,6 +136,7 @@ console.log(Object.keys(simplex)); // the exported codecs and crypto helpers
 
  xftp              file chunks, crypto and descriptions (over h2), used by chat for files
  store             SQLite store, sealed with a passphrase
+ worker/           Cloudflare Worker: WebSocket to TCP pipe for the browser build (TypeScript)
  crypto, encoding, types   shared by every layer
 ```
 

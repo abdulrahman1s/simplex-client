@@ -1,0 +1,44 @@
+name = "simplex-tunnel"
+main = "src/index.ts"
+compatibility_date = "2026-11-20"
+workers_dev = true
+preview_urls = false
+send_metrics = false
+logpush = false
+
+# No logs, traces or invocation records: the Worker writes none, and none are kept.
+[observability]
+enabled = false
+
+[observability.logs]
+enabled = false
+invocation_logs = false
+
+[vars]
+ALLOWED_PORTS = "5223,443"
+ALLOWED_HOSTS = ""
+ALLOWED_ORIGINS = ""
+MAX_TUNNELS_PER_IP = "8"
+MAX_NEW_TUNNELS_PER_MINUTE = "30"
+HELLO_TIMEOUT_SECONDS = "10"
+IDLE_TIMEOUT_SECONDS = "900"
+MAX_LIFETIME_SECONDS = "86400"
+MAX_BYTES_PER_TUNNEL = "1073741824"
+MAX_FRAME_BYTES = "65536"
+
+# A fast first gate on new tunnels per hashed client IP, before the WebSocket opens. Counters
+# are per Cloudflare machine, so it is loose; MAX_NEW_TUNNELS_PER_MINUTE is the exact limit.
+# `period` is 10 or 60 seconds.
+[[ratelimits]]
+name = "TUNNEL_RL"
+namespace_id = "5223"
+simple = { limit = 30, period = 60 }
+
+# Per hashed client IP: open tunnels (MAX_TUNNELS_PER_IP) and new ones (MAX_NEW_TUNNELS_PER_MINUTE).
+[[durable_objects.bindings]]
+name = "TUNNELS"
+class_name = "TunnelCounter"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TunnelCounter"]
