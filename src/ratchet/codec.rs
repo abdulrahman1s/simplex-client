@@ -2,9 +2,31 @@
 use super::key::Key32;
 use super::state::{Ratchet, RcvRatchet, SndRatchet};
 use super::version::RatchetVersions;
+use zeroize::Zeroizing;
+
 use crate::encoding::{Decode, DecodeError, Decoder, Encode, EncodeError};
 
 const FORMAT: u8 = 1;
+/// What a stored ratchet takes besides its skipped keys, at most; the KEM keys are most of it.
+const STORED_BASE: usize = 8192;
+/// One skipped key: header key, number, message key and IV.
+const STORED_SKIPPED: usize = 32 + 4 + 32 + 16;
+
+impl Ratchet {
+    /// The stored form, in a buffer sized up front and wiped on drop: growing a buffer would
+    /// leave a copy of the keys in freed memory.
+    pub fn to_stored(&self) -> Result<Zeroizing<Vec<u8>>, EncodeError> {
+        let mut out = Zeroizing::new(Vec::with_capacity(self.stored_capacity()));
+        self.encode(&mut out)?;
+        Ok(out)
+    }
+
+    /// The capacity `to_stored` sets aside.
+    #[must_use]
+    pub fn stored_capacity(&self) -> usize {
+        STORED_BASE + STORED_SKIPPED * self.skipped.len()
+    }
+}
 
 impl Encode for SndRatchet {
     fn encode(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {

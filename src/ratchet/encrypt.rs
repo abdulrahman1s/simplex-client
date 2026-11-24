@@ -1,9 +1,12 @@
 //! Encrypting a message: advance the sending chain, encrypt the header, then the padded body (Ratchet.hs `rcEncryptHeader`, `rcEncryptMsg`, `rcCheckCanPad`).
+use zeroize::Zeroizing;
+
 use super::envelope::{EncMessageHeader, EncRatchetMessage};
 use super::error::{RatchetError, Result};
 use super::header::MsgHeader;
 use super::kdf::{MessageKey, chain_kdf};
 use super::kem_state::RatchetKem;
+use super::key::Key32;
 use super::lengths::padded_header_len;
 use super::pq::PqEncryption;
 use super::state::Ratchet;
@@ -152,12 +155,17 @@ impl Encode for MsgEncryptKey {
 impl Decode for MsgEncryptKey {
     fn decode(d: &mut Decoder<'_>) -> Result<Self, DecodeError> {
         let (version, ad, key, iv) = <(Version, Vec<u8>, Vec<u8>, Vec<u8>)>::decode(d)?;
-        let bad = || DecodeError::Invalid("message key");
+        let (key, bad) = (Zeroizing::new(key), || DecodeError::Invalid("message key"));
+        if key.len() != 32 {
+            return Err(bad());
+        }
+        let mut k = Key32::new([0; 32]);
+        k.fill(&key);
         Ok(Self {
             version,
             ad,
             key: MessageKey {
-                key: super::key::Key32::new(key.try_into().map_err(|_| bad())?),
+                key: k,
                 iv: iv.try_into().map_err(|_| bad())?,
             },
             enc_header: Large::decode(d)?.0,

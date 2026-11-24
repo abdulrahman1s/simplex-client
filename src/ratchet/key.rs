@@ -15,6 +15,11 @@ impl Key32 {
         Self(Zeroizing::new(b))
     }
 
+    /// Copies `b` in place, so the secret is never moved through a stack copy.
+    pub(crate) fn fill(&mut self, b: &[u8]) {
+        self.0.copy_from_slice(b);
+    }
+
     #[must_use]
     pub fn as_bytes(&self) -> &[u8; 32] {
         &self.0
