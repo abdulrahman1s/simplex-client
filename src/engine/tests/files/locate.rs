@@ -94,15 +94,9 @@ fn a_restart_with_a_transfer_half_done_ends_it_without_a_crash() {
 
     let hello = t.dir.hello("alice");
     let store = crate::store::Store::open(&t.dir.0.join("chat.db"), KEY).unwrap();
-    drop(std::mem::replace(
-        &mut t.e,
-        crate::engine::machine::Engine::new(
-            store,
-            FakeAgent::default(),
-            Box::new(t.clock.clone()),
-            crate::engine::log::Log::discard(),
-        ),
-    ));
+    let (e, relays) = crate::engine::tests::relays_pass::engine(store, &t.clock);
+    drop(std::mem::replace(&mut t.e, e));
+    t.relays = relays;
     t.e.start(&hello).unwrap();
     let out = t.out();
     let states: Vec<_> = messages(&out)

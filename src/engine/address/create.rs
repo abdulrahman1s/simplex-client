@@ -53,7 +53,8 @@ impl<A: AgentPort> Engine<A> {
             | AgentEvent::Up { .. }
             | AgentEvent::Down { .. }
             | AgentEvent::Err { .. }
-            | AgentEvent::RatchetSync { .. } => Ok(()),
+            | AgentEvent::RatchetSync { .. }
+            | AgentEvent::Switch { .. } => Ok(()),
         }
     }
 

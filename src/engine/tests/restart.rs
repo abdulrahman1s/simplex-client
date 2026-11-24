@@ -5,12 +5,10 @@ use std::time::Duration;
 use crate::types::model::{ChatRef, Delivery};
 use crate::types::{Event, Request};
 
-use super::{FakeAgent, KEY, T, messages};
+use super::{KEY, T, messages};
 use crate::chat::container::MsgContainer;
 use crate::chat::{ChatEvent, ChatMessage, encode_chat_message};
 use crate::engine::agent_port::AgentEvent;
-use crate::engine::log::Log;
-use crate::engine::machine::Engine;
 use crate::store::Store;
 
 #[test]
@@ -45,12 +43,11 @@ fn friends_their_conversations_and_pending_deliveries_survive_a_restart() {
         reply_to: None,
         mentions: Vec::new(),
     });
-    let T { e, clock, dir } = t;
+    let T { e, clock, dir, .. } = t;
     drop(e);
     clock.advance(Duration::from_secs(60));
     let store = Store::open(&dir.0.join("chat.db"), KEY).unwrap();
-    let agent = FakeAgent::default();
-    let mut e = Engine::new(store, agent, Box::new(clock.clone()), Log::discard());
+    let (mut e, _) = super::relays_pass::engine(store, &clock);
     e.start(&dir.hello("alice")).unwrap();
     let out: Vec<Event> = std::iter::from_fn(|| e.pop_out()).collect();
     let Some(Event::Chats { friends, chats, .. }) = out.last() else {

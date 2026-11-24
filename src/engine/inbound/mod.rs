@@ -1,6 +1,7 @@
 //! What arrives from the agent: the handshake, messages and their `x.*` events, delivery, relays.
 
 mod agent;
+mod conn_event;
 mod contact;
 mod delivery;
 mod handshake;

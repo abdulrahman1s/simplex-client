@@ -21,7 +21,7 @@ pub use agent_client::AgentClient;
 pub use clock::{SystemWallClock, WallClock};
 pub(crate) use config::ms;
 pub use config::{AgentConfig, DeliveryConfig, RetryInterval};
-pub use event::{AgentEvent, RcptStatus, Receipt};
+pub use event::{AgentEvent, RcptStatus, Receipt, SwitchPhase};
 pub use ids::{AgentMsgId, ConnId};
 pub(crate) use ops::OpKind;
 pub(crate) use temporary::is_temporary;

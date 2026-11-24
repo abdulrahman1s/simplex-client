@@ -240,6 +240,10 @@ impl AgentPort for FakeAgent {
         self.fail_next.take().map_or(Ok(()), Err)
     }
 
+    fn relay_tester(&self) -> Box<dyn crate::engine::relays::RelayTester> {
+        Box::new(super::relays_pass::Answering)
+    }
+
     fn set_disabled_relays(&mut self, disabled: &[String]) {
         self.calls.push(Call::SetDisabledRelays(disabled.to_vec()));
     }

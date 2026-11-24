@@ -1,57 +1,32 @@
-//! A check: every own relay tested at once, the silent ones kept off new queues while another answers.
+//! A check: every relay in use tested at once, the silent ones kept off new queues while another answers, and none answering is the network gone.
 
 use std::collections::HashSet;
 
-use crate::types::Config;
-
-use super::{CHECK_DEADLINE, CHECK_EVERY, RelayDone, SmpTester};
+use super::{CHECK_DEADLINE, CHECK_EVERY, RelayDone};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::machine::Engine;
-use crate::smp::SmpServer;
 
 pub(super) struct Check {
     run: u64,
     waiting: HashSet<String>,
     passed: HashSet<String>,
     /// Wall ms after which the silent are counted as failed.
-    deadline: i64,
+    pub(super) deadline: i64,
 }
 
-fn ms(d: std::time::Duration) -> i64 {
+pub(super) fn ms(d: std::time::Duration) -> i64 {
     i64::try_from(d.as_millis()).unwrap_or(i64::MAX)
 }
 
 impl<A: AgentPort> Engine<A> {
-    /// The own relays of a Config, and the tester that will ask them.
-    pub(crate) fn configure_relays(&mut self, hello: &Config) {
-        let mut known: Vec<(String, SmpServer)> = Vec::new();
-        for r in hello.relays.iter().filter(|r| r.starts_with("smp://")) {
-            match r.parse::<SmpServer>() {
-                Ok(s) if !known.iter().any(|(_, k)| *k == s) => known.push((r.clone(), s)),
-                Ok(_) | Err(_) => {}
-            }
-        }
-        let rel = &mut self.relays;
-        rel.own_hosts = known
-            .iter()
-            .filter_map(|(_, s)| s.hosts.first().cloned())
-            .collect();
-        rel.known = known.into_iter().map(|(r, _)| r).collect();
-        rel.disabled.clear();
-        rel.check = None;
-        rel.last_check = None;
-        rel.after.clear();
-        rel.tester.get_or_insert_with(|| Box::new(SmpTester));
-    }
-
-    /// Starts a check unless one runs, one started less than `CHECK_EVERY` ago, or fewer than two
-    /// relays are named (a lone relay is never disabled). Whether one started.
+    /// Starts a check unless one runs, one started less than `CHECK_EVERY` ago, or no relay is
+    /// known. A lone relay is checked only for the network: it is never disabled. Whether one started.
     pub(crate) fn start_check(&mut self) -> bool {
         let now = self.clock.wall_ms();
         let tx = self.jobs.tx.clone();
         let rel = &mut self.relays;
         let recent = rel.last_check.is_some_and(|l| now - l < ms(CHECK_EVERY));
-        if rel.check.is_some() || recent || rel.known.len() < 2 {
+        if rel.check.is_some() || recent || rel.known.is_empty() {
             return false;
         }
         let Some(tester) = rel.tester.as_mut() else {
@@ -99,14 +74,20 @@ impl<A: AgentPort> Engine<A> {
 
     /// Every answer is in, or the deadline passed: disable what stayed silent and enable what
     /// answered, unless nothing answered (then the network is down, not the relays).
-    fn finish_check(&mut self) {
+    pub(super) fn finish_check(&mut self) {
         let Some(c) = self.relays.check.take() else {
             return;
         };
         if c.passed.is_empty() {
             self.log
                 .line(format_args!("no relay answered; none is disabled"));
+            // The agent ignores a connection that never came up, so at a start without a network
+            // this is the only sign; a host the agent still has up says the network is there.
+            if !self.state.hosts.values().any(|up| *up) {
+                self.set_offline(true);
+            }
         } else {
+            self.set_offline(false);
             let silent = self
                 .relays
                 .known
@@ -137,28 +118,6 @@ impl<A: AgentPort> Engine<A> {
         self.agent.set_disabled_relays(&list);
         if newly {
             self.restart_pending_queues();
-        }
-    }
-
-    /// The deadline of a running check, or when the next check is due while a relay is disabled.
-    #[must_use]
-    pub(crate) fn next_relay_wake(&self) -> Option<i64> {
-        let rel = &self.relays;
-        match (&rel.check, rel.disabled.is_empty()) {
-            (Some(c), _) => Some(c.deadline),
-            (None, false) => rel.last_check.map(|l| l + ms(CHECK_EVERY)),
-            (None, true) => None,
-        }
-    }
-
-    pub(crate) fn relay_tick(&mut self, now: i64) {
-        if self.next_relay_wake().is_none_or(|at| at > now) {
-            return;
-        }
-        if self.relays.check.is_some() {
-            self.finish_check();
-        } else {
-            self.start_check();
         }
     }
 }

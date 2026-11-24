@@ -6,6 +6,7 @@ use super::agent_map::{conn_id, event, failure, native_conn, native_msg};
 use super::agent_port::{AgentEvent, AgentFailure, AgentMsgId, AgentPort, ConnId};
 use super::log::Log;
 use super::presets;
+use super::relays::{RelayTester, SmpTester};
 use crate::agent::AgentError;
 use crate::agent::client::{AgentClient, AgentConfig};
 use crate::agent::links::ConnectionLink;
@@ -205,6 +206,10 @@ impl AgentPort for NativeAgent {
             .map_err(failed)
     }
 
+    fn relay_tester(&self) -> Box<dyn RelayTester> {
+        Box::new(SmpTester)
+    }
+
     fn set_disabled_relays(&mut self, disabled: &[String]) {
         let down: Vec<SmpServer> = disabled.iter().filter_map(|r| r.parse().ok()).collect();
         let (off, on): (Vec<_>, Vec<_>) = self
@@ -240,6 +245,16 @@ mod tests {
 
     fn first(a: &NativeAgent) -> Option<String> {
         a.client.cfg.servers.first().map(|s| s.hosts[0].clone())
+    }
+
+    #[test]
+    fn a_preset_disabled_by_its_address_goes_last() {
+        let mut a = agent(&[]);
+        let first = presets::default_addresses().next().unwrap();
+        let before = a.client.cfg.servers.first().cloned();
+        a.set_disabled_relays(&[first.to_owned()]);
+        assert_ne!(a.client.cfg.servers.first().cloned(), before);
+        assert_eq!(a.client.cfg.servers.last(), before.as_ref());
     }
 
     #[test]

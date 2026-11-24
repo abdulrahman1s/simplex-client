@@ -1,6 +1,6 @@
-//! A ratchet re-sync reaching `Agreed` (Subscriber.hs `RSYNC`): a verified friend's code changed.
+//! A ratchet re-sync reaching `Agreed` (Subscriber.hs `RSYNC`): told in the chat, and a verified friend's code changed.
 
-use crate::types::model::{ChatNotice, ChatRef, MessageBody};
+use crate::types::model::{ChatNotice, ChatRef, MessageBody, SyncStatus};
 use crate::types::{Event, Request};
 
 use super::Call;
@@ -30,23 +30,33 @@ fn sync(t: &mut T, conn: ConnId, state: SyncState) -> Vec<Event> {
     t.agent(AgentEvent::RatchetSync { conn, state })
 }
 
+fn agreed() -> MessageBody {
+    MessageBody::Notice(ChatNotice::RatchetSync {
+        status: SyncStatus::Agreed,
+        member: None,
+    })
+}
+
 #[test]
 fn an_agreed_resync_ends_a_friends_verification_and_says_the_code_changed() {
     let mut t = T::started();
     let (bob, conn) = verified_friend(&mut t, "bob");
     assert!(listed_verified(&mut t, bob));
     let out = sync(&mut t, conn, SyncState::Agreed);
-    let [m] = messages(&out).try_into().unwrap();
+    let [told, m] = messages(&out).try_into().unwrap();
+    assert_eq!(told.body, agreed(), "the sync item comes first");
     assert_eq!(m.body, MessageBody::Notice(ChatNotice::CodeChanged));
     assert_eq!(m.chat, ChatRef::Direct(bob));
     assert!(!listed_verified(&mut t, bob));
 }
 
 #[test]
-fn an_agreed_resync_of_an_unverified_friend_shows_nothing() {
+fn an_agreed_resync_of_an_unverified_friend_is_told_without_a_code_change() {
     let mut t = T::started();
     let (_, conn) = t.friend("bob");
-    assert!(messages(&sync(&mut t, conn, SyncState::Agreed)).is_empty());
+    let out = sync(&mut t, conn, SyncState::Agreed);
+    let bodies: Vec<_> = messages(&out).into_iter().map(|m| m.body).collect();
+    assert_eq!(bodies, [agreed()]);
 }
 
 #[test]
@@ -59,17 +69,18 @@ fn other_sync_states_keep_the_verification() {
         SyncState::Started,
         SyncState::Ok,
     ] {
-        assert!(messages(&sync(&mut t, conn, state)).is_empty(), "{state:?}");
+        sync(&mut t, conn, state);
     }
     assert!(listed_verified(&mut t, bob));
 }
 
 #[test]
-fn an_agreed_resync_with_a_group_member_shows_nothing() {
+fn an_agreed_resync_with_a_group_member_is_told_without_a_code_change() {
     let mut t = T::started();
     let (_, members) = t.group("team", &["bob"], GroupMemberRole::Owner);
     let out = sync(&mut t, members[0].1, SyncState::Agreed);
-    assert!(messages(&out).is_empty());
+    let bodies: Vec<_> = messages(&out).into_iter().map(|m| m.body).collect();
+    assert_eq!(bodies, [agreed()]);
     assert!(!out.iter().any(|e| matches!(e, Event::Failed { .. })));
 }
 
@@ -112,4 +123,5 @@ fn a_resync_the_agent_refuses_is_only_logged() {
     t.e.agent.fail_next = Some(AgentFailure::Other("not duplex".into()));
     let out = sync(&mut t, conn, SyncState::Required);
     assert!(!out.iter().any(|e| matches!(e, Event::Failed { .. })));
+    assert!(messages(&out).is_empty(), "no sync was started");
 }

@@ -3,7 +3,7 @@ use crate::store::Store;
 
 use super::addr::same_addr;
 use super::state::{Step, Switch};
-use crate::agent::client::{AgentClient, AgentEvent, ConnId};
+use crate::agent::client::{AgentClient, AgentEvent, ConnId, SwitchPhase};
 use crate::agent::delivery::Handled;
 use crate::agent::error::{AgentError, Result};
 use crate::agent::message::SndQAddr;
@@ -22,6 +22,12 @@ impl AgentClient {
         queues: Vec<(SmpQueueUri, Option<SndQAddr>)>,
     ) -> Result<Handled> {
         let r = self.qadd(rec, queues);
+        if r.is_ok() {
+            self.emit(AgentEvent::Switch {
+                conn: rec.id,
+                phase: SwitchPhase::Started,
+            });
+        }
         Ok(self.reported(rec.id, r))
     }
 

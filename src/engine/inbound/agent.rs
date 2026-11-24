@@ -38,6 +38,7 @@ impl<A: AgentPort> Engine<A> {
             }
             AgentEvent::Err { conn, err } => self.on_conn_error(&conn, &err),
             AgentEvent::RatchetSync { conn, state } => self.on_ratchet_sync(&conn, state),
+            AgentEvent::Switch { conn, phase } => self.on_switch(&conn, phase),
             e @ (AgentEvent::Address { conn, .. } | AgentEvent::Req { conn, .. }) => {
                 match self.state.conns.get(&conn).map(|c| &c.kind) {
                     Some(&ConnKind::GroupLink { group }) => {

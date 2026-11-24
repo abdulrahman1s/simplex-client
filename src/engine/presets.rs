@@ -41,7 +41,12 @@ pub fn all() -> Vec<SmpServer> {
 /// The servers to create queues on when the config names none.
 #[must_use]
 pub fn defaults() -> Vec<SmpServer> {
-    parse(ENABLED.map(|i| ALL[i]))
+    parse(default_addresses())
+}
+
+/// `defaults` as addresses, the form the relay checks and `set_disabled_relays` take.
+pub(crate) fn default_addresses() -> impl Iterator<Item = &'static str> {
+    ENABLED.into_iter().map(|i| ALL[i])
 }
 
 #[cfg(test)]

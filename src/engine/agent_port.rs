@@ -95,6 +95,11 @@ pub enum AgentEvent {
         conn: ConnId,
         state: crate::agent::resync::SyncState,
     },
+    /// `SWITCH QDSnd`: the peer moves the queue we send to on `conn`.
+    Switch {
+        conn: ConnId,
+        phase: crate::agent::client::SwitchPhase,
+    },
     /// `REQ`: someone used the address `conn`; `invitation` names the request to
     /// `accept_request`/`reject_request`, `conn_info` is their `x.contact`.
     Req {
@@ -196,6 +201,9 @@ pub trait AgentPort {
     /// its sync state is `Allowed` or `Required`.
     fn synchronize_ratchet(&mut self, store: &mut Store, conn: &ConnId)
     -> Result<(), AgentFailure>;
+
+    /// What tests relays for the checks: the network, for the real agent.
+    fn relay_tester(&self) -> Box<dyn super::relays::RelayTester>;
 
     /// Keeps new queues off the relays in `disabled` (addresses as the config gave them) while
     /// any other relay is configured; queues already on them stay. An empty list enables all.

@@ -19,6 +19,11 @@ All notable changes to this project are documented here. The format follows
 - `wasm` feature: the pure protocol core and small wasm-bindgen bindings for
   `wasm32-unknown-unknown`.
 - CI for formatting, clippy, tests, wasm, MSRV 1.95, cargo-deny and docs.
+- `Event::Offline(true)` at a start without a network, from the first relay check, and
+  `Offline(false)` once a relay answers again.
+- The preset relays in use are checked like own relays when the config names none.
+- Chat notices for a peer's address switch and for ratchet re-syncs
+  (`ChatNotice::AddressSwitch`, `ChatNotice::RatchetSync`).
 
 ### Fixed
 

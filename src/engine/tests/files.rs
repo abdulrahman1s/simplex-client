@@ -9,12 +9,12 @@ mod send;
 
 use std::path::PathBuf;
 
-use base64::Engine as _;
 use crate::types::model::{ChatMessage, ChatRef, FileState, Media, MessageBody};
 use crate::types::{Event, FileKind, Request, RequestKind};
+use base64::Engine as _;
 
 use self::fake::Fake;
-use super::{FakeAgent, KEY, T, messages};
+use super::{KEY, T, messages};
 use crate::chat::container::MsgContainer;
 use crate::chat::content::MsgContent;
 use crate::chat::file::{FileDescr, FileInvitation};
