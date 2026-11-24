@@ -65,18 +65,18 @@ pub(super) fn event(e: Native, log: &Log) -> Option<AgentEvent> {
         Native::Con { conn } => AgentEvent::Con {
             conn: conn_id(conn),
         },
-        // Items take the time they arrive, so the broker time is not carried.
         Native::Msg {
             conn,
             msg_id,
             body,
             integrity,
-            ..
+            broker_ts,
         } => AgentEvent::Msg {
             conn: conn_id(conn),
             msg_id: msg_id.0,
             body,
             integrity,
+            broker_ts,
         },
         Native::Sent { conn, msg_id } => AgentEvent::Sent {
             conn: conn_id(conn),
@@ -193,11 +193,11 @@ mod tests {
             msg_id: AgentMsgId(5),
             body: b"x".to_vec(),
             integrity: skipped,
-            broker_ts: 0,
+            broker_ts: 1_795_000_000,
         };
         assert!(matches!(
             event(msg, &Log::discard()),
-            Some(AgentEvent::Msg { integrity, .. }) if integrity == skipped
+            Some(AgentEvent::Msg { integrity, broker_ts: 1_795_000_000, .. }) if integrity == skipped
         ));
         let rcvd = Native::Rcvd {
             conn: client::ConnId(1),

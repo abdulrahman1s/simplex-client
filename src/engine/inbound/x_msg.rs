@@ -110,15 +110,16 @@ impl<A: AgentPort> Engine<A> {
     }
 
     /// Subscriber.hs `messageDelete`: gone for good when the preferences allow their full
-    /// delete; only within `rcvItemDeletable`'s 78 hours of its arrival.
-    pub(crate) fn on_msg_del(&mut self, friend: i64, shared: &[u8]) -> Result<()> {
+    /// delete; only if the relay took the deletion within `rcvItemDeletable`'s 78 hours of
+    /// the item, so one that waited while the user was offline still counts.
+    pub(crate) fn on_msg_del(&mut self, friend: i64, shared: &[u8], broker_ms: i64) -> Result<()> {
         let Some((id, item)) = self.item_by_shared(ChatRef::Direct(friend), None, shared)? else {
             return Ok(());
         };
         if item.author != MessageAuthor::Friend || item.body == MessageBody::Deleted {
             return Ok(());
         }
-        if self.clock.wall_ms().saturating_sub(item.at) >= RCV_DELETE_WINDOW_MS {
+        if broker_ms.saturating_sub(item.at) >= RCV_DELETE_WINDOW_MS {
             return Err(fail(
                 Code::RequestFailed,
                 "x.msg.del: contact attempted invalid message delete",

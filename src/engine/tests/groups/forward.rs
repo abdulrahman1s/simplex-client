@@ -45,6 +45,7 @@ pub fn from_host(t: &mut T, host: &ConnId, msg_id: i64, body: Vec<u8>) -> Vec<cr
         msg_id,
         body,
         integrity: crate::agent::MsgIntegrity::Ok,
+        broker_ts: 0,
     })
 }
 

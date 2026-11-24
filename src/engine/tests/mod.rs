@@ -182,6 +182,7 @@ impl T {
             msg_id,
             body,
             integrity: crate::agent::MsgIntegrity::Ok,
+            broker_ts: crate::engine::clock::Clock::wall_ms(&self.clock) / 1000,
         })
     }
 

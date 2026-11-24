@@ -22,6 +22,7 @@ fn a_message_that_comes_again_is_kept_once_and_acked_again() {
         msg_id: 4,
         body: body.clone(),
         integrity: crate::agent::MsgIntegrity::Ok,
+        broker_ts: 0,
     });
     assert_eq!(messages(&first).len(), 1);
     let again = t.agent(AgentEvent::Msg {
@@ -29,6 +30,7 @@ fn a_message_that_comes_again_is_kept_once_and_acked_again() {
         msg_id: 4,
         body,
         integrity: crate::agent::MsgIntegrity::Ok,
+        broker_ts: 0,
     });
     assert!(messages(&again).is_empty());
     assert_eq!(t.acks().len(), 2);

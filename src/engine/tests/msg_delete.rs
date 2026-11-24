@@ -1,4 +1,4 @@
-//! A friend deletes its own message only within 78 hours of its arrival (Subscriber.hs `messageDelete`, `rcvItemDeletable`).
+//! A friend deletes its own message only if the relay took the deletion within 78 hours of the message (Subscriber.hs `messageDelete`, `rcvItemDeletable`).
 
 use std::time::Duration;
 
@@ -19,14 +19,17 @@ fn says(t: &mut T, conn: &ConnId, msg_id: i64) -> (i64, SharedMsgId) {
     (m.id, SharedMsgId(item.shared_id.unwrap()))
 }
 
-fn deletes(t: &mut T, conn: &ConnId, msg_id: i64, shared: SharedMsgId) -> Vec<crate::types::Event> {
-    let del = ChatEvent::MsgDel {
+fn del(shared: SharedMsgId) -> ChatEvent {
+    ChatEvent::MsgDel {
         msg_id: shared,
         member_id: None,
         scope: None,
         only_history: false,
-    };
-    t.peer_says(conn, msg_id, del)
+    }
+}
+
+fn deletes(t: &mut T, conn: &ConnId, msg_id: i64, shared: SharedMsgId) -> Vec<crate::types::Event> {
+    t.peer_says(conn, msg_id, del(shared))
 }
 
 #[test]
@@ -51,4 +54,25 @@ fn a_friends_deletion_of_a_message_older_than_78_hours_is_ignored() {
             .unwrap()
             .unwrap();
     assert_eq!(kept.body, MessageBody::Text("said".into()));
+}
+
+#[test]
+fn a_deletion_the_relay_took_in_time_counts_however_late_it_arrives() {
+    use crate::chat::{ChatMessage, encode_chat_message};
+    use crate::engine::agent_port::AgentEvent;
+    use crate::engine::clock::Clock;
+    let mut t = T::started();
+    let (_, conn) = t.friend("bob");
+    let (_, shared) = says(&mut t, &conn, 1);
+    let deleted_at = t.clock.wall_ms() / 1000 + 3600;
+    t.clock.advance(96 * HOUR);
+    let msg = ChatMessage::new(del(shared)).unwrap();
+    let out = t.agent(AgentEvent::Msg {
+        conn,
+        msg_id: 2,
+        body: encode_chat_message(&msg, false).unwrap(),
+        integrity: crate::agent::MsgIntegrity::Ok,
+        broker_ts: deleted_at,
+    });
+    assert_eq!(messages(&out)[0].body, MessageBody::Deleted);
 }

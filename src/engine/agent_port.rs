@@ -55,12 +55,14 @@ pub enum AgentEvent {
         conn: ConnId,
     },
     /// `MSG`: must be acknowledged with `ack`, whatever the engine makes of it. `integrity`
-    /// says how it followed the message before it (`MsgMeta.integrity`).
+    /// says how it followed the message before it (`MsgMeta.integrity`); `broker_ts` is when
+    /// the relay took it, in seconds.
     Msg {
         conn: ConnId,
         msg_id: AgentMsgId,
         body: Vec<u8>,
         integrity: crate::agent::MsgIntegrity,
+        broker_ts: i64,
     },
     Sent {
         conn: ConnId,

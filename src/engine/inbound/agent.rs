@@ -19,8 +19,9 @@ impl<A: AgentPort> Engine<A> {
                 msg_id,
                 body,
                 integrity,
+                broker_ts,
             } => {
-                self.on_msg(&conn, msg_id, &body, integrity);
+                self.on_msg(&conn, msg_id, &body, integrity, broker_ts);
                 Ok(())
             }
             AgentEvent::Sent { conn, msg_id } => self.on_delivery(&conn, msg_id, Delivery::Sent),

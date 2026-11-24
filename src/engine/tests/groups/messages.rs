@@ -326,6 +326,7 @@ fn an_observers_message_is_dropped_and_a_message_arriving_twice_is_kept_once() {
             msg_id: id,
             body: body.clone(),
             integrity: crate::agent::MsgIntegrity::Ok,
+            broker_ts: 0,
         });
     }
     let all = t.e.group_page(g, None, 10).unwrap();

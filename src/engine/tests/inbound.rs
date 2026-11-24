@@ -78,6 +78,7 @@ fn an_edit_a_deletion_and_a_reaction_update_the_friends_item() {
         msg_id: 1,
         body,
         integrity: crate::agent::MsgIntegrity::Ok,
+        broker_ts: 0,
     });
     let shared = || SharedMsgId(id.0.clone());
     let edit = ChatEvent::MsgUpdate {
@@ -152,6 +153,7 @@ fn unknown_events_and_bad_bodies_are_ignored_but_acked() {
             msg_id: 2,
             body: b"\x00garbage".to_vec(),
             integrity: crate::agent::MsgIntegrity::Ok,
+            broker_ts: 0,
         })
         .is_empty()
     );

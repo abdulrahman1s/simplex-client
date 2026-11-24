@@ -108,9 +108,9 @@ All notable changes to this project are documented here. The format follows
   fetched by themselves and their items stay out of the history a host sends. A
   `ChatNotice::MemberBlocked` item tells it, and an unblock undoes it. The user's own unblock
   does not.
-- A friend's deletion of its own message is taken only within 78 hours of the message's
-  arrival (`limits::RCV_DELETE_WINDOW_MS`, Subscriber.hs `rcvItemDeletable`), as in groups; an
-  older one is ignored.
+- A friend's deletion of its own message is taken only if the relay took it within 78 hours
+  of the message (`limits::RCV_DELETE_WINDOW_MS`, Subscriber.hs `rcvItemDeletable`); a later
+  one is ignored. `AgentEvent::Msg` carries the relay's time (`broker_ts`) for it.
 - A message that skips, repeats or breaks the chain before it (`MsgIntegrity`) now shows a
   `ChatNotice::Integrity` item before it, as simplex-chat's `CIRcvIntegrityError` does: "skipped
   message ID", "unexpected message ID", "incorrect message hash", "duplicate message ID". A

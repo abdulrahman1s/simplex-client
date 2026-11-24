@@ -277,6 +277,7 @@ fn a_joiner_engine_shows_the_history_it_is_sent_with_its_authors() {
             msg_id: 1 + n as i64,
             body,
             integrity: crate::agent::MsgIntegrity::Ok,
+            broker_ts: 0,
         });
         shown.extend(messages(&out).into_iter().map(|m| (m.author, m.body)));
     }

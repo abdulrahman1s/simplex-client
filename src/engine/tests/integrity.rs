@@ -20,6 +20,7 @@ fn text(t: &mut T, conn: ConnId, msg_id: i64, integrity: MsgIntegrity) -> Vec<cr
         msg_id,
         body: encode_chat_message(&msg, false).unwrap(),
         integrity,
+        broker_ts: 0,
     })
 }
 
