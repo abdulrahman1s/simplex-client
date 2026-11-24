@@ -3,6 +3,8 @@ use super::support::{PADDED, Pair, handshake, recv};
 use simplex_client::crypto::aead_encrypt;
 use simplex_client::encoding::Encode;
 use simplex_client::ratchet::CURRENT_E2E_VERSION;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 #[test]
 fn a_seven_oh_envelope_with_one_byte_lengths_and_no_kem_field_decrypts() {

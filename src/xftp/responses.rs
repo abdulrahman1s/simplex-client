@@ -7,6 +7,7 @@ use super::error_type::XftpErrorType;
 use super::version::FILE_STORAGE_TIME;
 
 /// The sender id, the recipient ids and the expiry of a `SIDS` answer.
+#[cfg(feature = "native")]
 pub(super) type SndIds = (Vec<u8>, Vec<Vec<u8>>, Option<i64>);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -89,6 +90,7 @@ fn optional_granted(d: &mut Decoder<'_>) -> Result<Option<i64>, DecodeError> {
 }
 
 /// What a command expects back; each accessor lists every variant, so a new response is a compile error here.
+#[cfg(feature = "native")]
 impl Response {
     pub(super) fn into_snd_ids(self) -> Option<SndIds> {
         match self {

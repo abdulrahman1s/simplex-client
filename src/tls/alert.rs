@@ -1,6 +1,7 @@
 //! TLS alerts (RFC 8446 section 6): decoding and names for error messages.
 use std::fmt;
 
+#[cfg(feature = "native")]
 use super::error::TlsError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -9,6 +10,7 @@ pub struct Alert {
     pub description: u8,
 }
 
+#[cfg(feature = "native")]
 impl Alert {
     pub(super) const CLOSE_NOTIFY: Alert = Alert {
         level: 1,
@@ -32,7 +34,9 @@ impl Alert {
     pub(super) fn is_close_notify(self) -> bool {
         self.description == 0
     }
+}
 
+impl Alert {
     fn name(self) -> &'static str {
         match self.description {
             0 => "close_notify",

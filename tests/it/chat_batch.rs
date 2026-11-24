@@ -6,6 +6,8 @@ use simplex_client::chat::forward::{FwdSender, GrpMsgForward};
 use simplex_client::chat::ids::MemberId;
 use simplex_client::chat::signed::{ChatBinding, MsgSignature, SignedMsg};
 use simplex_client::chat::{ChatEvent as E, ChatMessage, parse_chat_elements, parse_chat_messages};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 fn ok_json() -> Vec<u8> {
     msg(E::Ok).to_json().unwrap()

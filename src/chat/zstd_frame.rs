@@ -1,5 +1,6 @@
 //! One zstd frame: encode at level 3 with the content size, decode under strict bounds (spike zstd, Compression.hs).
 use super::error::{ChatError, Result};
+#[cfg(feature = "native")]
 use super::limits::COMPRESSION_LEVEL;
 use std::io::Read;
 
@@ -33,8 +34,32 @@ pub fn content_size(frame: &[u8]) -> Option<u64> {
 }
 
 /// libzstd level 3; `bulk::compress` states the content size in the frame header.
+#[cfg(feature = "native")]
 pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
     zstd::bulk::compress(data, COMPRESSION_LEVEL).map_err(|e| err(e.to_string()))
+}
+
+/// libzstd is C and does not build for wasm32-unknown-unknown.
+#[cfg(not(feature = "native"))]
+pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
+    compress_pure(data)
+}
+
+/// ruzstd's encoder (close to level 1), with the content size written into the header,
+/// because ruzstd leaves it out and the decoder here and simplex-chat's both require it.
+pub fn compress_pure(data: &[u8]) -> Result<Vec<u8>> {
+    let size = u32::try_from(data.len()).map_err(|_| err("too large to compress"))?;
+    let mut frame =
+        ruzstd::encoding::compress_to_vec(data, ruzstd::encoding::CompressionLevel::Fastest);
+    // Expect magic, then a descriptor with no size, no single segment and no dictionary, then the window byte.
+    let descriptor = match frame.get(..6) {
+        Some(head) if head[..4] == MAGIC && head[4] & 0b1110_0011 == 0 => head[4],
+        _ => return Err(err("unexpected ruzstd frame header")),
+    };
+    // Size flag 2: a four-byte `Frame_Content_Size` after the window descriptor.
+    frame[4] = descriptor | 0b1000_0000;
+    frame.splice(6..6, size.to_le_bytes());
+    Ok(frame)
 }
 
 /// Decodes one frame that states its size, never producing more than `limit` bytes.

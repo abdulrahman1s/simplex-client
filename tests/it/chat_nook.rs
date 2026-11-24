@@ -2,6 +2,8 @@
 use serde_json::Value;
 use simplex_client::chat::version::VersionRange;
 use simplex_client::chat::{ChatEvent as E, parse_chat_elements, parse_chat_messages};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 fn value(b: &[u8]) -> Value {
     serde_json::from_slice(b).unwrap()

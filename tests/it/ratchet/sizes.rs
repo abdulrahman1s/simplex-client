@@ -1,6 +1,8 @@
 //! Wire sizes follow PQ support, and both directions work.
 use super::support::{MODES, PADDED, handshake, recv, send};
 use simplex_client::ratchet::{full_header_len, padded_header_len};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 #[test]
 fn messages_have_the_padded_sizes_of_their_pq_support_and_flow_both_ways() {

@@ -3,6 +3,8 @@ use super::support::{recv, send};
 use simplex_client::ratchet::{
     CURRENT_E2E_VERSION, PqSupport, Ratchet, RatchetVersions, new_resync_params, ratchet_key_hash,
 };
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 #[test]
 fn after_a_resync_both_sides_get_working_ratchets_and_one_sends_eready() {

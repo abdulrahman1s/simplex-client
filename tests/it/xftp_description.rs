@@ -5,6 +5,8 @@ use simplex_client::xftp::{
     CHUNK_SIZE_0, CHUNK_SIZE_3, GB, MAX_FILE_SIZE_HARD, MB, SERVER_CHUNK_SIZES, XftpServer,
     prepare_chunk_sizes,
 };
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 const FIXTURE: &str = "chunkSize: 4mb
 digest: YWJj

@@ -6,6 +6,8 @@ use simplex_client::agent::links::{
 use simplex_client::agent::short_link::{contact_short_link_kdf, inv_short_link_kdf};
 use simplex_client::agent::{KemParams, QueueMode, SmpQueueInfo, SmpQueueUri, SmpServer};
 use simplex_client::encoding::{Decode, Encode, Version};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 use super::agent_support::*;
 

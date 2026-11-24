@@ -6,6 +6,8 @@ use simplex_client::ratchet::{
     adjust_e2e_range, compatible_e2e_version, generate_rcv_params, generate_snd_params, reply_kem,
     supported_e2e_range,
 };
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 #[test]
 fn params_round_trip_in_binary_and_link_form_with_and_without_pq() {

@@ -6,6 +6,8 @@ use simplex_client::xftp::{
     ServerHandshake, XftpError, XftpErrorType, XftpServer, decode_transmission,
     encode_client_handshake, encode_transmission, preset_servers,
 };
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 use super::hex::{hex, unhex};
 
@@ -378,6 +380,7 @@ fn the_twelve_preset_servers_parse_with_32_byte_key_hashes() {
     assert_eq!(b64_encode(&presets[0].key_hash, true), FP);
 }
 
+#[cfg(feature = "native")]
 #[test]
 fn a_server_that_never_answers_makes_connect_fail_instead_of_hang() {
     use std::sync::mpsc;

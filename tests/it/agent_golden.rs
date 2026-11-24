@@ -10,6 +10,8 @@ use simplex_client::agent::{
     url_encode,
 };
 use simplex_client::encoding::{Decode, Encode, b64_encode};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 use super::agent_support::*;
 

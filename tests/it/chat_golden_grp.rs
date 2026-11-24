@@ -16,6 +16,8 @@ use simplex_client::chat::group_prefs::{FeatureEnabled, GroupFeature, GroupPrefe
 use simplex_client::chat::group_profile::GroupProfile;
 use simplex_client::chat::ids::{CallId, GroupLinkId, MemberId, Probe, ProbeHash, XContactId};
 use simplex_client::chat::version::{SUPPORTED_CHAT_VRANGE, VersionRange};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 fn contact(req_id: Option<&[u8]>, request: Option<MsgContent>) -> ChatMessage {
     msg(E::Contact {

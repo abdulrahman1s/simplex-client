@@ -1,0 +1,4 @@
+# getrandom 0.3 picks its wasm backend by cfg, not by feature alone.
+[target.wasm32-unknown-unknown]
+rustflags = ['--cfg', 'getrandom_backend="wasm_js"']
+runner = "wasm-bindgen-test-runner"

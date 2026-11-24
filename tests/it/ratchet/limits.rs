@@ -1,6 +1,8 @@
 //! Limits and failures: too many skipped, earlier and duplicate messages, tampering, eviction.
 use super::support::{Pair, handshake, recv, recv_err, send};
 use simplex_client::ratchet::{MAX_SKIP, MAX_SKIPPED_MSG_KEYS, RatchetError};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 #[test]
 fn a_jump_over_more_than_max_skip_messages_is_refused_and_the_state_survives() {

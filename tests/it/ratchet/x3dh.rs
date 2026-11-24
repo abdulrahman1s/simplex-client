@@ -4,6 +4,8 @@ use simplex_client::ratchet::{
     CURRENT_E2E_VERSION, PqSupport, RatchetError, UseKem, generate_rcv_params, generate_snd_params,
     pq_x3dh_rcv, pq_x3dh_snd, reply_kem,
 };
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 #[test]
 fn both_parties_agree_on_keys_and_associated_data_for_every_pq_combination() {

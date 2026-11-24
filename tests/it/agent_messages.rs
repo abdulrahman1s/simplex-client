@@ -13,6 +13,8 @@ use simplex_client::agent::{
 };
 use simplex_client::crypto::{Alg, KeyPair};
 use simplex_client::encoding::{Decode, Encode, Version};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 use super::agent_support::*;
 

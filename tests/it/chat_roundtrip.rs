@@ -17,6 +17,8 @@ use simplex_client::chat::version::{SUPPORTED_CHAT_VRANGE, VersionRange};
 use simplex_client::chat::{
     ChatEvent as E, ChatMessage, EventKind, encode_chat_message, parse_chat_messages,
 };
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 fn mid() -> MemberId {
     MemberId(b"MTIzNDU2Nzg5MDEy".to_vec())

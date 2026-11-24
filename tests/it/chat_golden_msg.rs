@@ -10,6 +10,8 @@ use simplex_client::chat::image::ImageData;
 use simplex_client::chat::link_preview::LinkPreview;
 use simplex_client::chat::profile::{ChatPeerType, Profile};
 use simplex_client::chat::version::SUPPORTED_CHAT_VRANGE;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 fn text(t: &str) -> MsgContent {
     MsgContent::Text { text: t.into() }

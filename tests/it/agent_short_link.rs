@@ -11,6 +11,8 @@ use simplex_client::agent::version::supported_agent_range;
 use simplex_client::chat::profile::Profile;
 use simplex_client::crypto::{Alg, KeyPair, PrivateKey, SbKey, random_vec};
 use simplex_client::encoding::b64_encode;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 use super::agent_support::*;
 use super::hex::{hex, unhex};

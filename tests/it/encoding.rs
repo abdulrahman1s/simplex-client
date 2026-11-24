@@ -3,6 +3,8 @@ use simplex_client::encoding::{
     Decode, DecodeError, Decoder, Encode, EncodeError, Large, List, NonEmpty, SysTime, Tail,
     Version, VersionRange, b64_decode, b64_encode,
 };
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 use crate::hex::{hex, unhex};
 

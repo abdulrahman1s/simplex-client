@@ -1,6 +1,8 @@
 //! Turning PQ encryption on and off in a running conversation (RatchetTests.hs `testEnableKEM`, `testDisableEnableKEM`).
 use super::support::{PADDED, Pair, handshake, recv, send, send_pq};
 use simplex_client::ratchet::{PqSupport, padded_header_len};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test as test;
 
 #[test]
 fn pq_is_enabled_mid_conversation_then_disabled_then_enabled_again() {
