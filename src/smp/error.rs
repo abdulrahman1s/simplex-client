@@ -1,6 +1,7 @@
 //! What an SMP client call can fail with (Protocol.hs `ErrorType`/`BrokerErrorType`, Transport.hs `TransportError`).
 use crate::crypto::CryptoError;
 use crate::encoding::{DecodeError, EncodeError};
+use crate::tls::TlsError;
 
 use super::proxy::ProxyClientError;
 use super::server_error::ErrorType;
@@ -67,5 +68,29 @@ pub enum SmpError {
 impl From<std::io::Error> for SmpError {
     fn from(e: std::io::Error) -> Self {
         Self::Io(e.to_string())
+    }
+}
+
+/// A TLS failure: the server's own when its chain is not the pinned identity, so other hosts of
+/// the address are not tried; the network's otherwise.
+pub(crate) fn tls_failure(e: TlsError) -> SmpError {
+    match e {
+        TlsError::Identity(_) => HandshakeError::Identity.into(),
+        e @ (TlsError::Io(_)
+        | TlsError::Alert(_)
+        | TlsError::Decode(_)
+        | TlsError::Protocol(_)
+        | TlsError::Illegal(_)
+        | TlsError::Unsupported(_)
+        | TlsError::BadRecordMac
+        | TlsError::RecordOverflow
+        | TlsError::BadFinished
+        | TlsError::BadCertificateVerify
+        | TlsError::EmptyChain
+        | TlsError::Alpn
+        | TlsError::HelloRetryRequest
+        | TlsError::Certificate(_)
+        | TlsError::Internal(_)
+        | TlsError::Crypto(_)) => SmpError::Io(e.to_string()),
     }
 }

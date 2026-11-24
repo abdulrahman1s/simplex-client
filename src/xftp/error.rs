@@ -83,7 +83,22 @@ impl From<H2Error> for XftpError {
 pub(super) fn tls_error(e: TlsError) -> XftpError {
     match e {
         TlsError::Identity(_) => HandshakeError::Identity.into(),
-        e => XftpError::Connect(e.to_string()),
+        e @ (TlsError::Io(_)
+        | TlsError::Alert(_)
+        | TlsError::Decode(_)
+        | TlsError::Protocol(_)
+        | TlsError::Illegal(_)
+        | TlsError::Unsupported(_)
+        | TlsError::BadRecordMac
+        | TlsError::RecordOverflow
+        | TlsError::BadFinished
+        | TlsError::BadCertificateVerify
+        | TlsError::EmptyChain
+        | TlsError::Alpn
+        | TlsError::HelloRetryRequest
+        | TlsError::Certificate(_)
+        | TlsError::Internal(_)
+        | TlsError::Crypto(_)) => XftpError::Connect(e.to_string()),
     }
 }
 

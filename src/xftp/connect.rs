@@ -46,7 +46,11 @@ fn connect_host(
     let sock = match connect_tcp(host, port, &deadline) {
         Ok(sock) => sock,
         Err(NetError::TimedOut { .. }) => return Err(XftpError::TimedOut),
-        Err(e) => return Err(connect_error(e)),
+        Err(
+            e @ (NetError::OnionUnsupported(_)
+            | NetError::Resolve { .. }
+            | NetError::Connect { .. }),
+        ) => return Err(connect_error(e)),
     };
     let control = sock.try_clone()?;
     let left = deadline.left().ok_or(XftpError::TimedOut)?;

@@ -21,6 +21,8 @@ pub struct TlsStream<S: Socket> {
 impl<S: Socket> TlsStream<S> {
     /// Runs the handshake on `sock`, offering `alpn` (`smp/1`, `xftp/1`; empty offers none).
     /// Any certificate chain is taken: check it with `verify_server_chain`, or use `connect_pinned`.
+    /// Nothing here bounds the handshake: a peer can drip bytes past any read timeout, so shut
+    /// the socket from elsewhere when time is up, as `net::Watchdog` does.
     pub fn connect(sock: S, alpn: &[&str]) -> Result<Self, TlsError> {
         Self::open(sock, alpn, None)
     }
