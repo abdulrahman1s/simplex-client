@@ -1,20 +1,23 @@
-//! The client in a browser tab or node: JS bindings, a single-threaded runtime driven by one timer, and relays through a WebSocket tunnel.
+//! The client in a browser tab, Node.js or Bun: JS bindings, a single-threaded runtime driven by one timer, and relays through a WebSocket tunnel or TCP.
 mod answers;
+mod calls;
 mod client;
 mod clock;
 mod codec;
 mod console;
 mod convert;
+mod events;
 mod handlers;
-mod messages;
+mod objects;
 mod options;
 mod outcome;
+mod payload;
 mod people;
 mod run;
 mod runtime;
+mod seams;
 mod shared;
 mod socket;
-mod sugar;
 mod tcp;
 mod timer;
 mod waiters;
@@ -22,3 +25,4 @@ mod waiters;
 pub use client::Client;
 pub use clock::JsClock;
 pub use codec::*;
+pub use objects::{Friend, FriendRequest, Group, GroupInvite, Member, Message};

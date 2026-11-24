@@ -1,22 +1,31 @@
 //! Which waiting call an engine event answers, and with what.
 use serde_json::{Value, json};
 
-use super::sugar::message_value;
+use super::payload::Payload;
 use super::waiters::Want;
 use crate::types::{Event, RequestKind};
 
 /// The want an event answers, `None` in it standing for any of that kind, and the answer.
-pub(super) fn answer(e: &Event) -> Option<(Want, bool, Result<Value, Value>)> {
+pub(super) fn answer(e: &Event) -> Option<(Want, bool, Result<Payload, Value>)> {
     let ok = |want, exact, v| Some((want, exact, Ok(v)));
+    let text = |t: &String| Payload::Json(json!(t));
     match e {
-        Event::Invite(link) => ok(Want::Invite, true, json!(link)),
-        Event::Address(Some(link)) => ok(Want::Address, true, json!(link)),
-        Event::History { tag, messages, .. } => {
-            let list = messages.iter().map(message_value).collect();
-            ok(Want::History(*tag), true, Value::Array(list))
+        Event::Invite(link) => ok(Want::Invite, true, text(link)),
+        Event::Address(Some(link)) => ok(Want::Address, true, text(link)),
+        Event::History { tag, messages, .. } => ok(
+            Want::History(*tag),
+            true,
+            Payload::Messages(messages.clone()),
+        ),
+        Event::Members { group, members } => {
+            let list = members.clone();
+            let members = Payload::Members {
+                group: *group,
+                list,
+            };
+            ok(Want::Members(*group), true, members)
         }
-        Event::Members { group, members } => ok(Want::Members(*group), true, json!(members)),
-        Event::Code { friend, code } => ok(Want::Code(*friend), true, json!(code)),
+        Event::Code { friend, code } => ok(Want::Code(*friend), true, text(code)),
         Event::Failed {
             request,
             code,
@@ -28,6 +37,8 @@ pub(super) fn answer(e: &Event) -> Option<(Want, bool, Result<Value, Value>)> {
                 RequestKind::History => Want::History(0),
                 RequestKind::Members => Want::Members(0),
                 RequestKind::Code => Want::Code(0),
+                // Only `createGroup` waits on a group request; the others are told.
+                RequestKind::Group => Want::NewGroup,
                 RequestKind::Start
                 | RequestKind::SetProfile
                 | RequestKind::Connect
@@ -35,7 +46,6 @@ pub(super) fn answer(e: &Event) -> Option<(Want, bool, Result<Value, Value>)> {
                 | RequestKind::Send
                 | RequestKind::MarkRead
                 | RequestKind::Refresh
-                | RequestKind::Group
                 | RequestKind::RemoveFriend
                 | RequestKind::SendFile
                 | RequestKind::Edit

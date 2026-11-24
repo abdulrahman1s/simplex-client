@@ -10,15 +10,10 @@ fn main() -> simplex_client::Result<()> {
     println!("my address: {}", client.create_address()?);
     for event in client.events() {
         match event {
-            Event::Messages(msgs) => {
-                for m in msgs.iter().filter(|m| !m.mine() && !m.text().is_empty()) {
-                    client.reply(m, m.text())?;
-                }
-            }
-            Event::Chats { requests, .. } => {
-                for r in requests {
-                    client.accept(r.id)?;
-                }
+            Event::Request(request) => request.accept()?,
+            Event::FriendAdd(friend) => friend.send("Hi! I say back what you write.")?,
+            Event::Message(msg) if !msg.mine() && !msg.text().is_empty() => {
+                msg.reply(msg.text())?;
             }
             _ => {}
         }

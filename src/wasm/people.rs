@@ -1,94 +1,93 @@
-//! Friends, groups and the user from JS: links, requests, codes, groups and the name.
+//! The user's links, profile, friends and groups from JS.
 use wasm_bindgen::prelude::*;
 
 use super::client::Client;
-use super::convert::{error, id};
+use super::convert::{error, num, settled};
+use super::objects::{Friend, Group};
 use super::waiters::Want;
 use crate::types::Request;
 
 #[wasm_bindgen]
 impl Client {
     /// A one-time invitation link for one person.
-    #[wasm_bindgen(js_name = createInvite)]
+    #[wasm_bindgen(js_name = createInvite, unchecked_return_type = "Promise<string>")]
     pub fn create_invite(&self) -> js_sys::Promise {
-        self.ask(Want::Invite, Request::CreateInvite)
+        self.shared.ask(Want::Invite, Request::CreateInvite)
     }
 
     /// The user's long-lived address, made on first use.
-    #[wasm_bindgen(js_name = createAddress)]
+    #[wasm_bindgen(js_name = createAddress, unchecked_return_type = "Promise<string>")]
     pub fn create_address(&self) -> js_sys::Promise {
-        self.ask(Want::Address, Request::CreateAddress)
+        self.shared.ask(Want::Address, Request::CreateAddress)
     }
 
-    #[wasm_bindgen(js_name = deleteAddress)]
-    pub fn delete_address(&self) -> Result<(), JsValue> {
-        self.tell(Request::DeleteAddress)
+    #[wasm_bindgen(js_name = deleteAddress, unchecked_return_type = "Promise<void>")]
+    pub fn delete_address(&self) -> js_sys::Promise {
+        self.shared.queue(Request::DeleteAddress)
     }
 
     /// Connects through an invitation, an address or a group link.
-    pub fn connect(&self, link: &str) -> Result<(), JsValue> {
-        self.tell(Request::Connect(link.trim().to_owned()))
+    #[wasm_bindgen(unchecked_return_type = "Promise<void>")]
+    pub fn connect(&self, link: &str) -> js_sys::Promise {
+        self.shared.queue(Request::Connect(link.trim().to_owned()))
     }
 
-    /// Accepts a request from a `request` event (`req.id`).
-    pub fn accept(&self, request: f64) -> Result<(), JsValue> {
-        self.tell(Request::Accept(id(request)?))
-    }
-
-    pub fn reject(&self, request: f64) -> Result<(), JsValue> {
-        self.tell(Request::Reject(id(request)?))
-    }
-
-    #[wasm_bindgen(js_name = removeFriend)]
-    pub fn remove_friend(&self, friend: f64) -> Result<(), JsValue> {
-        self.tell(Request::RemoveFriend(id(friend)?))
-    }
-
-    /// The security code to compare with the friend's, out of band.
-    #[wasm_bindgen(js_name = showCode)]
-    pub fn show_code(&self, friend: f64) -> Result<js_sys::Promise, JsValue> {
-        let friend = id(friend)?;
-        Ok(self.ask(Want::Code(friend), Request::ShowCode(friend)))
-    }
-
-    #[wasm_bindgen(js_name = setName)]
-    pub fn set_name(&self, name: &str) -> Result<(), JsValue> {
+    #[wasm_bindgen(js_name = setName, unchecked_return_type = "Promise<void>")]
+    pub fn set_name(&self, name: &str) -> js_sys::Promise {
         let profile = {
             let mut core = self.shared.core.borrow_mut();
-            let sugar = core.as_mut().map(|c| &mut c.sugar);
-            let p = sugar.and_then(|s| s.profile.as_mut());
-            let p = p.ok_or_else(|| error("not_ready", "the profile is not known yet"))?;
-            name.clone_into(&mut p.name);
-            p.clone()
+            let p = core.as_mut().and_then(|c| c.profile.as_mut());
+            p.map(|p| {
+                name.clone_into(&mut p.name);
+                p.clone()
+            })
         };
-        self.tell(Request::SetProfile(profile))
+        let Some(profile) = profile else {
+            return settled(Err(error("closed", "the client is closed")));
+        };
+        self.shared.queue(Request::SetProfile(profile))
     }
 
-    /// Makes a group with the user as its owner; it shows in the next `chats`.
-    #[wasm_bindgen(js_name = newGroup)]
-    pub fn new_group(&self, name: &str) -> Result<(), JsValue> {
-        self.tell(Request::NewGroup(name.to_owned()))
+    /// Makes a group with the user as its owner; resolves once the chat list shows it.
+    #[wasm_bindgen(js_name = createGroup, unchecked_return_type = "Promise<Group>")]
+    pub fn create_group(&self, name: &str) -> js_sys::Promise {
+        self.shared
+            .ask(Want::NewGroup, Request::NewGroup(name.to_owned()))
     }
 
-    #[wasm_bindgen(js_name = addMember)]
-    pub fn add_member(&self, group: f64, friend: f64) -> Result<(), JsValue> {
-        let (group, friend) = (id(group)?, id(friend)?);
-        self.tell(Request::AddMember { group, friend })
+    /// Friends from the last chat list, by id, connected or still connecting. A new `Map`
+    /// on each read.
+    #[wasm_bindgen(getter, unchecked_return_type = "Map<number, Friend>")]
+    pub fn friends(&self) -> js_sys::Map {
+        let list: Vec<_> = {
+            let core = self.shared.core.borrow();
+            let friends = core.as_ref().map(|c| c.roster.friends.values());
+            friends.into_iter().flatten().cloned().collect()
+        };
+        let map = js_sys::Map::new();
+        for f in list {
+            let id = JsValue::from(num(f.id));
+            map.set(
+                &id,
+                &Friend::new(std::rc::Rc::clone(&self.shared), f).into(),
+            );
+        }
+        map
     }
 
-    #[wasm_bindgen(js_name = joinGroup)]
-    pub fn join_group(&self, group: f64) -> Result<(), JsValue> {
-        self.tell(Request::JoinGroup(id(group)?))
-    }
-
-    #[wasm_bindgen(js_name = leaveGroup)]
-    pub fn leave_group(&self, group: f64) -> Result<(), JsValue> {
-        self.tell(Request::LeaveGroup(id(group)?))
-    }
-
-    /// The user first, then everyone still in the group.
-    pub fn members(&self, group: f64) -> Result<js_sys::Promise, JsValue> {
-        let group = id(group)?;
-        Ok(self.ask(Want::Members(group), Request::Members(group)))
+    /// Groups from the last chat list, by id, left ones included. A new `Map` on each read.
+    #[wasm_bindgen(getter, unchecked_return_type = "Map<number, Group>")]
+    pub fn groups(&self) -> js_sys::Map {
+        let list: Vec<_> = {
+            let core = self.shared.core.borrow();
+            let groups = core.as_ref().map(|c| c.roster.groups.values());
+            groups.into_iter().flatten().cloned().collect()
+        };
+        let map = js_sys::Map::new();
+        for g in list {
+            let id = JsValue::from(num(g.id));
+            map.set(&id, &Group::new(std::rc::Rc::clone(&self.shared), g).into());
+        }
+        map
     }
 }

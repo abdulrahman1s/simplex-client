@@ -12,7 +12,6 @@ use super::options::{Options, Transport};
 use super::outcome::Outcome;
 use super::shared::Shared;
 use super::socket::WsDialer;
-use super::sugar::Sugar;
 use super::tcp::TcpDialer;
 use super::waiters::Waiters;
 use crate::agent::client::AgentClient;
@@ -20,9 +19,11 @@ use crate::engine::jobs::JobDone;
 use crate::engine::log::Log;
 use crate::engine::machine::{IDLE, MIN_SLEEP};
 use crate::engine::{AgentPort, Clock, Engine, NativeAgent};
+use crate::roster::Roster;
 use crate::smp::{self, ConnConfig, Dialer, SharedPool, SmpEvent, SystemClock, TunnelPool};
 use crate::store::{Store, StoreError};
 use crate::types::Config;
+use crate::types::model::ChatProfile;
 
 pub(super) struct Core {
     pub(super) engine: Engine<NativeAgent>,
@@ -31,7 +32,9 @@ pub(super) struct Core {
     pub(super) jobs: Receiver<JobDone>,
     pub(super) smp_clock: Arc<dyn smp::Clock>,
     pub(super) waiters: Waiters,
-    pub(super) sugar: Sugar,
+    pub(super) roster: Roster,
+    /// The user's profile as the engine last said, for `user` and `setName`.
+    pub(super) profile: Option<ChatProfile>,
     pub(super) log: Log,
     pub(super) timeout_ms: i64,
     /// Wall ms at which the engine's own timers are next due.
@@ -76,10 +79,9 @@ impl Core {
             relays: o.relays.clone(),
         };
         engine.start(&config)?;
-        // `Ready` only reaches JS on the first flush, after `start` has resolved; `profile()`
-        // must already answer then.
-        let mut sugar = Sugar::default();
-        sugar.profile = Some(engine.state.user.to_wire());
+        // `Ready` only reaches JS on the first flush, after `start` has resolved; `user` must
+        // already answer then.
+        let profile = Some(engine.state.user.to_wire());
         let jobs = engine.job_results();
         Ok(Core {
             engine,
@@ -88,7 +90,8 @@ impl Core {
             jobs,
             smp_clock,
             waiters: Waiters::default(),
-            sugar,
+            roster: Roster::default(),
+            profile,
             log,
             timeout_ms: o.timeout_ms,
             engine_due: 0,

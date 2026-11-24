@@ -10,10 +10,11 @@ const TIMEOUT_MS: i64 = 60_000;
 pub(super) enum Transport {
     /// The WebSocket byte tunnel at this `wss://…/v1` URL.
     Tunnel(String),
-    /// Straight TCP from Node.
+    /// Straight TCP from Node.js or Bun.
     Tcp,
 }
 
+/// Node.js, or Bun, which reports a Node.js version too.
 fn in_node() -> bool {
     let process = js_sys::Reflect::get(&js_sys::global(), &"process".into()).ok();
     let versions = process.and_then(|p| js_sys::Reflect::get(&p, &"versions".into()).ok());
@@ -21,7 +22,7 @@ fn in_node() -> bool {
     node.is_some_and(|n| n.is_string())
 }
 
-/// `transport: "tcp"`, or a `tunnel` URL; on Node with neither, TCP.
+/// `transport: "tcp"`, or a `tunnel` URL; on Node.js or Bun with neither, TCP.
 fn transport(o: &JsValue) -> Result<Transport, JsValue> {
     let tunnel = text(o, "tunnel")?;
     match (text(o, "transport")?.as_deref(), tunnel) {

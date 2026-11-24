@@ -6,29 +6,30 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, bounded};
+use crossbeam_channel::{Receiver, Sender, bounded};
 
 use super::builder::ClientBuilder;
-use super::dispatch::{self, Outbox, Shared};
+use super::dispatch::{Dispatcher, Outbox, Shared};
 use super::error::{Error, Result};
+use super::event::Queued;
 use super::spawn;
-use super::waiters::Want;
+use super::waiters::{Answer, Want};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::clock::Clock;
 use crate::engine::log::Log;
 use crate::types::model::ChatProfile;
-use crate::types::{Config, Event, Request};
+use crate::types::{Config, Request};
 
 /// A running SimpleX client. Clones share one engine; methods may be called from any thread.
 #[derive(Clone)]
 pub struct Client {
-    inner: Arc<Inner>,
+    pub(super) inner: Arc<Inner>,
 }
 
-struct Inner {
+pub(super) struct Inner {
     requests: Mutex<Option<Sender<Request>>>,
-    events: Receiver<Event>,
-    shared: Arc<Shared>,
+    pub(super) events: Receiver<Queued>,
+    pub(super) shared: Arc<Shared>,
     /// The engine thread, then the dispatcher: joined in that order.
     threads: Mutex<Vec<JoinHandle<()>>>,
     timeout: Duration,
@@ -56,11 +57,10 @@ impl Client {
             rx: events.clone(),
             log: log.clone(),
         };
-        for e in &started.startup {
-            shared.note(e);
-        }
-        let dispatcher =
-            dispatch::spawn(started.events, started.startup, Arc::clone(&shared), outbox)?;
+        // Here, so `profile()` and `friends()` answer as soon as `start` returns.
+        let mut dispatcher = Dispatcher::new(Arc::clone(&shared), outbox);
+        started.startup.into_iter().for_each(|e| dispatcher.take(e));
+        let dispatcher = dispatcher.spawn(started.events)?;
         Ok(Self {
             inner: Arc::new(Inner {
                 requests: Mutex::new(Some(started.requests)),
@@ -87,34 +87,11 @@ impl Client {
         tx.send(request).map_err(|_| Error::Closed)
     }
 
-    /// Everything that happens, in order, blocking until the next event; ends when the client
-    /// closes. Clones share one queue: each event goes to one reader. Answers to waiting
-    /// methods are not repeated here. Up to 1024 unread events are kept, then the oldest go.
-    pub fn events(&self) -> impl Iterator<Item = Event> + Send + 'static {
-        self.inner.events.clone().into_iter()
-    }
-
-    /// The next event, waiting at most `timeout`.
-    pub fn next_event(&self, timeout: Duration) -> Result<Event> {
-        self.inner
-            .events
-            .recv_timeout(timeout)
-            .map_err(|e| match e {
-                RecvTimeoutError::Timeout => Error::Timeout,
-                RecvTimeoutError::Disconnected => Error::Closed,
-            })
-    }
-
     /// The user's profile as the engine last reported it.
     #[must_use]
     pub fn profile(&self) -> ChatProfile {
         let p = self.inner.shared.profile.lock();
         p.unwrap_or_else(PoisonError::into_inner).clone()
-    }
-
-    pub(super) fn remember_profile(&self, profile: &ChatProfile) {
-        let p = self.inner.shared.profile.lock();
-        profile.clone_into(&mut p.unwrap_or_else(PoisonError::into_inner));
     }
 
     /// Stops the engine for every clone: the network closes, the store is saved and closed,
@@ -123,8 +100,8 @@ impl Client {
         self.inner.shutdown();
     }
 
-    /// Sends `request` and waits for the event that answers it.
-    pub(super) fn ask(&self, want: Want, request: Request) -> Result<Event> {
+    /// Sends `request` and waits for the answer to `want`.
+    pub(super) fn ask(&self, want: Want, request: Request) -> Result<Answer> {
         let waiters = &self.inner.shared.waiters;
         waiters.wait(want, self.inner.timeout, || self.request(request))
     }

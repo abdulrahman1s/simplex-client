@@ -4,7 +4,7 @@ use std::path::Path;
 
 use super::error::{Result, unexpected};
 use super::handle::Client;
-use super::waiters::Want;
+use super::waiters::{Answer, Want};
 use crate::types::model::{ChatMessage, ChatRef};
 use crate::types::{Event, FileKind, Request, RequestKind};
 
@@ -63,7 +63,7 @@ impl Client {
         })
     }
 
-    /// Sends a file; its progress arrives as `Event::Updated`.
+    /// Sends a file; its progress arrives as `Event::MessageUpdate`.
     pub fn send_file(&self, chat: ChatRef, path: impl AsRef<Path>) -> Result<()> {
         self.request(Request::SendFile {
             chat,
@@ -101,7 +101,9 @@ impl Client {
             count,
             tag,
         };
-        let Event::History { messages, .. } = self.ask(Want::History(tag), request)? else {
+        let Answer::Event(Event::History { messages, .. }) =
+            self.ask(Want::History(tag), request)?
+        else {
             return Err(unexpected(RequestKind::History));
         };
         Ok(messages)

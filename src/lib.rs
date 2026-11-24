@@ -14,6 +14,8 @@ pub mod h2;
 #[cfg(feature = "native")]
 pub mod net;
 pub mod ratchet;
+#[cfg(any(feature = "native", feature = "wasm"))]
+mod roster;
 pub mod smp;
 pub mod store;
 pub mod tls;
@@ -23,6 +25,9 @@ pub mod wasm;
 pub mod xftp;
 
 #[cfg(feature = "native")]
-pub use client::{Client, ClientBuilder, Error, Result};
+pub use client::{
+    Author, Chat, Client, ClientBuilder, Error, Event, Friend, FriendRequest, Group, GroupInvite,
+    Member, Message, Result,
+};
 pub use types::model::*;
-pub use types::{ErrorCode, Event, Request, RequestKind};
+pub use types::{ErrorCode, Request, RequestKind};

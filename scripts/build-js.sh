@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the JS packages: pkg/web (browsers, bundlers) and pkg/node (Node.js 22+).
+# Builds the JS packages: pkg/web (browsers, bundlers) and pkg/node (Node.js 22+ and Bun).
 # Needs the wasm32-unknown-unknown target and wasm-bindgen-cli 0.2.130 on PATH.
 set -euo pipefail
 cd "$(dirname "$0")/.."

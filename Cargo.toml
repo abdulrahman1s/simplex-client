@@ -19,7 +19,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["native"]
 # Threads, TCP, SQLite and the engine: everything a running client needs.
 native = ["dep:ormlite", "dep:libsqlite3-sys", "dep:tokio", "dep:zstd"]
-# The client in a browser or node: randomness from `crypto.getRandomValues`, time from
+# The client in a browser, Node.js or Bun: randomness from `crypto.getRandomValues`, time from
 # `Date.now`, relays through a WebSocket tunnel, and the `wasm` module's JS bindings.
 wasm = ["getrandom/wasm_js", "getrandom04/wasm_js", "dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 

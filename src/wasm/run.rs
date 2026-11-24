@@ -1,10 +1,9 @@
 //! One run: socket reports into the pool, SMP events and requests into the engine, timers, then what JS hears.
 use std::collections::VecDeque;
 
-use serde_json::Value;
-
 use super::clock::JsClock;
 use super::outcome::Outcome;
+use super::payload::Payload;
 use super::runtime::Core;
 use crate::engine::Clock;
 use crate::smp::{PipeId, PipeInput};
@@ -68,13 +67,13 @@ impl Core {
         let mut out = Outcome::default();
         while let Some(e) = self.engine.pop_out() {
             out.settled.extend(self.waiters.answer(&e));
-            self.sugar.calls(&e, &mut out.calls);
+            self.hear(&e, &mut out);
         }
         out.settled.extend(self.waiters.expire(wall));
         let rev = self.engine.store.revision();
         if rev != self.seen_rev {
             self.seen_rev = rev;
-            out.calls.push(("change", Value::Null));
+            out.calls.push(("change", Payload::Nothing));
         }
         out
     }

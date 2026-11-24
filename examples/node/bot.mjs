@@ -1,6 +1,7 @@
-// An echo bot on Node.js: it accepts every request and answers each message with its text.
-// It reaches relays over direct TCP (no tunnel needed) and keeps its store, sealed under
-// BOT_KEY, in ./bot.snapshot. Build with scripts/build-js.sh, then: node examples/node/bot.mjs
+// An echo bot on Node.js or Bun: it accepts every request, greets each new friend, and answers
+// each message with its text. It reaches relays over direct TCP (no tunnel needed) and keeps
+// its store, sealed under BOT_KEY, in ./bot.snapshot. Build with scripts/build-js.sh, then
+// run `node examples/node/bot.mjs` or `bun examples/node/bot.mjs`.
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { Client } from "simplex-client";
 
@@ -23,12 +24,16 @@ bot.on("change", () => {
   clearTimeout(timer);
   timer = setTimeout(save, 1000);
 });
-bot.on("request", (req) => bot.accept(req.id));
-bot.on("message", (msg) => {
-  if (!msg.mine && msg.text) bot.reply(msg, msg.text);
+bot.on("ready", (me) => console.log(`Logged in as ${me.name}`));
+bot.on("request", (request) => request.accept());
+bot.on("friendAdd", (friend) => friend.send("Hi! I say back what you write."));
+bot.on("message", async (message) => {
+  if (message.mine || !message.text) return;
+  await message.reply(message.text);
 });
-bot.on("offline", (off) => console.log(off ? "offline" : "online"));
-console.log("my address:", await bot.createAddress());
+bot.on("offline", () => console.log("offline"));
+bot.on("online", () => console.log("online"));
+console.log("My address:", await bot.createAddress());
 
 process.on("SIGINT", () => {
   save();

@@ -69,3 +69,15 @@ fn a_group_not_in_the_list_cannot_be_left() {
     let out = t.req(Request::LeaveGroup(99));
     assert!(matches!(out.as_slice(), [Event::Failed { .. }]));
 }
+
+#[test]
+fn declining_an_invitation_is_leaving_before_joining() {
+    let mut t = T::started();
+    let (g, _) = super::members_join::invited(&mut t);
+    let out = t.req(Request::LeaveGroup(g));
+    assert!(
+        !out.iter().any(|e| matches!(e, Event::Failed { .. })),
+        "{out:?}"
+    );
+    assert_eq!(t.e.state.groups[&g].status, MemberStatus::Left);
+}

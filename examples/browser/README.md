@@ -24,7 +24,8 @@ or with `wasm-pack`:
 wasm-pack build --target web --out-dir examples/browser/pkg -- --no-default-features --features wasm
 ```
 
-`scripts/build-js.sh` builds the same into `pkg/web` (and the Node build into `pkg/node`).
+`scripts/build-js.sh` builds the same into `pkg/web` (and the Node.js and Bun build into
+`pkg/node`).
 The `wasm-bindgen` CLI must match the crate's `wasm-bindgen` version (0.2.130).
 
 ## Run
@@ -43,40 +44,51 @@ is refused.
 
 ```js
 import init, { Client } from "./pkg/simplex_client.js";
+
 await init();
+
 const client = await Client.start({
   name: "Alice",
   key: "passphrase",
-  tunnel: "wss://simplex-tunnel.<account>.workers.dev/v1", // or transport: "tcp" on Node
+  tunnel: "wss://simplex-tunnel.citizen6775.workers.dev/v1", // or transport: "tcp" on Node.js and Bun
   relays: [],             // optional smp:// addresses; the presets when empty
   snapshot: savedBytes,   // optional Uint8Array from client.save()
   tunnelToken: undefined, // optional, when the Worker sets TUNNEL_TOKEN
   timeout: 60000,         // optional, ms a waiting call waits
   log: false,             // optional, the engine's log on the console
 });
-client.on("message", (msg) => { if (!msg.mine) client.reply(msg, msg.text); });
-client.on("request", (req) => client.accept(req.id));
-client.on("event", (ev) => console.log(ev)); // every engine event, {t, c}
-client.on("change", () => save(client.save()));
-const link = await client.createAddress();
-const invite = await client.createInvite();
-client.connect(link);
-client.send({ friend: 1 }, "hi");
-const bytes = client.save();
-client.close();
+
+client.on("ready", (me) => console.log(`Logged in as ${me.name}`));
+client.on("request", (request) => request.accept());
+client.on("friendAdd", (friend) => friend.send("welcome!"));
+
+client.on("message", async (message) => {
+  if (message.mine) return;
+  await message.reply(message.text);
+});
 ```
 
-Named events: `event` (every engine event), `message` (each new message, with `mine` and
-`text`), `request` (each new contact request, once), `ready` (your profile), `offline`
-(`true` while no relay is reachable), `chats` (friends, groups, requests, previews) and
-`change` (the store changed; time to save).
+Events: `ready` (your profile), `message` and `messageUpdate` (a `Message`), `request` (a
+`FriendRequest`, once), `friendAdd` and `friendRemove` (a `Friend`), `groupAdd` and
+`groupRemove` (a `Group`), `groupInvite` (a `GroupInvite`), `memberAdd` (a `Member` who
+connected with you: someone new, or each one already there when you join),
+`offline` and `online`, `change` (the store changed: save it) and `raw` (every engine event as
+`{t, c}`). `on`, `off` and `once` take them; `await client.once("ready")` works too.
 
-A chat is `{friend: id}` or `{group: id}`; the `{t: "direct", c: id}` form an event carries
-works too. Methods: `send`, `reply`, `edit`, `delete`, `react`, `unreact`, `accept`, `reject`,
-`removeFriend`, `connect`, `createInvite`, `createAddress`, `deleteAddress`, `newGroup`,
-`addMember`, `joinGroup`, `leaveGroup`, `members`, `history`, `markRead`, `showCode`,
-`setName`, `profile`, `request` (any engine request as its JSON), `save`, `close`, `on`, `off`.
-`createInvite`, `createAddress`, `history`, `members` and `showCode` return Promises; a failure
-rejects, and every method throws, with `{code, detail}`.
+The objects act on their own, and every method returns a Promise:
+
+- `Message`: `reply`, `react`, `unreact`, `edit`, `delete`; `text`, `mine`, `at`, `replyTo`,
+  `chat` (a `Friend` or `Group`), `author` (a `Friend`, a `Member`, or `null` for yours), `raw`.
+- `FriendRequest`: `accept`, `reject`; `id`, `name`.
+- `Friend`: `send`, `remove`, `showCode`, `history({limit, before})`, `markRead`; `id`, `name`,
+  `ready`, `verified`, `raw`.
+- `Group`: `send`, `addMember(friend)`, `leave`, `members`, `history`, `markRead`; `id`,
+  `name`, `membership`, `owner`, `raw`.
+- `GroupInvite`: `accept`, `reject`; `group`, `name`. `Member`: `name`, `id`, `group`, `friend`.
+
+On the client: `friends` and `groups` (`Map`s by id, from the last chat list), `user`,
+`createGroup(name)` (resolves to the `Group`), `createAddress`, `createInvite`,
+`deleteAddress`, `connect(link)`, `setName`, `request` (any engine request as its JSON),
+`save` and `close`. A failure rejects with `{code, detail}`.
 
 Files (XFTP) are not available in the browser build.

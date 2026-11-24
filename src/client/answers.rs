@@ -40,6 +40,8 @@ fn failed_slot(kind: RequestKind) -> Option<usize> {
         K::History => Want::History(0),
         K::Members => Want::Members(0),
         K::Code => Want::Code(0),
+        // Only `create_group` waits on a group request; the others are told, not asked.
+        K::Group => Want::NewGroup,
         K::Start
         | K::SetProfile
         | K::Connect
@@ -47,7 +49,6 @@ fn failed_slot(kind: RequestKind) -> Option<usize> {
         | K::Send
         | K::MarkRead
         | K::Refresh
-        | K::Group
         | K::RemoveFriend
         | K::SendFile
         | K::Edit

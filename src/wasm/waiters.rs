@@ -6,7 +6,9 @@ use serde_json::Value;
 use super::answers::answer;
 use super::convert::failure;
 use super::outcome::Settled;
+use super::payload::Payload;
 use crate::types::Event;
+use crate::types::model::ChatGroup;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Want {
@@ -15,6 +17,8 @@ pub(super) enum Want {
     History(u64),
     Members(i64),
     Code(i64),
+    /// The next group the user made.
+    NewGroup,
 }
 
 impl Want {
@@ -26,6 +30,7 @@ impl Want {
             Want::History(_) => 2,
             Want::Members(_) => 3,
             Want::Code(_) => 4,
+            Want::NewGroup => 5,
         }
     }
 }
@@ -67,6 +72,13 @@ impl Waiters {
         self.0.remove(at).map(|w| settle(w, result))
     }
 
+    /// A group the user owns, new in the chat list, answers the oldest `createGroup`.
+    pub(super) fn created(&mut self, g: &ChatGroup) -> Option<Settled> {
+        let at = self.0.iter().position(|w| w.want == Want::NewGroup)?;
+        let group = Payload::Group(Box::new(g.clone()));
+        self.0.remove(at).map(|w| settle(w, Ok(group)))
+    }
+
     pub(super) fn expire(&mut self, now: i64) -> Vec<Settled> {
         let (gone, kept) = std::mem::take(&mut self.0)
             .into_iter()
@@ -88,7 +100,7 @@ impl Waiters {
     }
 }
 
-fn settle(w: Waiter, result: Result<Value, Value>) -> Settled {
+fn settle(w: Waiter, result: Result<Payload, Value>) -> Settled {
     Settled {
         resolve: w.resolve,
         reject: w.reject,
