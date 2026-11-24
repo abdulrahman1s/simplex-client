@@ -34,6 +34,12 @@ pub enum ChatNotice {
         who: String,
     },
     MemberLeft(String),
+    /// A moderator blocked or unblocked a member for everyone (`RGEMemberBlocked`).
+    MemberBlocked {
+        by: Option<String>,
+        who: String,
+        blocked: bool,
+    },
     MemberRemoved {
         by: Option<String>,
         who: String,

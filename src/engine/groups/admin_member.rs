@@ -1,11 +1,11 @@
-//! A member's role, restriction or removal by an admin (Subscriber.hs `xGrpMemRole`, `xGrpMemRestrict`, `xGrpMemDel`). Roles are checked on the author, never on the member that forwarded.
+//! A member's role or removal by an admin (Subscriber.hs `xGrpMemRole`, `xGrpMemDel`). Roles are checked on the author, never on the member that forwarded.
 
 use crate::types::model::ChatNotice;
 
 use super::admin::insufficient;
 use super::inbound::GroupCtx;
 use super::rank::{at_least, role_required_to_change};
-use crate::chat::group::{GroupMemberRole, MemberRestrictions};
+use crate::chat::group::GroupMemberRole;
 use crate::chat::ids::MemberId;
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
@@ -55,29 +55,6 @@ impl<A: AgentPort> Engine<A> {
             }
         }
         self.state.chats_dirty = true;
-        Ok(())
-    }
-
-    /// Subscriber.hs 3716 `xGrpMemRestrict`. The user is never restricted by it, and a member's
-    /// restriction is not kept (a member's own `blocked` is the user's local choice).
-    pub(crate) fn on_mem_restrict(
-        &mut self,
-        ctx: GroupCtx,
-        member_id: &MemberId,
-        _restrictions: &MemberRestrictions,
-    ) -> Result<()> {
-        let g = self.group(ctx.group)?;
-        let Some(target) = self.member_by_id(ctx.group, member_id).cloned() else {
-            return Ok(());
-        };
-        if *member_id == g.my_member_id {
-            return Ok(());
-        }
-        let sender = self.member(ctx.group, ctx.author)?;
-        let moderator = at_least(&sender.role, &GroupMemberRole::Moderator);
-        if !(moderator && at_least(&sender.role, &target.role)) {
-            return Err(insufficient("x.grp.mem.restrict"));
-        }
         Ok(())
     }
 

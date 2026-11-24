@@ -53,6 +53,7 @@ mod reactions;
 mod redact;
 mod relations;
 pub(crate) mod relay;
+mod restrict;
 mod role;
 mod send;
 mod send_action;

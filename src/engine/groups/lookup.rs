@@ -53,6 +53,7 @@ impl<A: AgentPort> Engine<A> {
             friend: None,
             invited_by,
             blocked: false,
+            blocked_by_admin: false,
             key: info.member_key.clone(),
             chat_v: info.v,
             via_link: false,

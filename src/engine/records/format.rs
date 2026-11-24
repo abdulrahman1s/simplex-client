@@ -8,8 +8,9 @@ use crate::store::StoreError;
 pub const NS: &str = "chat";
 
 /// The record format. A record of a later version is refused, never guessed at.
-/// 2: notices of a broken message chain, and a delivery with a bad hash. Version 1 records
-/// read as they are: every change since only adds.
+/// 2: notices of a broken message chain and of a block for everyone, a delivery with a bad
+/// hash, and a member blocked by a moderator. Version 1 records read as they are: every change
+/// since only adds.
 pub const VERSION: u32 = 2;
 
 /// The oldest format still read.

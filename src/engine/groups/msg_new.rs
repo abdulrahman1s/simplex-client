@@ -83,7 +83,7 @@ impl<A: AgentPort> Engine<A> {
             .map(|inv| offer(&c.content, inv))
             .transpose()?;
         // A blocked member's mentions are not kept (Subscriber.hs `createNonLive`).
-        let mentions = if m.blocked {
+        let mentions = if m.hidden() {
             Vec::new()
         } else {
             self.group_incoming_mentions(&g, &c.mentions, c.content.text())
@@ -107,13 +107,13 @@ impl<A: AgentPort> Engine<A> {
         let added = self.add_item(chat, &item)?;
         let shown = self.shown_last(chat, &item, added);
         let id = shown.id;
-        if !m.blocked {
+        if !m.hidden() {
             g.unread += 1;
             self.save_group(g)?;
         }
         self.emit(Event::Messages(vec![shown]));
         if let Some((_, rec)) = offer {
-            self.on_offered_in(chat, id, rec, size, !m.blocked)?;
+            self.on_offered_in(chat, id, rec, size, !m.hidden())?;
         }
         Ok(())
     }

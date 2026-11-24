@@ -57,7 +57,7 @@ impl<A: AgentPort> Engine<A> {
                 "x.grp.inv: direct messages not allowed",
             ));
         }
-        if m.blocked {
+        if m.hidden() {
             return Err(fail(Code::RequestFailed, "x.grp.inv: member is blocked"));
         }
         Ok(m.profile)

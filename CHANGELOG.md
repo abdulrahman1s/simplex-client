@@ -93,6 +93,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- A moderator's "block for all" (`x.grp.mem.restrict`) is applied, as `xGrpMemRestrict` does:
+  the member is kept as `blocked_by_admin`, shown as `blocked` in the member list, their
+  messages are collapsed and never unread, their mentions are dropped, their pictures are not
+  fetched by themselves and their items stay out of the history a host sends. A
+  `ChatNotice::MemberBlocked` item tells it, and an unblock undoes it. The user's own unblock
+  does not.
 - A friend's deletion of its own message is taken only within 78 hours of the message's
   arrival (`limits::RCV_DELETE_WINDOW_MS`, Subscriber.hs `rcvItemDeletable`), as in groups; an
   older one is ignored.

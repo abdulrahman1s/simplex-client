@@ -46,7 +46,7 @@ impl<A: AgentPort> Engine<A> {
         }
         self.require_verified(&ctx, &item, Some(m.id), at)?;
         let g = self.group(ctx.group)?;
-        let found = if m.blocked {
+        let found = if m.hidden() {
             Vec::new()
         } else {
             self.group_incoming_mentions(&g, &mentions, content.text())
