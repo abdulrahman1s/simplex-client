@@ -5,7 +5,7 @@ use crate::types::model::{ChatRef, MessageAuthor, MessageBody};
 
 use crate::chat::container::MsgContainer;
 use crate::chat::content::MsgContent;
-use crate::chat::{ChatEvent, ChatMessage, encode_chat_message};
+use crate::chat::{ChatEvent, ChatMessage};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
@@ -13,6 +13,7 @@ use crate::engine::quote::outgoing;
 use crate::engine::records::{ItemRecord, keys};
 
 use super::invite::PQ;
+use super::size::encode_sized;
 
 impl<A: AgentPort> Engine<A> {
     /// Mentions are carried in groups only (codec `render_text`), so a direct chat drops them.
@@ -46,7 +47,7 @@ impl<A: AgentPort> Engine<A> {
             None => (MsgContainer::simple(content), None),
         };
         let msg = ChatMessage::new(ChatEvent::MsgNew(container))?;
-        let body = encode_chat_message(&msg, PQ)?;
+        let body = encode_sized(&msg, PQ)?;
         let agent_id = self.agent.send(&mut self.store, &f.conn, f.pq, body)?;
         let now = self.clock.wall_ms();
         let mut item = ItemRecord::new(MessageAuthor::Me, MessageBody::Text(text.to_owned()), now);

@@ -55,7 +55,7 @@ const fn active(status: MemberStatus) -> bool {
 /// `assertUserGroupRole`: what the user needs to change the group.
 pub(crate) fn assert_user_role(g: &GroupRecord, min: &GroupMemberRole) -> Result<()> {
     if !at_least(&g.my_role, min) {
-        return Err(fail(Code::RequestFailed, "insufficient role in the group"));
+        return Err(fail(Code::NotAllowed, "insufficient role in the group"));
     }
     if !active(g.status) {
         return Err(fail(

@@ -16,7 +16,9 @@ use super::spawn;
 use super::waiters::{Answer, Want};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::clock::Clock;
+use crate::engine::kind_of;
 use crate::engine::log::Log;
+use crate::limits::check;
 use crate::types::model::ChatProfile;
 use crate::types::{Config, Request};
 
@@ -75,8 +77,15 @@ impl Client {
     }
 
     /// Sends any request as it is; what it causes arrives as events. The escape hatch for
-    /// everything without its own method (calls, streams, muting, pictures, …).
+    /// everything without its own method (calls, streams, muting, pictures, …). A request that
+    /// breaks one of the [`limits`](crate::limits) the engine can tell without looking anything
+    /// up fails here, before it is sent; the rest arrive as `Event::Failed`.
     pub fn request(&self, request: Request) -> Result<()> {
+        check(&request).map_err(|r| Error::Failed {
+            request: kind_of(&request),
+            code: r.code,
+            detail: r.detail,
+        })?;
         let tx = self
             .inner
             .requests

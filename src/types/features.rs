@@ -2,8 +2,8 @@
 
 use crate::types::model::ChatFeatures;
 
-/// The reactions the engine carries, in display form.
-pub const REACTION_EMOJI: [&str; 8] = ["👍", "👎", "😀", "😂", "😢", "❤️", "🚀", "✅"];
+/// The reactions the engine carries, in display form: [`limits::REACTIONS`](crate::limits::REACTIONS).
+pub use crate::limits::REACTIONS as REACTION_EMOJI;
 
 /// What an engine started with `relays` (`smp://` and `xftp://` addresses; empty = the presets)
 /// carries, known before it starts: Settings shows the same rows whether Chat is on or off.

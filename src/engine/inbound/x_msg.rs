@@ -1,48 +1,16 @@
-//! A friend's messages: `x.msg.new` (with its quote), and their edits, deletions and reactions.
+//! A friend's messages: `x.msg.new` (with its quote), and their edits and deletions.
 
 use crate::types::Event;
-use crate::types::model::{ChatRef, MessageAuthor, MessageBody, Quote, Reaction};
+use crate::types::model::{ChatRef, MessageAuthor, MessageBody, Quote};
 
 use crate::chat::container::{MsgContainer, QuotedMsg};
 use crate::chat::content::MsgContent;
-use crate::chat::reaction::MsgReaction;
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::Result;
 use crate::engine::machine::Engine;
 use crate::engine::quote::shown_quote;
 use crate::engine::records::ItemRecord;
 use crate::engine::records::friend::Feature;
-
-/// The page's form of an emoji: ❤ travels without its variation selector.
-fn display(c: char) -> String {
-    if c == '\u{2764}' {
-        "\u{2764}\u{fe0f}".to_owned()
-    } else {
-        c.to_string()
-    }
-}
-
-/// The friend's reaction added or taken away; the user's own part of the count stays.
-fn react(reactions: &mut Vec<Reaction>, emoji: String, add: bool) {
-    let i = reactions.iter().position(|r| r.emoji == emoji);
-    let theirs = i.is_some_and(|i| reactions[i].count > u32::from(reactions[i].mine));
-    match (i, add) {
-        (Some(i), true) if !theirs => reactions[i].count += 1,
-        (None, true) => reactions.push(Reaction {
-            emoji,
-            count: 1,
-            mine: false,
-            who: Vec::new(),
-        }),
-        (Some(i), false) if theirs => {
-            reactions[i].count -= 1;
-            if reactions[i].count == 0 {
-                reactions.remove(i);
-            }
-        }
-        (Some(_) | None, true | false) => {}
-    }
-}
 
 impl<A: AgentPort> Engine<A> {
     /// A blocked friend's message is deleted on arrival: never kept, never shown.
@@ -153,32 +121,5 @@ impl<A: AgentPort> Engine<A> {
             .enabled(Feature::FullDelete)
             .for_contact;
         self.finish_delete(friend, id, item, full)
-    }
-
-    pub(crate) fn on_msg_react(
-        &mut self,
-        friend: i64,
-        shared: &[u8],
-        reaction: &MsgReaction,
-        add: bool,
-    ) -> Result<()> {
-        let emoji = match reaction {
-            MsgReaction::Emoji(c) => display(*c),
-            MsgReaction::Unknown(_) => return Ok(()),
-        };
-        if !self.friend(friend)?.enabled(Feature::Reactions).for_contact {
-            return Ok(());
-        }
-        let Some((id, mut item)) = self.item_by_shared(ChatRef::Direct(friend), None, shared)?
-        else {
-            return Ok(());
-        };
-        if item.body == MessageBody::Deleted {
-            return Ok(());
-        }
-        react(&mut item.reactions, emoji, add);
-        let m = self.change_item(ChatRef::Direct(friend), id, &item)?;
-        self.emit(Event::Updated(vec![m]));
-        Ok(())
     }
 }

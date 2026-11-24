@@ -15,6 +15,7 @@ use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
 use crate::engine::records::file::{FileRecord, Way};
 use crate::engine::records::{ItemRecord, keys};
+use crate::engine::requests::sized;
 
 /// Every friend's connection this engine makes is PQ.
 pub(super) const PQ: bool = true;
@@ -42,6 +43,7 @@ impl<A: AgentPort> Engine<A> {
         let mut container = MsgContainer::simple(content(kind, text, preview, duration));
         container.file = Some(FileInvitation::xftp(&name, size));
         let msg = ChatMessage::new(ChatEvent::MsgNew(container))?;
+        sized(&msg)?;
         let sent = self.send_offer(chat, &msg)?;
         let media = Media {
             name: name.clone(),

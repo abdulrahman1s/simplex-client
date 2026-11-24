@@ -7,6 +7,7 @@ use super::store::{FileStore, size_allowed};
 use crate::crypto::random_array;
 use crate::encoding::b64_encode;
 use crate::engine::error::{Code, Result, fail};
+use crate::limits::MAX_FILE_SIZE;
 use crate::xftp::{MB, safe_file_name};
 
 /// The default largest file, either way: a browser tab's memory is the limit.
@@ -67,8 +68,9 @@ impl MemFiles {
         self.inner().limit
     }
 
+    /// Never above the official client's [`MAX_FILE_SIZE`]: a larger file would be refused anyway.
     pub fn set_limit(&self, bytes: u64) {
-        self.inner().limit = bytes;
+        self.inner().limit = bytes.min(MAX_FILE_SIZE);
     }
 
     /// Keeps `bytes` under a path of its own, `/mem/<token>/<n>/<name>`.
@@ -77,7 +79,7 @@ impl MemFiles {
         let size = bytes.len() as u64;
         if size > g.limit {
             return Err(fail(
-                Code::RequestFailed,
+                Code::FileTooLarge,
                 "file is larger than allowed in memory",
             ));
         }

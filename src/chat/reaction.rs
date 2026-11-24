@@ -2,15 +2,14 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::limits::is_reaction_char;
+
 /// `{"type":"emoji","emoji":"👍"}`; any other reaction keeps its JSON and shows as `?`.
 #[derive(Clone, Debug, PartialEq)]
 pub enum MsgReaction {
     Emoji(char),
     Unknown(Value),
 }
-
-/// The reaction whitelist, matched per `Char` (so `❤` is U+2764 without the variation selector).
-pub const REACTION_EMOJI: &str = "👍👎😀😂😢❤\u{fe0f}🚀✅";
 
 impl Serialize for MsgReaction {
     fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
@@ -37,7 +36,7 @@ impl<'de> Deserialize<'de> for MsgReaction {
             ));
         };
         let emoji = match (tag, o.get("emoji").and_then(Value::as_str)) {
-            ("emoji", Some(e)) => single_char(e).filter(|c| REACTION_EMOJI.contains(*c)),
+            ("emoji", Some(e)) => single_char(e).filter(|c| is_reaction_char(*c)),
             _ => None,
         };
         Ok(emoji.map_or(Self::Unknown(v), Self::Emoji))

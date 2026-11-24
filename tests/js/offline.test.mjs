@@ -103,3 +103,22 @@ test("an unknown privateRouting value is refused with a clear error", async () =
     (e) => e.code === "bad_option" && /privateRouting/.test(e.detail),
   );
 });
+
+test("what breaks one of the official client's limits rejects with the limit's code", async () => {
+  const client = await Client.start({ key: "k", relays: [await deadRelay()] });
+  const club = await client.createGroup("Club");
+  await assert.rejects(club.send("x".repeat(16000)), (e) => e.code === "text_too_long");
+  await assert.rejects(client.createGroup("#club"), (e) => e.code === "invalid_name");
+
+  const hello = next(client, "message", (m) => m.text === "hello");
+  await club.send("hello");
+  const message = await hello;
+  await assert.rejects(message.react("🤡"), (e) => e.code === "reaction_not_allowed");
+  await message.react("👍");
+  client.close();
+
+  await assert.rejects(
+    Client.start({ key: "k", name: "J.Doe", relays: [await deadRelay()] }),
+    (e) => e.code === "invalid_name",
+  );
+});

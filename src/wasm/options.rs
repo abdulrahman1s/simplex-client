@@ -2,7 +2,8 @@
 use wasm_bindgen::{JsCast, JsValue};
 
 use super::convert::error;
-use crate::types::{ProxyFallback, ProxyMode};
+use crate::limits::is_valid_name;
+use crate::types::{ErrorCode, ProxyFallback, ProxyMode};
 
 /// How long a call that waits for an answer waits, as the native client does.
 const TIMEOUT_MS: i64 = 60_000;
@@ -107,8 +108,14 @@ impl Options {
             Some(true) => ProxyFallback::Allow,
             Some(false) | None => ProxyFallback::AllowProtected,
         };
+        let name = text(o, "name")?.unwrap_or_else(|| "SimpleX user".into());
+        // Only a new store's user takes the name (Commands.hs `CreateActiveUser`: `checkValidName`).
+        if snapshot.is_none() && !is_valid_name(name.trim()) {
+            let code = ErrorCode::InvalidName.name();
+            return Err(error(code, format!("not a valid name: {name:?}")));
+        }
         Ok(Self {
-            name: text(o, "name")?.unwrap_or_else(|| "SimpleX user".into()),
+            name,
             key: text(o, "key")?.ok_or_else(|| need("key"))?,
             transport: transport(o)?,
             token: text(o, "tunnelToken")?,

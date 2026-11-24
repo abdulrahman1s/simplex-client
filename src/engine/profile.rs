@@ -53,8 +53,7 @@ fn data_uri(p: &Picture) -> ImageData {
     ))
 }
 
-/// `maxProfileImageSize` (Commands.hs): the longest `data:` URI the user's own profile carries.
-pub const MAX_PICTURE_URI: usize = 12_500;
+pub use crate::limits::MAX_PICTURE_URI;
 /// The longest URI read from a friend's profile; a real one travels in one message, so far shorter.
 const MAX_PICTURE_URI_IN: usize = 32 * 1024;
 

@@ -5,7 +5,6 @@ use crate::types::Event;
 use crate::types::model::{ChatRef, MessageBody};
 
 use crate::chat::ChatEvent;
-use crate::chat::group::GroupMemberRole;
 use crate::chat::ids::SharedMsgId;
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::Result;
@@ -13,15 +12,14 @@ use crate::engine::groups::policy;
 use crate::engine::machine::Engine;
 use crate::engine::records::friend::Feature;
 use crate::engine::records::{ItemRecord, NS, keys};
-
-use super::change::DELETE_MS;
+use crate::limits::{DELETE_WINDOW_MS, ROLE_TO_DELETE_OWN};
 
 impl<A: AgentPort> Engine<A> {
     /// Commands.hs `APIDeleteChatItem` broadcast: the item goes for good when the preferences
     /// allow full deletion for the user, else it stays, marked deleted.
     pub(crate) fn delete(&mut self, chat: ChatRef, item: i64) -> Result<()> {
-        self.may_change(chat, &GroupMemberRole::Observer)?;
-        let (it, shared) = self.own_item(chat, item, DELETE_MS)?;
+        self.may_change(chat, &ROLE_TO_DELETE_OWN)?;
+        let (it, shared) = self.own_item(chat, item, DELETE_WINDOW_MS)?;
         self.send_to_chat(
             chat,
             ChatEvent::MsgDel {

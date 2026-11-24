@@ -3,6 +3,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use std::rc::Rc;
 
+use super::files::Parts;
 use super::handlers::Handlers;
 use super::outcome::Outcome;
 use super::runtime::Core;
@@ -16,8 +17,9 @@ pub(super) struct Shared {
     pub(super) core: RefCell<Option<Core>>,
     /// What the sockets reported. Eviction: emptied by every run, which each report starts.
     pub(super) inbox: RefCell<VecDeque<(PipeId, PipeInput)>>,
-    /// Requests from JS calls. Eviction: emptied by every run, which each call starts.
-    pub(super) requests: RefCell<VecDeque<Request>>,
+    /// Requests from JS calls, each with the promise that waits for its verdict, if any.
+    /// Eviction: emptied by every run, which each call starts.
+    pub(super) requests: RefCell<VecDeque<(Request, Option<Parts>)>>,
     pub(super) handlers: RefCell<Handlers>,
     pub(super) timer: RefCell<Option<Timer>>,
     /// Requests seen, for tests; `None` unless a test turns it on, emptied by each look.
@@ -48,10 +50,15 @@ impl Shared {
     }
 
     pub(super) fn request(self: &Rc<Self>, request: Request) {
+        self.request_with(request, None);
+    }
+
+    /// `request`, with a promise settled once the engine has taken it or refused it.
+    pub(super) fn request_with(self: &Rc<Self>, request: Request, parts: Option<Parts>) {
         if let Some(seen) = self.tap.borrow_mut().as_mut() {
             seen.push(request.clone());
         }
-        self.requests.borrow_mut().push_back(request);
+        self.requests.borrow_mut().push_back((request, parts));
         self.run();
     }
 
@@ -68,7 +75,7 @@ impl Shared {
             let requests = std::mem::take(&mut *self.requests.borrow_mut());
             let outcome = match self.core.borrow_mut().as_mut() {
                 Some(core) => core.run(inbox, requests),
-                None => Outcome::default(),
+                None => Outcome::closed(requests),
             };
             outcome.deliver(self);
             if !self.again.get() {
@@ -96,6 +103,7 @@ impl Shared {
             core.close().deliver(self);
         }
         self.inbox.borrow_mut().clear();
-        self.requests.borrow_mut().clear();
+        let left = std::mem::take(&mut *self.requests.borrow_mut());
+        Outcome::closed(left).deliver(self);
     }
 }

@@ -21,9 +21,17 @@ impl Shared {
         Ok(())
     }
 
-    /// `tell` as a promise, for methods that answer nothing but keep every method awaitable.
+    /// `tell` as a promise, for methods that answer nothing but keep every method awaitable:
+    /// it resolves once the engine has taken the request, and rejects with the limit's code
+    /// (`reaction_not_allowed`, `text_too_long`, …) when it breaks one.
     pub(super) fn queue(self: &Rc<Self>, r: Request) -> js_sys::Promise {
-        settled(self.tell(r))
+        if self.core.borrow().is_none() {
+            return settled(Err(closed()));
+        }
+        let mut parts = None;
+        let promise = js_sys::Promise::new(&mut |resolve, reject| parts = Some((resolve, reject)));
+        self.request_with(r, parts);
+        promise
     }
 
     /// Sends `r`; the promise settles with the engine's answer to `want`, or a timeout.

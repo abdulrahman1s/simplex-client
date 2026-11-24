@@ -2,6 +2,7 @@
 use std::collections::VecDeque;
 
 use super::clock::JsClock;
+use super::files::Parts;
 use super::outcome::Outcome;
 use super::payload::Payload;
 use super::runtime::Core;
@@ -13,7 +14,7 @@ impl Core {
     pub(super) fn run(
         &mut self,
         inbox: VecDeque<(PipeId, PipeInput)>,
-        requests: VecDeque<Request>,
+        requests: VecDeque<(Request, Option<Parts>)>,
     ) -> Outcome {
         let now = self.smp_clock.now_ms();
         if let Ok(mut pool) = self.pool.try_borrow_mut() {
@@ -27,8 +28,12 @@ impl Core {
             pool.tick(now);
         }
         self.settle_net();
-        for r in requests {
-            self.engine.on_request(r);
+        let mut verdicts = Outcome::default();
+        for (r, parts) in requests {
+            let done = self.engine.handle(r);
+            if let Some(parts) = parts {
+                verdicts.verdict(parts, &done);
+            }
             self.settle_net();
         }
         let wall = JsClock.wall_ms();
@@ -38,7 +43,9 @@ impl Core {
         }
         let sleep = i64::try_from(self.engine.sleep_for().as_millis()).unwrap_or(i64::MAX);
         self.engine_due = JsClock.wall_ms().saturating_add(sleep);
-        self.outcome(wall)
+        let mut out = self.outcome(wall);
+        out.settled.splice(0..0, verdicts.settled);
+        out
     }
 
     /// Bytes out, then the SMP events and job results they and the engine caused, until quiet.

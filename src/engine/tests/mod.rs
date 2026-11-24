@@ -13,6 +13,7 @@ mod friend_pq;
 mod groups;
 mod handshake;
 mod inbound;
+mod limits;
 mod live_address;
 mod live_call;
 mod live_cli;

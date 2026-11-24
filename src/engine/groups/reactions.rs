@@ -11,9 +11,7 @@ use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
 use crate::engine::records::{ItemRecord, NS, decode, keys};
 use crate::engine::requests::has_content;
-
-/// Internal.hs `maxMsgReactions`.
-const MAX_REACTIONS: usize = 3;
+use crate::limits::MAX_REACTIONS;
 
 /// The page's form of an emoji: ❤ travels without its variation selector.
 fn display(c: char) -> String {

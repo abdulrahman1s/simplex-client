@@ -4,7 +4,7 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
 use crate::engine::error::{Code, Result, fail};
-use crate::xftp::MAX_FILE_SIZE;
+use crate::limits::MAX_FILE_SIZE;
 
 /// The engine's view of its local copies; a copy is named by its path either way.
 pub trait FileStore: Send {
@@ -16,10 +16,13 @@ pub trait FileStore: Send {
     fn remove(&self, dir: &Path, path: &Path) -> std::result::Result<(), String>;
 }
 
-/// What a sent file must be: not empty, within XFTP's limit.
+/// What a sent file must be: not empty, within XFTP's limit (Commands.hs `checkSndFile`).
 pub(super) fn size_allowed(size: u64) -> Result<()> {
-    if size == 0 || size > MAX_FILE_SIZE {
-        return Err(fail(Code::RequestFailed, "file size is not allowed"));
+    if size == 0 {
+        return Err(fail(Code::RequestFailed, "the file is empty"));
+    }
+    if size > MAX_FILE_SIZE {
+        return Err(fail(Code::FileTooLarge, "the file is over 1 GiB"));
     }
     Ok(())
 }

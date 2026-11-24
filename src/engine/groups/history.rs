@@ -10,9 +10,8 @@ use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
 use crate::engine::records::{GroupRecord, ItemRecord, decode, keys};
+use crate::limits::HISTORY_ITEMS;
 
-/// `sendHistory`: `getGroupHistoryItems … 100`.
-const HISTORY_ITEMS: usize = 100;
 /// Items read at a time while looking for them.
 const PAGE: u32 = 200;
 

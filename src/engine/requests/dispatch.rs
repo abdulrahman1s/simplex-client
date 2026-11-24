@@ -1,23 +1,34 @@
-//! The request table: each request to its handler; a handler's error answers `Failed`.
+//! The request table: the limits first, then each request to its handler; a handler's error answers `Failed`.
 
 use crate::types::{Event, Request};
 
 use super::kind::kind_of;
 use crate::engine::agent_port::AgentPort;
-use crate::engine::error::Result;
+use crate::engine::error::{EngineError, Result};
 use crate::engine::machine::Engine;
+use crate::limits::check;
 
 impl<A: AgentPort> Engine<A> {
     pub fn on_request(&mut self, request: Request) {
+        // The failure has gone out as `Event::Failed`; nobody else waits for it here.
+        let _ = self.handle(request);
+    }
+
+    /// `on_request` that also hands back the failure it announced.
+    pub fn handle(&mut self, request: Request) -> Result<()> {
         let kind = kind_of(&request);
-        if let Err(e) = self.route(request) {
+        let done = check(&request)
+            .map_err(EngineError::from)
+            .and_then(|()| self.route(request));
+        if let Err(e) = &done {
             self.emit(Event::Failed {
                 request: kind,
                 code: e.code,
-                detail: e.detail,
+                detail: e.detail.clone(),
             });
         }
         self.pump();
+        done
     }
 
     fn route(&mut self, request: Request) -> Result<()> {
