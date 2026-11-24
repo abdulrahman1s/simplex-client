@@ -46,6 +46,12 @@ pub struct ChatGroup {
     /// The group's description, its welcome message.
     #[serde(default)]
     pub description: Option<String>,
+    /// The user's own name for it, never sent; empty when none.
+    #[serde(default)]
+    pub alias: String,
+    /// As `Friend::item_ttl`.
+    #[serde(default)]
+    pub item_ttl: Option<i64>,
     /// Seconds new messages last, when the group has disappearing messages on.
     #[serde(default)]
     pub timer: Option<i64>,

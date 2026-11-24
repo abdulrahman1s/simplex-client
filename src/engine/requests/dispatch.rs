@@ -97,6 +97,12 @@ impl<A: AgentPort> Engine<A> {
             } => self.set_group_profile(group, &name, description.as_deref()),
             Request::SetGroupPrefs { group, prefs } => self.set_group_prefs(group, &prefs),
             Request::Moderate { group, item } => self.moderate(group, item),
+            Request::DeleteForMe { chat, item } => self.delete_for_me(chat, item),
+            Request::ClearChat(chat) => self.clear_chat(chat),
+            Request::MarkReadUpTo { chat, item } => self.read_to(chat, Some(item)),
+            Request::SetUnreadMark { chat, on } => self.set_unread_mark(chat, on),
+            Request::SetAlias { chat, alias } => self.set_alias(chat, &alias),
+            Request::SetMessageTtl { chat, ttl } => self.set_message_ttl(chat, ttl),
             Request::SetBlocked { friend, on } => self.set_blocked(friend, on),
             Request::SetMemberBlocked { group, member, on } => {
                 self.set_member_blocked(group, member, on)

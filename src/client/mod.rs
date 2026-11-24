@@ -7,6 +7,7 @@ mod error;
 mod event;
 mod groups;
 mod handle;
+mod local;
 mod messages;
 mod objects;
 mod people;

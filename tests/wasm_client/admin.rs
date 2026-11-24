@@ -1,4 +1,4 @@
-//! Group admin from JS: a listed member's role and removal, the group's profile, preferences and deletion, and moderation.
+//! Group admin and local actions from JS: a listed member's role and removal, the group's profile, preferences and deletion; aliases, marks, clearing and message TTLs.
 
 use serde_json::json;
 use simplex_client::types::Request;
@@ -72,6 +72,52 @@ async fn admin_calls_queue_their_requests_and_bad_arguments_are_refused() {
             prefs: voice_off,
         },
         Request::DeleteGroup(g),
+    ] {
+        assert!(asked.contains(&want), "{want:?} in {asked:?}");
+    }
+    client.close();
+}
+
+#[test]
+async fn local_calls_queue_their_requests() {
+    fake_tunnel("silent");
+    let client = start(json!({})).unwrap();
+    sleep(20.0).await;
+    let group = settle(client.create_group("notes").into()).await.unwrap();
+    let chat = simplex_client::types::model::ChatRef::Group(id(&group));
+    client.tap(true);
+    settle(call(&group, "setAlias", &["mine".into()]))
+        .await
+        .unwrap();
+    settle(call(&group, "setUnreadMark", &[true.into()]))
+        .await
+        .unwrap();
+    settle(call(&group, "setMessageTtl", &[86_400.into()]))
+        .await
+        .unwrap();
+    settle(call(&group, "clear", &[])).await.unwrap();
+    settle(client.set_message_ttl(None).into()).await.unwrap();
+    let bad = settle(client.set_message_ttl(Some(1.5)).into())
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(from_js(&bad)["code"], "bad_argument");
+    let asked = client.tap(false);
+    for want in [
+        Request::SetAlias {
+            chat,
+            alias: "mine".into(),
+        },
+        Request::SetUnreadMark { chat, on: true },
+        Request::SetMessageTtl {
+            chat: Some(chat),
+            ttl: Some(86_400),
+        },
+        Request::ClearChat(chat),
+        Request::SetMessageTtl {
+            chat: None,
+            ttl: None,
+        },
     ] {
         assert!(asked.contains(&want), "{want:?} in {asked:?}");
     }

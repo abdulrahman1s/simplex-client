@@ -36,6 +36,7 @@ impl UserRecord {
             status: self.status,
             picture: self.picture.clone(),
             prefs: to_wire(self.prefs.as_ref()),
+            item_ttl: 0,
         }
     }
 }

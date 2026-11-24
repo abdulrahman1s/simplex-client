@@ -140,6 +140,36 @@ pub enum Request {
         group: i64,
         item: i64,
     },
+    /// Deletes a message here only, with its file (`APIDeleteChatItem` `CIDMInternal`).
+    DeleteForMe {
+        chat: ChatRef,
+        item: i64,
+    },
+    /// Deletes every message of a conversation here, with their files (`APIClearChat`).
+    ClearChat(ChatRef),
+    /// The conversation is read up to and including `item` (`APIChatItemsRead`).
+    MarkReadUpTo {
+        chat: ChatRef,
+        item: i64,
+    },
+    /// Marks a conversation unread, or takes the mark off (`APIChatUnread`).
+    SetUnreadMark {
+        chat: ChatRef,
+        on: bool,
+    },
+    /// The user's own name for a friend or a group, never sent (`APISetContactAlias`,
+    /// `APISetGroupAlias`); empty takes it off.
+    SetAlias {
+        chat: ChatRef,
+        alias: String,
+    },
+    /// Messages older than `ttl` seconds are deleted here (`APISetChatItemTTL`,
+    /// `APISetChatTTL`). `chat: None` sets the user's own, `None` or 0 keeping them; for one
+    /// chat `None` follows the user's own and `Some(0)` keeps them.
+    SetMessageTtl {
+        chat: Option<ChatRef>,
+        ttl: Option<i64>,
+    },
     ShowCode(i64),
     Verify {
         friend: i64,

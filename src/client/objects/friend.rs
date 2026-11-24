@@ -94,4 +94,24 @@ impl Friend {
     pub const fn features(&self) -> &BTreeMap<ChatFeature, PrefEnabled> {
         &self.info.features
     }
+
+    /// Deletes every message here, with their files.
+    pub fn clear(&self) -> Result<()> {
+        self.client.clear_chat(self.chat())
+    }
+
+    pub fn set_unread_mark(&self, on: bool) -> Result<()> {
+        self.client.set_unread_mark(self.chat(), on)
+    }
+
+    /// The user's own name, never sent; empty takes it off.
+    pub fn set_alias(&self, alias: &str) -> Result<()> {
+        self.client.set_alias(self.chat(), alias)
+    }
+
+    /// Messages older than `ttl` seconds are deleted here; `None` follows the user's own
+    /// setting and `Some(0)` keeps them.
+    pub fn set_message_ttl(&self, ttl: Option<i64>) -> Result<()> {
+        self.client.set_message_ttl(Some(self.chat()), ttl)
+    }
 }

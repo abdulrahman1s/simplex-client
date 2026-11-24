@@ -38,6 +38,12 @@ impl Client {
         super::objects::timer::set_prefs(&self.shared, None, &prefs)
     }
 
+    /// Messages older than `seconds` are deleted here in every chat; `null` or `0` keeps them.
+    #[wasm_bindgen(js_name = setMessageTtl, unchecked_return_type = "Promise<void>")]
+    pub fn set_message_ttl(&self, seconds: Option<f64>) -> js_sys::Promise {
+        super::objects::local::set_ttl(&self.shared, None, seconds)
+    }
+
     #[wasm_bindgen(js_name = setName, unchecked_return_type = "Promise<void>")]
     pub fn set_name(&self, name: &str) -> js_sys::Promise {
         let profile = {

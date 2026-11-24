@@ -89,6 +89,12 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::DeleteGroup(_)
         | Request::SetGroupPrefs { .. }
         | Request::Moderate { .. }
+        | Request::DeleteForMe { .. }
+        | Request::ClearChat(_)
+        | Request::MarkReadUpTo { .. }
+        | Request::SetUnreadMark { .. }
+        | Request::SetAlias { .. }
+        | Request::SetMessageTtl { .. }
         | Request::SetBlocked { .. }
         | Request::SetMemberBlocked { .. }
         | Request::ShowCode(_)

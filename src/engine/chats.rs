@@ -23,6 +23,8 @@ fn friend(user: Option<&Preferences>, f: &FriendRecord) -> Friend {
         verified: f.verified.is_some(),
         picture: f.image.as_deref().and_then(picture_of),
         timer: friend_ttl(user, f).flatten(),
+        alias: f.local.alias.clone(),
+        item_ttl: f.local.item_ttl,
         prefs: to_wire(f.my_prefs.as_ref()),
         ..Friend::default()
     }
@@ -49,6 +51,7 @@ impl<A: AgentPort> Engine<A> {
                 last: self.state.last.get(&ChatRef::Direct(f.id)).cloned(),
                 unread: f.unread,
                 muted: f.muted,
+                marked_unread: f.local.marked_unread,
             });
         let in_groups = self.state.groups.values().map(|g| ChatPreview {
             chat: ChatRef::Group(g.id),
@@ -56,6 +59,7 @@ impl<A: AgentPort> Engine<A> {
             last: self.state.last.get(&ChatRef::Group(g.id)).cloned(),
             unread: g.unread,
             muted: g.muted,
+            marked_unread: g.local.marked_unread,
         });
         let chats = direct.chain(in_groups).collect();
         let groups = self

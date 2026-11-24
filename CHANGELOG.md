@@ -57,6 +57,18 @@ All notable changes to this project are documented here. The format follows
   **Breaking:** `Request`, `RequestKind` and `ChatNotice` have new variants, `GroupMember` and
   `ChatGroup` new fields.
 
+- What the user keeps for themselves, as SimpleX Chat 7.1.4 has it: `Request::DeleteForMe`
+  (`APIDeleteChatItem` internal), `ClearChat` (`APIClearChat`), `MarkReadUpTo`
+  (`APIChatItemsRead`), `SetUnreadMark` (`APIChatUnread`), `SetAlias` (`APISetContactAlias`,
+  `APISetGroupAlias`) and `SetMessageTtl` (`APISetChatItemTTL`, `APISetChatTTL`), which
+  deletes messages older than a TTL every half hour, for every chat or one, keeping a group's
+  last 12 hours. Rust: `message.delete_for_me`, `mark_read_up_to`, `friend.clear`,
+  `set_unread_mark`, `set_alias`, `set_message_ttl` (and on `Group`), `client.set_message_ttl`;
+  JS the same in camelCase. `Friend.alias`, `item_ttl`, `ChatGroup.alias`, `item_ttl`,
+  `ChatPreview.marked_unread` and `ChatProfile.item_ttl` show them, and `Event::Cleared` says a
+  chat was cleared. **Breaking:** `Request`, `RequestKind` and `Event` have new variants, and
+  `Friend`, `ChatGroup`, `ChatPreview` and `ChatProfile` new fields.
+
 ### Fixed
 
 - The profile sent to friends said disappearing messages were allowed, so an official app

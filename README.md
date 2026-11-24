@@ -19,6 +19,8 @@ small, plain API.
 - Chat preferences (full delete, reactions, voice, files, calls), your own and per friend
 - Group admin: roles, blocking for everyone, removing members, moderation, the group's name,
   description and preferences, and deleting a group
+- Local housekeeping: delete for me, clear a chat, read up to a message, unread marks,
+  aliases, and deleting old messages after a TTL
 - XFTP file upload and download, with file crypto and descriptions, natively and in the
   browser, Node.js and Bun
 - Calls (signalling and frame crypto)
@@ -340,6 +342,23 @@ await group.setProfile("crew", "Welcome!");
 await group.setPrefs({ voice: { on: false }, files: { on: true, role: "moderator" } });
 await group.delete();               // an owner deletes it for every member too
 ```
+
+### Your own housekeeping
+
+These stay on your device and nobody is told:
+
+```js
+await message.deleteForMe();        // with its file
+await message.markReadUpTo();       // later messages stay unread
+await friend.clear();               // every message, with their files
+await friend.setAlias("Mum");       // your own name for them
+await group.setUnreadMark(true);
+await client.setMessageTtl(7 * 86400); // delete messages older than a week, every chat
+await friend.setMessageTtl(0);         // except this one; null follows your own again
+```
+
+Old messages are looked for every half hour, as the official apps do, and a group's messages
+of the last 12 hours stay whatever time they say they were sent.
 
 ## Limits
 

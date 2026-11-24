@@ -33,6 +33,13 @@ pub struct Friend {
     /// What is on between them, feature by feature.
     #[serde(default)]
     pub features: BTreeMap<ChatFeature, PrefEnabled>,
+    /// The user's own name for them, never sent; empty when none.
+    #[serde(default)]
+    pub alias: String,
+    /// Seconds after which messages are deleted here: `None` follows the user's own setting,
+    /// `Some(0)` keeps them.
+    #[serde(default)]
+    pub item_ttl: Option<i64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

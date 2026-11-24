@@ -40,7 +40,8 @@ pub(crate) fn lift(e: &Event, roster: &mut Roster) -> Vec<Note> {
             ..
         } => roster.update(friends, groups, requests),
         Event::Offline(offline) => vec![Note::Offline(*offline)],
-        Event::Features { .. }
+        Event::Cleared(_)
+        | Event::Features { .. }
         | Event::Profile(_)
         | Event::Invite(_)
         | Event::Address(_)

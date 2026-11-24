@@ -72,6 +72,19 @@ impl<A: AgentPort> Engine<A> {
         self.store.put(NS, key, &bytes)
     }
 
+    pub(crate) fn save_settings(&mut self, s: SettingsRecord) -> Result<(), StoreError> {
+        self.put(keys::SETTINGS, &s)?;
+        self.state.settings = s;
+        Ok(())
+    }
+
+    /// The user's profile as the page sees it, with the settings kept beside it.
+    pub(crate) fn profile_wire(&self) -> crate::types::model::ChatProfile {
+        let mut p = self.state.user.to_wire();
+        p.item_ttl = self.state.settings.item_ttl;
+        p
+    }
+
     pub(crate) fn save_friend(&mut self, f: FriendRecord) -> Result<(), StoreError> {
         self.put(&keys::friend(f.id), &f)?;
         self.state.friends.insert(f.id, f);

@@ -26,6 +26,7 @@ mod live_prefs;
 mod live_repair;
 mod live_timed;
 mod local;
+mod local_chat;
 mod msg_delete;
 mod prefs;
 mod prefs_set;

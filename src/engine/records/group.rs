@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::ChatLocal;
 use crate::chat::group::{GroupInvitation, GroupMemberRole};
 use crate::chat::group_profile::GroupProfile;
 use crate::chat::ids::MemberId;
@@ -29,6 +30,8 @@ pub struct GroupRecord {
     /// The group link (`/g#…`, its short form when the relay keeps one) and its contact connection.
     pub link: Option<String>,
     pub link_conn: Option<ConnId>,
+    #[serde(default)]
+    pub local: ChatLocal,
 }
 
 /// `GroupMemberStatus` (Types.hs), for the user's membership and for every member.

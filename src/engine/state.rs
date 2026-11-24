@@ -41,6 +41,8 @@ pub struct State {
     /// Received timed items not read yet, by chat, as the store's `timed_unread` keys hold
     /// them. Eviction: an entry leaves when its item is read or goes, or with its chat.
     pub timed_unread: BTreeSet<(ChatRef, i64)>,
+    /// When old messages are next looked for (`ciExpirationInterval`); `None` before the start.
+    pub next_expire: Option<i64>,
 }
 
 impl State {

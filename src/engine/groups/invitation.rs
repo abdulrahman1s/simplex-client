@@ -123,6 +123,7 @@ impl<A: AgentPort> Engine<A> {
             unread: 0,
             link: None,
             link_conn: None,
+            local: crate::engine::records::ChatLocal::default(),
         })?;
         Ok(())
     }

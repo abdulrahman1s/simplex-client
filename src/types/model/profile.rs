@@ -15,6 +15,10 @@ pub struct ChatProfile {
     /// Read only here: `Request::SetPrefs` changes them, `SetProfile` leaves them.
     #[serde(default)]
     pub prefs: ChatPrefs,
+    /// Seconds after which messages are deleted here, 0 keeping them; local, never sent.
+    /// Read only here: `Request::SetMessageTtl` changes it.
+    #[serde(default)]
+    pub item_ttl: i64,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

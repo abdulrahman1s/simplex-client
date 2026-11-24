@@ -99,6 +99,16 @@ impl Message {
         self.client.delete(&self.info)
     }
 
+    /// Deletes this message here only, with its file.
+    pub fn delete_for_me(&self) -> Result<()> {
+        self.client.delete_for_me(&self.info)
+    }
+
+    /// Reads the conversation up to and including this message.
+    pub fn mark_read_up_to(&self) -> Result<()> {
+        self.client.mark_read_up_to(&self.info)
+    }
+
     /// A moderator deletes a member's message in a group for everyone.
     pub fn moderate(&self) -> Result<()> {
         let ChatRef::Group(group) = self.info.chat else {

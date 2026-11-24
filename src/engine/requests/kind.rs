@@ -31,6 +31,12 @@ pub fn kind_of(r: &Request) -> RequestKind {
         | Request::SetGroupProfile { .. }
         | Request::SetGroupPrefs { .. }
         | Request::Moderate { .. } => K::GroupAdmin,
+        Request::DeleteForMe { .. }
+        | Request::ClearChat(_)
+        | Request::MarkReadUpTo { .. }
+        | Request::SetUnreadMark { .. }
+        | Request::SetAlias { .. }
+        | Request::SetMessageTtl { .. } => K::Local,
         Request::SetBlocked { .. } | Request::SetMemberBlocked { .. } => K::Block,
         Request::ShowCode(_) | Request::Verify { .. } => K::Code,
         Request::Members(_) => K::Members,

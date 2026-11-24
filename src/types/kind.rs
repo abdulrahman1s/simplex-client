@@ -26,6 +26,8 @@ pub enum RequestKind {
     Prefs,
     /// An admin's or owner's change to a group, or deleting one.
     GroupAdmin,
+    /// What the user keeps for themselves: deletions here, read marks, aliases, message TTLs.
+    Local,
     Block,
     Code,
     Members,

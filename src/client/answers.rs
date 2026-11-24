@@ -22,6 +22,7 @@ pub(super) fn answers(event: &Event) -> Option<(usize, Option<Want>)> {
         | Event::Updated(_)
         | Event::Verified { .. }
         | Event::Offline(_)
+        | Event::Cleared(_)
         | Event::Preview { .. }
         | Event::OpenFile { .. }
         | Event::Located { .. }
@@ -58,6 +59,7 @@ fn failed_slot(kind: RequestKind) -> Option<usize> {
         | K::Timer
         | K::Prefs
         | K::GroupAdmin
+        | K::Local
         | K::Block
         | K::File
         | K::GroupLink

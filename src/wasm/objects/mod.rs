@@ -4,6 +4,7 @@ mod admin;
 mod friend;
 mod group;
 mod invite;
+pub(in crate::wasm) mod local;
 mod member;
 mod message;
 mod page;

@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::ChatLocal;
 use crate::chat::preferences::Preferences;
 use crate::chat::version::VersionRange;
 use crate::engine::agent_port::ConnId;
@@ -48,6 +49,8 @@ pub struct FriendRecord {
     /// `SetPrefs` set, and the timer, set or taken from their profile (`engine::timed`).
     #[serde(default)]
     pub my_prefs: Option<Preferences>,
+    #[serde(default)]
+    pub local: ChatLocal,
 }
 
 const fn pq_on() -> bool {
@@ -77,6 +80,7 @@ impl FriendRecord {
             pq: true,
             chat_v: None,
             my_prefs: None,
+            local: ChatLocal::default(),
         }
     }
 

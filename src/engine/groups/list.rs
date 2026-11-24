@@ -78,6 +78,8 @@ impl<A: AgentPort> Engine<A> {
             owner: g.my_role == GroupMemberRole::Owner,
             role: to_wire(&g.my_role),
             description: g.profile.description.clone(),
+            alias: g.local.alias.clone(),
+            item_ttl: g.local.item_ttl,
             timer: group_ttl(g).flatten(),
             ..ChatGroup::default()
         }

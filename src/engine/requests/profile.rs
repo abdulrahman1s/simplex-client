@@ -70,7 +70,7 @@ impl<A: AgentPort> Engine<A> {
             .map(|f| f.id)
             .collect();
         self.save_user(user)?;
-        self.emit(Event::Profile(self.state.user.to_wire()));
+        self.emit(Event::Profile(self.profile_wire()));
         for friend in told {
             // One friend's relay failing is no reason to keep the profile from the rest.
             if let Err(e) = self.send_profile(friend) {

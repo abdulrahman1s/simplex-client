@@ -11,4 +11,7 @@ pub struct ChatPreview {
     pub last: Option<ChatMessage>,
     pub unread: u32,
     pub muted: bool,
+    /// Marked unread by the user (`Request::SetUnreadMark`).
+    #[serde(default)]
+    pub marked_unread: bool,
 }

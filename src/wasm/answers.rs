@@ -55,6 +55,7 @@ pub(super) fn answer(e: &Event) -> Option<(Want, bool, Result<Payload, Value>)> 
                 | RequestKind::Timer
                 | RequestKind::Prefs
                 | RequestKind::GroupAdmin
+                | RequestKind::Local
                 | RequestKind::Block
                 | RequestKind::File
                 | RequestKind::GroupLink
@@ -72,6 +73,7 @@ pub(super) fn answer(e: &Event) -> Option<(Want, bool, Result<Payload, Value>)> 
         | Event::Updated(_)
         | Event::Verified { .. }
         | Event::Offline(_)
+        | Event::Cleared(_)
         | Event::Preview { .. }
         | Event::OpenFile { .. }
         | Event::Located { .. }
