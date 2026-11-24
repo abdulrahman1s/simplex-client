@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use crate::encoding::{Version, VersionRange};
 
+use super::clock::system_wall_clock;
 use super::version::{MAX_VERSION, MIN_VERSION};
 
 #[derive(Debug, Clone)]
@@ -26,6 +27,8 @@ pub struct ConnConfig {
     pub versions: VersionRange,
     /// Send our DH key so blocks are sbc-chain encrypted, as the Haskell client does.
     pub block_encryption: bool,
+    /// Seconds since the Unix epoch, which server certificates must be valid at.
+    pub wall_clock: fn() -> i64,
 }
 
 impl Default for ConnConfig {
@@ -43,6 +46,7 @@ impl Default for ConnConfig {
             versions: VersionRange::new(Version(MIN_VERSION), Version(MAX_VERSION))
                 .unwrap_or_else(|| VersionRange::single(Version(MAX_VERSION))),
             block_encryption: true,
+            wall_clock: system_wall_clock,
         }
     }
 }

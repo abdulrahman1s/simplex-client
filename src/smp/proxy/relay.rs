@@ -9,6 +9,7 @@ use super::broker_error::BrokerError;
 use super::error::ProxyError;
 use super::transport_error::{Handshake, TransportError};
 use crate::smp::address::SmpServer;
+use crate::smp::clock::system_wall_clock;
 use crate::smp::commands::Command;
 use crate::smp::error::SmpError;
 use crate::smp::flow::{Answer, Request};
@@ -68,7 +69,9 @@ impl ProxiedRelay {
             .ok_or_else(|| transport(TransportError::Version))?;
         let version = negotiate(&range, &ours).map_err(|_| transport(TransportError::Version))?;
         let identity = || transport(TransportError::Handshake(Handshake::Identity));
-        verify_server_chain(&chain, &dest.key_hash).map_err(|_| identity())?;
+        // The agent's signature carries no clock, so the system's wall clock dates the chain.
+        let now = system_wall_clock();
+        verify_server_chain(&chain, &dest.key_hash, now).map_err(|_| identity())?;
         let leaf = chain.first().ok_or_else(identity)?;
         let server_key = verify_signed_key(leaf, &signed_key).map_err(|_| identity())?;
         Ok(Self {

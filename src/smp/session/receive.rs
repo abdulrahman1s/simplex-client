@@ -62,6 +62,7 @@ impl SmpSession {
             range: self.cfg.versions,
             block_encryption: self.cfg.block_encryption,
             timeout: self.cfg.connect_timeout,
+            now: (self.cfg.wall_clock)(),
         };
         let (hello, session) = answer_server_hello(block, &facts, &self.key_hash, &cfg)?;
         self.link.write(&hello)?;

@@ -36,7 +36,7 @@ pub(crate) mod tests;
 pub use address::{DEFAULT_PORT, SmpServer};
 pub use auth::Authorizer;
 pub use block::{RcvBlocks, SndBlocks, block_ciphers, max_payload};
-pub use clock::{Clock, SystemClock};
+pub use clock::{Clock, SystemClock, system_wall_clock};
 pub use commands::{Command, NewQueue};
 pub use config::ConnConfig;
 #[cfg(feature = "native")]

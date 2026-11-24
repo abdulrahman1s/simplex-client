@@ -19,12 +19,15 @@ pub struct Rig {
 
 impl Rig {
     pub fn start(fake: &Fake, send_ahead: u32) -> Self {
+        Self::start_with(fake, send_ahead, ClientConfig::default())
+    }
+
+    pub fn start_with(fake: &Fake, send_ahead: u32, cfg: ClientConfig) -> Self {
         let (mut sock, _server) = fake.serve(0);
         let opts = h2::Options {
             send_ahead,
             ..h2::Options::default()
         };
-        let cfg = ClientConfig::default();
         let (s, hello) = XftpSession::start(&fake.address, "files.test", cfg, opts, T0).unwrap();
         sock.write_all(&hello).unwrap();
         Self {

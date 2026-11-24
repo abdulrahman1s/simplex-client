@@ -27,16 +27,19 @@ pub struct HandshakeConfig {
     pub range: VersionRange,
     pub block_encryption: bool,
     pub timeout: Duration,
+    /// Seconds since the Unix epoch, which the server's certificates must be valid at.
+    pub now: i64,
 }
 
 impl HandshakeConfig {
     #[must_use]
-    pub fn standard(timeout: Duration) -> Self {
+    pub fn standard(timeout: Duration, now: i64) -> Self {
         let range = VersionRange::new(Version(MIN_VERSION), Version(MAX_VERSION));
         Self {
             range: range.unwrap_or_else(|| VersionRange::single(Version(MAX_VERSION))),
             block_encryption: true,
             timeout,
+            now,
         }
     }
 }
@@ -80,7 +83,7 @@ pub fn answer_server_hello(
         return Err(HandshakeError::Session.into());
     }
     let version = negotiate(&hello.range, &cfg.range)?;
-    verify_server_chain(tls.peer_chain, key_hash_of_server)
+    verify_server_chain(tls.peer_chain, key_hash_of_server, cfg.now)
         .map_err(|_| HandshakeError::Identity)?;
     match chain_id_ca_certs(&hello.chain) {
         ChainCertificates::Valid { id, .. } if key_hash(id).as_slice() == key_hash_of_server => {}

@@ -17,6 +17,7 @@ mod record;
 mod shared;
 #[cfg(feature = "native")]
 mod stream;
+mod validity;
 mod verify;
 mod wire;
 #[cfg(feature = "native")]

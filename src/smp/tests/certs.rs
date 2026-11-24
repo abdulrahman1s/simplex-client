@@ -2,6 +2,7 @@
 use crate::crypto::{Alg, KeyPair, PublicKey, key_hash};
 
 use super::support::keypair;
+use crate::tls::testing::{ALWAYS, validity};
 
 fn der(tag: u8, content: &[u8]) -> Vec<u8> {
     let mut out = vec![tag];
@@ -34,7 +35,7 @@ pub fn certificate(subject: &PublicKey, issuer: &KeyPair) -> Vec<u8> {
         der(0x02, &[1]),
         ED25519_ALG.to_vec(),
         der(0x30, &[]),
-        der(0x30, &[]),
+        validity(ALWAYS),
         der(0x30, &[]),
         subject.to_der(),
     ]

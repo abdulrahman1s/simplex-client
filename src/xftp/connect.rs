@@ -109,7 +109,8 @@ fn handshake(
         peer_chain: &chain,
     };
     if alpn.as_deref() != Some(ALPN) {
-        verify_server_chain(&chain, &server.key_hash).map_err(|_| HandshakeError::Identity)?;
+        let now = (cfg.wall_clock)();
+        verify_server_chain(&chain, &server.key_hash, now).map_err(|_| HandshakeError::Identity)?;
         let session_id = tls_unique.to_vec();
         return Ok((
             conn,
@@ -123,7 +124,14 @@ fn handshake(
         clock,
         timeout: cfg.connect_timeout,
     };
-    let n = client_handshake(&mut conn, authority, &server.key_hash, &facts, &patience)?;
+    let n = client_handshake(
+        &mut conn,
+        authority,
+        &server.key_hash,
+        &facts,
+        &patience,
+        (cfg.wall_clock)(),
+    )?;
     Ok((conn, n))
 }
 

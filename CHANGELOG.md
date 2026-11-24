@@ -90,3 +90,7 @@ All notable changes to this project are documented here. The format follows
   `ConnConfig::connect_timeout`, then the next host is tried; the timeout used to bound each
   socket read, so a server dripping a byte now and then held a connect forever. Blocking XFTP
   connects bound TCP and TLS by the connect timeout and the handshake by one per request.
+- Server certificates must be valid now: `verify_server_chain` checks every certificate's
+  notBefore and notAfter (no skew allowance, as upstream), in SMP connects, PKEY and XFTP. The
+  time comes from the new `ConnConfig::wall_clock` and `xftp::ClientConfig::wall_clock`
+  (default `smp::system_wall_clock`); `verify_server_chain` and `HandshakeConfig` take it too.

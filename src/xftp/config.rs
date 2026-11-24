@@ -1,6 +1,8 @@
 //! How long an XFTP connection waits for each step (Client.hs `XFTPClientConfig`, `xftpClientTimeout`).
 use std::time::Duration;
 
+use crate::smp::system_wall_clock;
+
 /// Tries of one command on one server, each on a fresh connection after a temporary failure.
 pub(super) const ATTEMPTS: usize = 3;
 /// Recipient keys one FNEW or FADD carries (Agent's `xftpMaxRecipientsPerRequest`).
@@ -17,6 +19,8 @@ pub struct ClientConfig {
     pub poll: Duration,
     /// How long one write may stall; a timed-out write ends the connection, so this is generous.
     pub write_timeout: Duration,
+    /// Seconds since the Unix epoch, which server certificates must be valid at.
+    pub wall_clock: fn() -> i64,
 }
 
 impl Default for ClientConfig {
@@ -27,6 +31,7 @@ impl Default for ClientConfig {
             per_kib: Duration::from_millis(25),
             poll: Duration::from_millis(250),
             write_timeout: Duration::from_secs(30),
+            wall_clock: system_wall_clock,
         }
     }
 }

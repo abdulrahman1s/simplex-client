@@ -11,10 +11,10 @@ const SEQUENCE: u8 = 0x30;
 const BIT_STRING: u8 = 0x03;
 const VERSION: u8 = 0xa0;
 
-struct Tlv<'a> {
-    tag: u8,
+pub(super) struct Tlv<'a> {
+    pub(super) tag: u8,
     raw: &'a [u8],
-    value: &'a [u8],
+    pub(super) value: &'a [u8],
 }
 
 fn tlv(b: &[u8]) -> Result<(Tlv<'_>, &[u8]), CertError> {
@@ -46,7 +46,7 @@ fn tlv(b: &[u8]) -> Result<(Tlv<'_>, &[u8]), CertError> {
     ))
 }
 
-fn children(mut b: &[u8]) -> Result<Vec<Tlv<'_>>, CertError> {
+pub(super) fn children(mut b: &[u8]) -> Result<Vec<Tlv<'_>>, CertError> {
     let mut out = Vec::new();
     while !b.is_empty() {
         let (t, rest) = tlv(b)?;
@@ -59,6 +59,8 @@ fn children(mut b: &[u8]) -> Result<Vec<Tlv<'_>>, CertError> {
 /// The signed part, the SubjectPublicKeyInfo and the signature of a certificate.
 pub(super) struct Certificate<'a> {
     pub(super) tbs: &'a [u8],
+    /// The Validity SEQUENCE's contents: notBefore, notAfter.
+    pub(super) validity: &'a [u8],
     pub(super) spki: &'a [u8],
     pub(super) signature: &'a [u8],
 }
@@ -78,6 +80,10 @@ pub(super) fn parse_certificate(der: &[u8]) -> Result<Certificate<'_>, CertError
     let fields = children(tbs.value)?;
     let skip = usize::from(fields.first().is_some_and(|f| f.tag == VERSION));
     // serialNumber, signature, issuer, validity, subject, subjectPublicKeyInfo
+    let validity = fields
+        .get(skip + 3)
+        .filter(|f| f.tag == SEQUENCE)
+        .ok_or(CertError("x509: no Validity"))?;
     let spki = fields
         .get(skip + 5)
         .filter(|f| f.tag == SEQUENCE)
@@ -91,6 +97,7 @@ pub(super) fn parse_certificate(der: &[u8]) -> Result<Certificate<'_>, CertError
     }
     Ok(Certificate {
         tbs: tbs.raw,
+        validity: validity.value,
         spki: spki.raw,
         signature,
     })

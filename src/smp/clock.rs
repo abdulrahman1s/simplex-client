@@ -1,4 +1,4 @@
-//! Monotonic time for timeouts, behind a trait so tests can drive it (clippy.toml forbids `Instant::now` elsewhere).
+//! Monotonic time for timeouts behind a trait, and wall time for certificate dates, so tests can drive both (clippy.toml forbids `Instant::now` elsewhere).
 #[cfg(not(all(target_arch = "wasm32", feature = "wasm")))]
 use std::time::Instant;
 
@@ -57,4 +57,29 @@ impl Clock for SystemClock {
     fn now_ms(&self) -> u64 {
         (js_sys::Date::now() - self.0).max(0.0) as u64
     }
+}
+
+/// Seconds since the Unix epoch: the default `ConnConfig::wall_clock`, which certificate
+/// validity dates are checked against.
+#[cfg(not(all(target_arch = "wasm32", feature = "wasm")))]
+#[must_use]
+#[allow(
+    clippy::disallowed_methods,
+    reason = "the one wall clock of the SMP and XFTP clients, for certificate dates"
+)]
+pub fn system_wall_clock() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
+}
+
+/// `SystemTime::now` panics on wasm32-unknown-unknown, so the browser's clock stands in.
+#[cfg(all(target_arch = "wasm32", feature = "wasm"))]
+#[must_use]
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "whole seconds since 1970 fit an i64 for millions of years"
+)]
+pub fn system_wall_clock() -> i64 {
+    (js_sys::Date::now() / 1000.0) as i64
 }

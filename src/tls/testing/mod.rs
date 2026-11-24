@@ -11,7 +11,7 @@ mod pipe;
 mod server;
 mod tcp;
 
-pub(crate) use cert::make_cert;
+pub(crate) use cert::{ALWAYS, make_cert, make_cert_valid, validity};
 pub(crate) use conn::ServerConn;
 pub(crate) use options::{AppHook, MockOpts, MockResult};
 pub(crate) use pipe::Pipe;

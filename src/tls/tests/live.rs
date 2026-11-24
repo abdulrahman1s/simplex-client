@@ -18,7 +18,7 @@ fn check_server(host: &str, port: u16, fingerprint: &str) {
     let mut tls: TlsStream<TcpStream> = TlsStream::connect(sock, &["smp/1"]).unwrap();
     assert_eq!(tls.info().alpn(), Some("smp/1"));
     let chain = tls.peer_cert_chain().to_vec();
-    verify_server_chain(&chain, &key_hash_bytes).unwrap();
+    verify_server_chain(&chain, &key_hash_bytes, crate::smp::system_wall_clock()).unwrap();
     assert_eq!(key_hash(&chain[1]).to_vec(), key_hash_bytes);
 
     let mut block = vec![0u8; 16384];

@@ -98,6 +98,7 @@ fn handshake(
         range: cfg.versions,
         block_encryption: cfg.block_encryption,
         timeout: cfg.connect_timeout,
+        now: (cfg.wall_clock)(),
     };
     let session = client_handshake(&mut rd, &mut wr, &facts, &server.key_hash, &hs)?;
     Ok((rd, wr, session))

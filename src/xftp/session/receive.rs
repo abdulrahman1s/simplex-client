@@ -64,7 +64,7 @@ impl XftpSession {
             tls_unique: &tls_unique,
             peer_chain: self.tls.peer_cert_chain(),
         };
-        verify_identity(&facts, &self.key_hash)?;
+        verify_identity(&facts, &self.key_hash, (self.cfg.wall_clock)())?;
         if alpn {
             h2.start(&post(&self.authority, &[]), BLOCK_SIZE)?;
             self.phase = Phase::Hello;
