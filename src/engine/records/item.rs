@@ -1,7 +1,8 @@
 //! One chat item (Messages.hs `ChatItem`) in the store's items table; its row id is the item number.
 
 use crate::types::model::{
-    ChatMessage, ChatRef, Delivery, Mention, MessageAuthor, MessageBody, Quote, Reaction, Timed,
+    ChatMessage, ChatRef, Delivery, LinkInfo, Mention, MessageAuthor, MessageBody, Quote, Reaction,
+    Timed,
 };
 use serde::{Deserialize, Serialize};
 
@@ -28,6 +29,9 @@ pub struct ItemRecord {
     /// A disappearing message (`engine::timed`).
     #[serde(default)]
     pub timed: Option<Timed>,
+    /// The preview of the link the text has (`MCLink`).
+    #[serde(default)]
+    pub link: Option<LinkInfo>,
 }
 
 impl ItemRecord {
@@ -50,6 +54,7 @@ impl ItemRecord {
             member: None,
             verified: false,
             timed: None,
+            link: None,
         }
     }
 
@@ -70,6 +75,7 @@ impl ItemRecord {
             edited: self.edited,
             mentions: self.mentions.clone(),
             timed: self.timed,
+            link: self.link.clone(),
         }
     }
 }

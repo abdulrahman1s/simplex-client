@@ -50,6 +50,7 @@ impl<A: AgentPort> Engine<A> {
         );
         let mut item = ItemRecord::new(MessageAuthor::Friend, body, self.clock.wall_ms());
         item.timed = self.incoming_timed(ChatRef::Direct(friend), c.ttl, false)?;
+        item.link = crate::engine::link::of(&c.content);
         item.shared_id = shared;
         item.reply = c
             .quote
@@ -109,8 +110,10 @@ impl<A: AgentPort> Engine<A> {
         content: &MsgContent,
     ) -> Result<()> {
         let text = content.text().to_owned();
+        let link = crate::engine::link::of(content);
         self.change_theirs(friend, shared, |i| {
             crate::engine::files::edit_caption(&mut i.body, text);
+            i.link = link;
             i.edited = true;
         })
     }

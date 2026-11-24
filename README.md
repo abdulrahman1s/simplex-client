@@ -14,7 +14,7 @@ small, plain API.
 - SMP queues over TLS, with the agent's double ratchet and the post-quantum KEM
 - Private message routing: messages reach other people's relays through one of yours, so
   their relay never sees your IP address
-- Chat messages, contacts, groups, replies, edits, deletes and reactions
+- Chat messages, contacts, groups, replies, edits, deletes and reactions, link previews
 - Disappearing messages, for a friend or a group
 - Chat preferences (full delete, reactions, voice, files, calls), your own and per friend
 - Group admin: roles, blocking for everyone, removing members, moderation, the group's name,
@@ -342,6 +342,18 @@ await message.moderate();           // a member's message, deleted for everyone
 await group.setProfile("crew", "Welcome!");
 await group.setPrefs({ voice: { on: false }, files: { on: true, role: "moderator" } });
 await group.delete();               // an owner deletes it for every member too
+```
+
+### Link previews
+
+The page makes a link's preview (the client fetches nothing) and sends it with the text:
+
+```js
+await friend.sendLink("see https://simplex.chat", {
+  uri: "https://simplex.chat", title: "SimpleX", description: "Private messaging",
+  image: smallJpeg, // optional
+});
+client.on("message", (m) => m.link && console.log(m.link.title));
 ```
 
 ### Your own housekeeping

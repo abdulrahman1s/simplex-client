@@ -61,7 +61,13 @@ impl<A: AgentPort> Engine<A> {
                 text,
                 reply_to,
                 mentions,
-            } => self.send_text(chat, &text, reply_to, &mentions),
+            } => self.send_text(chat, &text, reply_to, &mentions, None),
+            Request::SendLink {
+                chat,
+                text,
+                preview,
+                reply_to,
+            } => self.send_text(chat, &text, reply_to, &[], Some(&preview)),
             Request::MarkRead(chat) => self.mark_read(chat),
             Request::History {
                 chat,

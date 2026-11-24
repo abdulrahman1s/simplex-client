@@ -96,6 +96,7 @@ impl<A: AgentPort> Engine<A> {
         let author = MessageAuthor::Member(m.profile.display_name.clone());
         let mut item = ItemRecord::new(author, body, at);
         item.timed = self.incoming_timed(chat, c.ttl, ctx.forwarded)?;
+        item.link = crate::engine::link::of(&c.content);
         item.shared_id = shared;
         item.member = Some(m.id);
         item.verified = ctx.signed == Some(SigStatus::Verified);

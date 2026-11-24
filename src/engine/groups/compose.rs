@@ -1,12 +1,11 @@
 //! Send in a group: one item, the message to every current member (kept for those still connecting), with its quote and mentions (Commands.hs `sendGroupContentMessages_`; Internal.hs `prepareGroupMsg`, `getCIMentions`).
 
 use crate::types::Event;
-use crate::types::model::{ChatRef, Mention, MessageAuthor, MessageBody, Quote};
+use crate::types::model::{ChatRef, LinkInfo, Mention, MessageAuthor, MessageBody, Quote};
 
 use super::mention::{mentioned_names, quote_mentions};
 use super::policy::at_least;
 use crate::chat::container::{MsgContainer, MsgMention, MsgMentions, QuotedMsg};
-use crate::chat::content::MsgContent;
 use crate::chat::group::GroupMemberRole;
 use crate::chat::ids::MemberId;
 use crate::chat::{ChatEvent, ChatMessage};
@@ -48,12 +47,13 @@ impl<A: AgentPort> Engine<A> {
         text: &str,
         reply_to: Option<i64>,
         mentions: &[(String, i64)],
+        link: Option<&LinkInfo>,
     ) -> Result<()> {
         let g = self.group(group)?;
         Self::assert_my_role(&g, &ROLE_TO_SEND)?;
         let wire_text = quote_mentions(text, mentions.iter().map(|(n, _)| n.as_str()));
         let msg_mentions = self.outgoing_mentions(&g, &wire_text, mentions)?;
-        let content = MsgContent::Text { text: wire_text };
+        let content = crate::engine::link::content_of(wire_text, link);
         let (mut container, reply) = match reply_to {
             Some(item) => {
                 let (q, shown) = self.group_quote(&g, item)?;
@@ -71,6 +71,7 @@ impl<A: AgentPort> Engine<A> {
         let mut item = ItemRecord::new(MessageAuthor::Me, MessageBody::Text(text.to_owned()), now);
         item.reply = reply;
         item.timed = timed;
+        item.link = link.cloned();
         item.shared_id = msg.msg_id.map(|m| m.0);
         item.mentions = mentions
             .iter()

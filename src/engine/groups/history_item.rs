@@ -5,7 +5,6 @@ use crate::types::model::{ChatRef, MessageBody};
 use super::fwd_batch::fwd_member_name;
 use super::mention::quote_mentions;
 use crate::chat::container::{MsgContainer, MsgMention, MsgMentions};
-use crate::chat::content::MsgContent;
 use crate::chat::element::encode_forward_element;
 use crate::chat::forward::{FwdSender, GrpMsgForward};
 use crate::chat::ids::SharedMsgId;
@@ -29,7 +28,10 @@ impl<A: AgentPort> Engine<A> {
         let mentions = self.history_mentions(g, it);
         let (content, file) = if let MessageBody::Text(t) = &it.body {
             let text = quote_mentions(t, mentions.keys().map(String::as_str));
-            (MsgContent::Text { text }, None)
+            (
+                crate::engine::link::content_of(text, it.link.as_ref()),
+                None,
+            )
         } else {
             let Some(found) = self.history_file(ChatRef::Group(g.id), id, it)? else {
                 return Ok(Vec::new());

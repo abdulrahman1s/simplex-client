@@ -77,6 +77,12 @@ All notable changes to this project are documented here. The format follows
   **Breaking:** `MessageBody::Voice` holds a `Media` instead of `secs` and `wave`, and
   `FileKind` has a new variant.
 
+- Link previews: `Request::SendLink { chat, text, preview, reply_to }` (`client.send_link`;
+  JS `friend.sendLink(text, { uri, title, description, image })`) sends `MCLink`, and a
+  received link's preview is kept in `ChatMessage.link` (JS `message.link`) instead of being
+  dropped; group history keeps it too. **Breaking:** `Request` has a new variant and
+  `ChatMessage` a new field.
+
 ### Fixed
 
 - The profile sent to friends said disappearing messages were allowed, so an official app

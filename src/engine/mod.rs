@@ -14,6 +14,7 @@ mod groups;
 mod inbound;
 mod items;
 pub mod jobs;
+mod link;
 mod load;
 mod local;
 pub mod log;

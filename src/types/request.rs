@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 use crate::types::kind::FileKind;
 use crate::types::model::bytes;
 use crate::types::model::{
-    CallRequest, ChatPrefs, ChatProfile, ChatRef, GroupPrefs, MemberRole, Picture, StreamRequest,
+    CallRequest, ChatPrefs, ChatProfile, ChatRef, GroupPrefs, LinkInfo, MemberRole, Picture,
+    StreamRequest,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -78,6 +79,13 @@ pub enum Request {
     SetMuted {
         chat: ChatRef,
         on: bool,
+    },
+    /// A text with a link, and the link's preview (`MCLink`); the page makes the preview.
+    SendLink {
+        chat: ChatRef,
+        text: String,
+        preview: LinkInfo,
+        reply_to: Option<i64>,
     },
     /// Disappearing messages: new messages in the chat go `ttl` seconds after they are sent
     /// (the user's) or read (received ones); `None` turns it off. For a friend it is offered

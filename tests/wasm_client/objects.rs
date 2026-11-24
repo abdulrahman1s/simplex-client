@@ -71,6 +71,7 @@ async fn a_message_objects_reply_quotes_it_in_its_chat() {
         edited: false,
         mentions: Vec::new(),
         timed: None,
+        link: None,
     };
     client.inject(Event::Messages(vec![msg]));
     let message = heard.objects().pop().unwrap();

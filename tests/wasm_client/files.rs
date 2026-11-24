@@ -33,6 +33,7 @@ fn photo(state: FileState) -> ChatMessage {
         edited: false,
         mentions: Vec::new(),
         timed: None,
+        link: None,
     }
 }
 

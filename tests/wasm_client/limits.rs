@@ -45,6 +45,7 @@ async fn a_reaction_outside_the_official_set_rejects_with_its_code() {
         edited: false,
         mentions: Vec::new(),
         timed: None,
+        link: None,
     }]));
     let message = heard.objects().pop().unwrap();
     let refused = settle(call(&message, "react", &["🤡".into()])).await;

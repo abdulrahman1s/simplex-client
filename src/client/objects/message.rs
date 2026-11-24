@@ -99,6 +99,12 @@ impl Message {
         self.client.delete(&self.info)
     }
 
+    /// The preview of the link the text has.
+    #[must_use]
+    pub const fn link(&self) -> Option<&crate::types::model::LinkInfo> {
+        self.info.link.as_ref()
+    }
+
     /// Deletes this message here only, with its file.
     pub fn delete_for_me(&self) -> Result<()> {
         self.client.delete_for_me(&self.info)

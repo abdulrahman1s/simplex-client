@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{ChatRef, MessageBody};
+use super::{ChatRef, LinkInfo, MessageBody};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "t", content = "c", rename_all = "snake_case")]
@@ -64,6 +64,9 @@ pub struct ChatMessage {
     /// A disappearing message: how long it lasts and when it goes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timed: Option<Timed>,
+    /// The preview of the link the text has (`MCLink`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link: Option<LinkInfo>,
 }
 
 /// A disappearing message (Messages.hs `CITimed`). The user's own count from sending; a

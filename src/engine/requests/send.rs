@@ -1,10 +1,9 @@
 //! Send: a text message to a friend or a group, maybe replying to one of theirs or the user's.
 
 use crate::types::Event;
-use crate::types::model::{ChatRef, MessageAuthor, MessageBody};
+use crate::types::model::{ChatRef, LinkInfo, MessageAuthor, MessageBody};
 
 use crate::chat::container::MsgContainer;
-use crate::chat::content::MsgContent;
 use crate::chat::{ChatEvent, ChatMessage};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
@@ -24,18 +23,17 @@ impl<A: AgentPort> Engine<A> {
         text: &str,
         reply_to: Option<i64>,
         mentions: &[(String, i64)],
+        link: Option<&LinkInfo>,
     ) -> Result<()> {
         let id = match chat {
             ChatRef::Direct(id) => id,
-            ChatRef::Group(g) => return self.send_group_text(g, text, reply_to, mentions),
+            ChatRef::Group(g) => return self.send_group_text(g, text, reply_to, mentions, link),
         };
         let f = self.friend(id)?;
         if !f.reachable() {
             return Err(fail(Code::RequestFailed, "not connected"));
         }
-        let content = MsgContent::Text {
-            text: text.to_owned(),
-        };
+        let content = crate::engine::link::content_of(text.to_owned(), link);
         let (mut container, reply) = match reply_to {
             Some(item) => {
                 let q = self
@@ -55,6 +53,7 @@ impl<A: AgentPort> Engine<A> {
         let mut item = ItemRecord::new(MessageAuthor::Me, MessageBody::Text(text.to_owned()), now);
         item.reply = reply;
         item.timed = timed;
+        item.link = link.cloned();
         item.shared_id = msg.msg_id.map(|m| m.0);
         let m = self.add_item(ChatRef::Direct(id), &item)?;
         self.put_index(&keys::sent(&f.conn, agent_id), m.id)?;
