@@ -9,12 +9,20 @@ mod forget;
 mod history;
 mod inbound;
 mod locate;
+#[cfg(any(feature = "wasm", test))]
+mod mem_files;
 mod offer;
+mod outcome;
+#[cfg(any(feature = "wasm", test))]
+mod queued;
 #[cfg(feature = "native")]
 mod real;
 mod receive;
+#[cfg(any(feature = "wasm", test))]
+mod runner;
 mod send;
 mod state;
+mod store;
 pub(crate) mod transfers;
 mod uploaded;
 
@@ -26,6 +34,15 @@ use std::sync::atomic::AtomicBool;
 pub(crate) use body::edit_caption;
 pub(crate) use history::HistoryFile;
 pub(crate) use inbound::offer;
+#[cfg(feature = "wasm")]
+pub use mem_files::DEFAULT_LIMIT;
+#[cfg(any(feature = "wasm", test))]
+pub use mem_files::MemFiles;
+#[cfg(feature = "wasm")]
+pub use queued::queue;
+#[cfg(feature = "wasm")]
+pub use runner::FileRunner;
+pub use store::{DiskFiles, FileStore};
 pub use transfers::{FileDone, FileKey, Transfers};
 pub(crate) use uploaded::descr_parts;
 
@@ -48,6 +65,8 @@ pub struct Files {
     /// The servers an upload goes to, and the ones a download is approved from.
     pub servers: Vec<XftpServer>,
     pub transfers: Box<dyn Transfers>,
+    /// Where local copies live: the data folder, or memory.
+    pub store: Box<dyn FileStore>,
     /// Eviction: an entry leaves when its job's result arrives or the transfer is cancelled.
     pub active: HashMap<FileKey, Active>,
     next_job: u64,
@@ -59,6 +78,7 @@ impl Default for Files {
             dir: PathBuf::new(),
             servers: Vec::new(),
             transfers: Box::new(transfers::NoTransfers),
+            store: Box::new(DiskFiles),
             active: HashMap::new(),
             next_job: 0,
         }

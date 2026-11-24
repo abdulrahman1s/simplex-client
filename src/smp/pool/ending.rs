@@ -14,7 +14,7 @@ impl Slot {
         let Some(mut link) = self.link.take() else {
             return;
         };
-        link.pipe.close();
+        link.carrier.pipe.close();
         let was_up = link.session.is_up();
         out.extend(link.session.close());
         let err = match &why {
@@ -72,7 +72,7 @@ impl Slot {
         out.extend(events);
         let Some(failed) = ended else { return };
         if let Some(mut link) = self.link.take() {
-            link.pipe.close();
+            link.carrier.pipe.close();
         }
         if let Some(err) = failed {
             self.tell_down(err, out);

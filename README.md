@@ -15,7 +15,8 @@ small, plain API.
 - Private message routing: messages reach other people's relays through one of yours, so
   their relay never sees your IP address
 - Chat messages, contacts, groups, replies, edits, deletes and reactions
-- XFTP file upload and download, with file crypto and descriptions
+- XFTP file upload and download, with file crypto and descriptions, natively and in the
+  browser, Node.js and Bun
 - Calls (signalling and frame crypto)
 - SQLite store sealed with a passphrase
 - A threaded engine and a high-level `Client`; no async runtime
@@ -82,7 +83,6 @@ What the official core still has that this crate lacks:
   security audits; this crate has not.
 - **Tor and SOCKS.** There is no onion or SOCKS transport, so private routing is the only IP
   protection.
-- **Files in the browser.** The wasm build has no XFTP file transfers yet.
 - **Coverage of newer features.** Features added after 7.1.4 are not tracked.
 
 Sizes were measured on 2026-11-24: the official 7.1.4 CLI release asset, and `libsimplex`
@@ -234,6 +234,27 @@ console.log("My address:", await bot.createAddress());
 instead. `scripts/build-js.sh` builds both packages (`pkg/web` and `pkg/node`), and
 [`examples/node/bot.mjs`](examples/node/bot.mjs) is the bot above with a safer save; run it
 with `node examples/node/bot.mjs` or `bun examples/node/bot.mjs`.
+
+### Files
+
+Files go over XFTP, natively and in wasm, in the browser through the same tunnel. In wasm
+they are held in memory, so files over 64 MiB are refused (`client.setFileLimit(bytes)`
+changes that).
+
+```js
+const photo = await fs.promises.readFile("cat.jpg"); // or new Uint8Array(await file.arrayBuffer())
+await friend.sendFile(photo, "cat.jpg");
+
+client.on("message", async (message) => {
+  if (!message.file) return; // { name, size, kind } or null
+  const { name, bytes } = await message.download();
+  console.log(`got ${name}: ${bytes.length} bytes`);
+});
+
+client.on("fileProgress", ({ percent, sending }) => {
+  console.log(`${sending ? "sending" : "receiving"}: ${percent}%`);
+});
+```
 
 ## Browser tunnel (Cloudflare Worker)
 

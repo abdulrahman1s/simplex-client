@@ -11,13 +11,12 @@ use crate::h2::Progress;
 use crate::smp::Clock;
 
 use super::client::Ctl;
+use super::config::ATTEMPTS;
 use super::description::{FileChunk, FileDescription, Party};
 use super::error::XftpError;
 use super::file_digest::sha512_files;
 use super::pool::Pool;
 use super::version::BLOCK_SIZE;
-
-const ATTEMPTS: usize = 3;
 
 /// Chunk files that are deleted when this is dropped.
 pub(super) struct ChunkFiles(pub(super) Vec<PathBuf>);

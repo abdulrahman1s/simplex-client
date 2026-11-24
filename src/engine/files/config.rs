@@ -39,7 +39,7 @@ impl<A: AgentPort> Engine<A> {
     pub(crate) fn configure_files(&mut self, hello: &Config) -> Result<(), StoreError> {
         self.files.dir.clone_from(&hello.dir);
         self.files.servers = servers_of(&hello.relays);
-        // Without threads and a folder (a browser), transfers stay `NoTransfers`.
+        // Without threads and a folder the runtime hands in memory transfers instead.
         #[cfg(feature = "native")]
         self.open_files_folder();
         for key in self.store.keys_with_prefix(NS, keys::FILE_PREFIX)? {

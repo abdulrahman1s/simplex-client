@@ -9,24 +9,11 @@ use super::address::XftpServer;
 use super::chunks::ChunkSpec;
 use super::client::Ctl;
 use super::commands::FileInfo;
+use super::config::{ATTEMPTS, MAX_PER_REQUEST};
 use super::error::XftpError;
 use super::pool::Pool;
+use super::upload_descr::SentChunk;
 use super::version::BLOCK_SIZE;
-
-/// Recipient keys one FNEW or FADD carries (Agent's `xftpMaxRecipientsPerRequest`).
-const MAX_PER_REQUEST: usize = 200;
-const ATTEMPTS: usize = 3;
-
-pub(super) struct SentChunk {
-    pub(super) spec: ChunkSpec,
-    pub(super) digest: Vec<u8>,
-    pub(super) server: XftpServer,
-    pub(super) sender_id: Vec<u8>,
-    pub(super) sender_key: Vec<u8>,
-    /// Id and PKCS#8 key per recipient.
-    pub(super) recipients: Vec<(Vec<u8>, Vec<u8>)>,
-    pub(super) expires: Option<i64>,
-}
 
 pub(super) struct Job<'a> {
     pub(super) servers: &'a [XftpServer],

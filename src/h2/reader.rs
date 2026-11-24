@@ -1,16 +1,24 @@
-//! Frame reader that keeps partial frames across read timeouts, so a timeout is only a chance to look at the cancel flag.
-use std::io::{ErrorKind, Read};
-
+//! Cutting pushed network bytes into whole frames; a partial frame waits for the rest.
 use super::error::H2Error;
 use super::frames::{FrameHeader, HEADER_LEN, parse_header};
 
 #[derive(Default)]
 pub(super) struct FrameReader {
+    /// Bytes of frames not yet taken; under one frame (`HEADER_LEN` + the maximum payload) once
+    /// `take` has returned `None`.
     buf: Vec<u8>,
 }
 
 impl FrameReader {
-    fn take(&mut self, max_payload: usize) -> Result<Option<(FrameHeader, Vec<u8>)>, H2Error> {
+    pub(super) fn push(&mut self, bytes: &[u8]) {
+        self.buf.extend_from_slice(bytes);
+    }
+
+    /// The next whole frame, or `None` until more bytes come.
+    pub(super) fn take(
+        &mut self,
+        max_payload: usize,
+    ) -> Result<Option<(FrameHeader, Vec<u8>)>, H2Error> {
         let Some(head) = self.buf.first_chunk::<HEADER_LEN>() else {
             return Ok(None);
         };
@@ -27,28 +35,5 @@ impl FrameReader {
         let payload = self.buf[HEADER_LEN..end].to_vec();
         self.buf.drain(..end);
         Ok(Some((header, payload)))
-    }
-
-    /// The next whole frame, or `None` when the socket's read timeout fired first.
-    pub(super) fn next_frame(
-        &mut self,
-        io: &mut impl Read,
-        max_payload: usize,
-    ) -> Result<Option<(FrameHeader, Vec<u8>)>, H2Error> {
-        loop {
-            if let Some(frame) = self.take(max_payload)? {
-                return Ok(Some(frame));
-            }
-            let mut chunk = [0u8; 32768];
-            match io.read(&mut chunk) {
-                Ok(0) => return Err(H2Error::Closed),
-                Ok(n) => self.buf.extend_from_slice(&chunk[..n]),
-                Err(e) if matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) => {
-                    return Ok(None);
-                }
-                Err(e) if e.kind() == ErrorKind::Interrupted => {}
-                Err(e) => return Err(e.into()),
-            }
-        }
     }
 }

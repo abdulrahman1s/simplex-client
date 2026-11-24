@@ -18,7 +18,11 @@ impl Core {
         let now = self.smp_clock.now_ms();
         if let Ok(mut pool) = self.pool.try_borrow_mut() {
             for (id, input) in inbox {
-                pool.on_input(id, input, now);
+                if super::files::Files::owns(id) {
+                    self.files.on_input(id, input, now);
+                } else {
+                    pool.on_input(id, input, now);
+                }
             }
             pool.tick(now);
         }
@@ -47,6 +51,7 @@ impl Core {
                     self.log.line(format_args!("tunnel: {line}"));
                 }
             }
+            self.files.pump(now);
             let mut quiet = true;
             while let Ok(ev) = self.smp.try_recv() {
                 self.engine.on_smp(ev);
@@ -68,6 +73,7 @@ impl Core {
         while let Some(e) = self.engine.pop_out() {
             out.settled.extend(self.waiters.answer(&e));
             self.hear(&e, &mut out);
+            self.files.hear(&e, &mut out, &mut self.engine);
         }
         out.settled.extend(self.waiters.expire(wall));
         let rev = self.engine.store.revision();

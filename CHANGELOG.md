@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- File transfers in the wasm build (browser, Node.js and Bun): `friend.sendFile`,
+  `group.sendFile`, `message.download()` and the `fileProgress` event, over a sans-I/O XFTP
+  session on a sans-I/O HTTP/2 client.
 - Private message routing (SMP proxying, `PRXY`/`PFWD`) with the chat's defaults; set it with
   `ClientBuilder::private_routing` / `allow_direct`, or `privateRouting` / `allowDirect` in JS.
 - Initial extraction from the author's app, ported from simplex-chat v7.1.4 and simplexmq
@@ -28,6 +31,11 @@ All notable changes to this project are documented here. The format follows
 - `store`: an in-memory backend beside SQLite, and `export_snapshot`/`open_snapshot` for a
   sealed, versioned snapshot of either.
 - CI for formatting, clippy, tests, wasm, MSRV 1.95, cargo-deny and docs.
+- Files in the wasm build, in browsers, Node.js and Bun: `friend.sendFile(bytes, name)`,
+  `group.sendFile(bytes, name)`, `message.download()` resolving with `{name, bytes}`, and a
+  `fileProgress` event. Transfers run in memory, up to `setFileLimit` bytes (64 MiB unless
+  set), over the tunnel or TCP.
+- `h2::H2Client` and `xftp::XftpSession`: sans-I/O HTTP/2 and XFTP, driven by bytes in and out.
 - `Event::Offline(true)` at a start without a network, from the first relay check, and
   `Offline(false)` once a relay answers again.
 - Private message routing: messages, confirmations, SKEY, LKEY and LGET for someone else's

@@ -7,10 +7,11 @@ use crate::smp::SystemClock;
 use crate::tls::{TlsStream, verify_server_chain};
 
 use super::address::XftpServer;
+use super::address::authority;
 use super::client::{ClientConfig, XftpClient};
 use super::error::{HandshakeError, XftpError};
-use super::handshake::{Patience, TlsFacts, client_handshake};
-use super::version::{ALPN, DEFAULT_PORT};
+use super::handshake::{Negotiated, Patience, TlsFacts, client_handshake};
+use super::version::ALPN;
 
 pub struct TcpXftpClient {
     pub client: XftpClient<TlsStream<TcpStream>>,
@@ -19,19 +20,6 @@ pub struct TcpXftpClient {
 
 fn connect_error(e: impl std::fmt::Display) -> XftpError {
     XftpError::Connect(e.to_string())
-}
-
-fn authority(host: &str, port: u16) -> String {
-    let host = if host.contains(':') {
-        format!("[{host}]")
-    } else {
-        host.to_owned()
-    };
-    if port == DEFAULT_PORT {
-        host
-    } else {
-        format!("{host}:{port}")
-    }
 }
 
 /// Tries each host of the address that is not a Tor host; the first that completes the handshake wins.
@@ -85,8 +73,10 @@ fn connect_host(
         client: XftpClient {
             conn,
             authority,
-            session_id,
-            version,
+            session: Negotiated {
+                version,
+                session_id,
+            },
             cfg: *cfg,
         },
         socket: control,

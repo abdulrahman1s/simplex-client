@@ -6,7 +6,6 @@ use crate::types::model::{ChatRef, FileState, Media, MessageAuthor};
 use crate::types::{Event, FileKind};
 
 use super::body::{content, show};
-use super::offer::checked;
 use super::transfers::{FileKey, UploadReq};
 use crate::chat::container::MsgContainer;
 use crate::chat::file::FileInvitation;
@@ -35,7 +34,7 @@ impl<A: AgentPort> Engine<A> {
         }
         self.may_send_file(chat)?;
         self.room_for_transfer()?;
-        let (source, size) = checked(&self.files.dir, path)?;
+        let (source, size) = self.files.store.source(&self.files.dir, path)?;
         let name = source
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())

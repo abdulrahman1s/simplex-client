@@ -83,7 +83,7 @@ impl TunnelPool {
         self.slots.retain(|server, slot| {
             let kept = keep(server);
             if let (false, Some(link)) = (kept, &mut slot.link) {
-                link.pipe.close();
+                link.carrier.pipe.close();
             }
             kept
         });
@@ -96,7 +96,8 @@ impl TunnelPool {
     /// What pipe `id` reported. News of a pipe the pool has replaced is ignored.
     pub fn on_input(&mut self, id: PipeId, input: PipeInput, now: u64) {
         let token = self.token.as_deref();
-        let found = (self.slots.values_mut()).find(|s| s.link.as_ref().is_some_and(|l| l.id == id));
+        let found =
+            (self.slots.values_mut()).find(|s| s.link.as_ref().is_some_and(|l| l.carrier.id == id));
         let Some(slot) = found else { return };
         let mut out = Vec::new();
         slot.on_input(input, now, token, &mut out, &mut self.notes);

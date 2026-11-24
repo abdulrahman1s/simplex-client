@@ -25,7 +25,11 @@ impl Friend {
         self.info.id
     }
 
-    const fn chat(&self) -> ChatRef {
+    pub(in crate::wasm) const fn shared(&self) -> &Rc<Shared> {
+        &self.shared
+    }
+
+    pub(in crate::wasm) const fn chat(&self) -> ChatRef {
         self.info.chat()
     }
 }

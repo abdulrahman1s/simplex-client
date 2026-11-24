@@ -1,7 +1,5 @@
-//! Handling the server's control frames while a request is in flight (RFC 9113 section 6).
-use std::io::{Read, Write};
-
-use super::connection::Connection;
+//! Handling the server's frames, with or without a request in flight (RFC 9113 section 6).
+use super::client::H2Client;
 use super::error::H2Error;
 use super::frames::{
     ACK, CONTINUATION, DATA, FrameHeader, GOAWAY, HEADERS, MAX_WINDOW, NO_ERROR, PADDED, PING,
@@ -25,12 +23,12 @@ pub(super) fn unpadded(flags: u8, p: &[u8]) -> Result<&[u8], H2Error> {
         .ok_or(H2Error::Protocol("bad padding"))
 }
 
-impl<T: Read + Write> Connection<T> {
+impl H2Client {
     pub(super) fn on_frame(
         &mut self,
-        ex: &mut Exchange,
+        ex: Option<&mut Exchange>,
         h: FrameHeader,
-        p: Vec<u8>,
+        p: &[u8],
     ) -> Result<(), H2Error> {
         if let Some(b) = &self.block
             && (h.kind != CONTINUATION || h.stream != b.stream)
@@ -38,24 +36,27 @@ impl<T: Read + Write> Connection<T> {
             return Err(H2Error::Protocol("expected CONTINUATION"));
         }
         match h.kind {
-            DATA => self.on_data(ex, h, &p),
-            HEADERS => self.on_headers(ex, h, &p),
-            CONTINUATION => self.on_continuation(ex, h, &p),
+            DATA => self.on_data(ex, h, p),
+            HEADERS => self.on_headers(ex, h, p),
+            CONTINUATION => self.on_continuation(ex, h, p),
             PRIORITY => Ok(()),
             RST_STREAM if p.len() != 4 => Err(H2Error::FrameSize("RST_STREAM")),
-            RST_STREAM if h.stream == ex.id => Err(H2Error::Reset(be32(&p))),
-            SETTINGS => self.on_settings(ex, h, &p),
+            RST_STREAM if ex.as_ref().is_some_and(|e| e.id == h.stream) => {
+                Err(H2Error::Reset(be32(p)))
+            }
+            RST_STREAM => Ok(()),
+            SETTINGS => self.on_settings(ex, h, p),
             PUSH_PROMISE => Err(H2Error::Protocol("PUSH_PROMISE")),
-            PING => self.on_ping(h, &p),
-            GOAWAY => self.on_goaway(ex, &p),
-            WINDOW_UPDATE => self.on_window_update(ex, h, &p),
+            PING => self.on_ping(h, p),
+            GOAWAY => self.on_goaway(ex.as_deref(), p),
+            WINDOW_UPDATE => self.on_window_update(ex, h, p),
             _ => Ok(()),
         }
     }
 
     pub(super) fn on_settings(
         &mut self,
-        ex: &mut Exchange,
+        mut ex: Option<&mut Exchange>,
         h: FrameHeader,
         p: &[u8],
     ) -> Result<(), H2Error> {
@@ -72,7 +73,9 @@ impl<T: Read + Write> Connection<T> {
                     if v > MAX_WINDOW {
                         return Err(H2Error::FlowControl("INITIAL_WINDOW_SIZE"));
                     }
-                    ex.send_window += v - self.peer_initial_window;
+                    if let Some(ex) = &mut ex {
+                        ex.send_window += v - self.peer_initial_window;
+                    }
                     self.peer_initial_window = v;
                 }
                 SETTINGS_MAX_FRAME_SIZE => {
@@ -84,7 +87,8 @@ impl<T: Read + Write> Connection<T> {
                 _ => {} // we never index request headers, so the peer's table size does not matter
             }
         }
-        self.write(&encode_frame(SETTINGS, ACK, 0, &[]))
+        self.out.extend(encode_frame(SETTINGS, ACK, 0, &[]));
+        Ok(())
     }
 
     pub(super) fn on_ping(&mut self, h: FrameHeader, p: &[u8]) -> Result<(), H2Error> {
@@ -93,19 +97,18 @@ impl<T: Read + Write> Connection<T> {
             return Err(H2Error::Protocol("PING on a stream"));
         }
         if h.flags & ACK == 0 {
-            self.write(&encode_ping(data, true))
-        } else {
-            Ok(())
+            self.out.extend(encode_ping(data, true));
         }
+        Ok(())
     }
 
-    pub(super) fn on_goaway(&mut self, ex: &Exchange, p: &[u8]) -> Result<(), H2Error> {
+    pub(super) fn on_goaway(&mut self, ex: Option<&Exchange>, p: &[u8]) -> Result<(), H2Error> {
         if p.len() < 8 {
             return Err(H2Error::FrameSize("GOAWAY"));
         }
         let (last, code) = (be32(p) & 0x7fff_ffff, be32(&p[4..]));
         self.going_away = true;
-        if ex.id > last || code != NO_ERROR {
+        if ex.is_some_and(|e| e.id > last) || code != NO_ERROR {
             return Err(H2Error::GoAway(code));
         }
         Ok(())
@@ -113,7 +116,7 @@ impl<T: Read + Write> Connection<T> {
 
     pub(super) fn on_window_update(
         &mut self,
-        ex: &mut Exchange,
+        ex: Option<&mut Exchange>,
         h: FrameHeader,
         p: &[u8],
     ) -> Result<(), H2Error> {
@@ -124,9 +127,9 @@ impl<T: Read + Write> Connection<T> {
         if inc == 0 {
             return Err(H2Error::Protocol("zero WINDOW_UPDATE"));
         }
-        let window = match h.stream {
-            0 => &mut self.conn_send,
-            id if id == ex.id => &mut ex.send_window,
+        let window = match (h.stream, ex) {
+            (0, _) => &mut self.conn_send,
+            (id, Some(ex)) if id == ex.id => &mut ex.send_window,
             _ => return Ok(()),
         };
         *window += inc;

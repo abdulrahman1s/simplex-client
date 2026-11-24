@@ -7,8 +7,7 @@ use super::error_type::XftpErrorType;
 use super::version::FILE_STORAGE_TIME;
 
 /// The sender id, the recipient ids and the expiry of a `SIDS` answer.
-#[cfg(feature = "native")]
-pub(super) type SndIds = (Vec<u8>, Vec<Vec<u8>>, Option<i64>);
+pub type SndIds = (Vec<u8>, Vec<Vec<u8>>, Option<i64>);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Response {
@@ -90,9 +89,9 @@ fn optional_granted(d: &mut Decoder<'_>) -> Result<Option<i64>, DecodeError> {
 }
 
 /// What a command expects back; each accessor lists every variant, so a new response is a compile error here.
-#[cfg(feature = "native")]
 impl Response {
-    pub(super) fn into_snd_ids(self) -> Option<SndIds> {
+    #[must_use]
+    pub fn into_snd_ids(self) -> Option<SndIds> {
         match self {
             Self::SndIds {
                 sender_id,
@@ -103,14 +102,16 @@ impl Response {
         }
     }
 
-    pub(super) fn into_rcv_ids(self) -> Option<Vec<Vec<u8>>> {
+    #[must_use]
+    pub fn into_rcv_ids(self) -> Option<Vec<Vec<u8>>> {
         match self {
             Self::RcvIds { recipient_ids } => Some(recipient_ids),
             Self::SndIds { .. } | Self::File { .. } | Self::Ok | Self::Err(_) | Self::Pong => None,
         }
     }
 
-    pub(super) fn into_file(self) -> Option<(PublicKey, CbNonce)> {
+    #[must_use]
+    pub fn into_file(self) -> Option<(PublicKey, CbNonce)> {
         match self {
             Self::File { dh_key, nonce } => Some((dh_key, nonce)),
             Self::SndIds { .. } | Self::RcvIds { .. } | Self::Ok | Self::Err(_) | Self::Pong => {
@@ -119,7 +120,8 @@ impl Response {
         }
     }
 
-    pub(super) fn is_ok(&self) -> bool {
+    #[must_use]
+    pub fn is_ok(&self) -> bool {
         match self {
             Self::Ok => true,
             Self::SndIds { .. }
@@ -130,7 +132,8 @@ impl Response {
         }
     }
 
-    pub(super) fn is_pong(&self) -> bool {
+    #[must_use]
+    pub fn is_pong(&self) -> bool {
         match self {
             Self::Pong => true,
             Self::SndIds { .. }

@@ -33,14 +33,9 @@ impl<A: AgentPort> Engine<A> {
                 continue;
             };
             let rec: FileRecord = decode(&bytes)?;
-            // Only copies in the engine's own folder: a path outside it is never ours to delete.
-            // Local paths are canonical (send and receive canonicalise them); compare like with like.
-            let dir =
-                &std::fs::canonicalize(&self.files.dir).unwrap_or_else(|_| self.files.dir.clone());
-            let ours = |p: &std::path::PathBuf| !dir.as_os_str().is_empty() && p.starts_with(dir);
-            if let Some(p) = rec.local.filter(ours)
-                && let Err(e) = std::fs::remove_file(&p)
-                && e.kind() != std::io::ErrorKind::NotFound
+            // Only copies in the engine's own place: a path outside it is never ours to delete.
+            if let Some(p) = rec.local
+                && let Err(e) = self.files.store.remove(&self.files.dir, &p)
             {
                 self.log.line(format_args!("a file was not deleted: {e}"));
             }

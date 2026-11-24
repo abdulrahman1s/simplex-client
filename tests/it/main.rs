@@ -20,6 +20,7 @@ mod encoding;
 #[cfg(feature = "native")]
 mod h2_connection;
 mod h2_hpack;
+mod h2_sans_io;
 #[cfg(feature = "native")]
 mod h2_support;
 mod hex;
@@ -30,4 +31,6 @@ mod xftp_description;
 mod xftp_file;
 #[cfg(feature = "native")]
 mod xftp_live;
+#[cfg(feature = "native")]
+mod xftp_live_sans_io;
 mod xftp_protocol;

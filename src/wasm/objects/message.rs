@@ -20,6 +20,14 @@ impl Message {
         Self { shared, info }
     }
 
+    pub(in crate::wasm) const fn shared(&self) -> &Rc<Shared> {
+        &self.shared
+    }
+
+    pub(in crate::wasm) const fn info(&self) -> &ChatMessage {
+        &self.info
+    }
+
     fn friend(&self, id: i64) -> JsValue {
         Friend::new(Rc::clone(&self.shared), self.shared.friend(id)).into()
     }
