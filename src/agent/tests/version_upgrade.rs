@@ -2,8 +2,8 @@
 use super::rotation_support::restart;
 use super::support::{Rig, connect, next_msg, rig, v7_agent};
 use crate::agent::client::ConnId;
-use crate::agent::records::Batch;
 use crate::agent::testing::Node;
+use crate::agent::version::supported_agent_range;
 use crate::encoding::Version;
 use crate::ratchet::CURRENT_E2E_VERSION;
 
@@ -14,15 +14,6 @@ fn agent_version(n: &Node, c: ConnId) -> Version {
 fn e2e_version(n: &Node, c: ConnId) -> Version {
     let rc = n.agent.conn(c).unwrap().ratchet.clone().unwrap();
     rc.versions().current
-}
-
-/// As a connection made by an agent before v8 is stored.
-fn stored_at_v7(n: &mut Node, c: ConnId) {
-    let (mut rec, _) = n.agent.editable(c).unwrap();
-    rec.agent_version = Version(7);
-    n.agent
-        .save(&mut n.store, rec, None, Batch::default())
-        .unwrap();
 }
 
 /// `a` sends `body` and `b` reads and acks it.
@@ -40,10 +31,16 @@ fn reopen(r: &Rig, a: Node, b: Node) -> (Node, Node) {
 #[test]
 fn a_v7_connection_between_v8_agents_is_raised_by_the_first_message_each_way_and_stays_raised() {
     let r = rig();
+    r.pin("a", v7_agent());
+    r.pin("b", v7_agent());
     let (mut a, mut b) = (r.node("a"), r.node("b"));
     let (ca, cb) = connect(&mut a, &mut b, false, true);
-    stored_at_v7(&mut a, ca);
-    stored_at_v7(&mut b, cb);
+    assert_eq!(agent_version(&a, ca), Version(7));
+    // Both agents are updated to speak v8; the connection is stored as their v7 handshake left it.
+    r.pin("a", supported_agent_range());
+    r.pin("b", supported_agent_range());
+    let (mut a, mut b) = reopen(&r, a, b);
+    assert_eq!(agent_version(&b, cb), Version(7));
     say(&mut a, &mut b, ca, cb, b"one");
     assert_eq!(agent_version(&b, cb), Version(8), "a's message offers v8");
     assert_eq!(agent_version(&a, ca), Version(7), "a has heard nothing yet");
