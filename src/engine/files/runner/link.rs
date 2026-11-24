@@ -3,9 +3,11 @@ use crate::h2;
 use crate::smp::{Carrier, Dialer, PipeId, PipeInput, TunnelError, parse_tunnel_reply};
 use crate::xftp::{ClientConfig, SessionEvent, XftpError, XftpServer, XftpSession};
 
-/// Upload bytes the server has not acknowledged, at most: well inside the tunnel's 1 MiB
-/// write-ahead allowance.
-const SEND_AHEAD: u32 = 256 * 1024;
+/// Upload bytes the server has not acknowledged, at most. An upload moves about this much per
+/// round trip, as the server grants a stream about 1 MiB (http2 4.2's `properWindowSize`).
+/// With TLS and HTTP/2 framing it stays under the tunnel's 1 MiB write-ahead allowance, with
+/// about 250 KiB to spare; `worker/test/sendahead.test.ts` keeps it there.
+const SEND_AHEAD: u32 = 768 * 1024;
 
 pub(super) struct FileLink {
     pub(super) server: XftpServer,

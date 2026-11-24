@@ -13,6 +13,9 @@ All notable changes to this project are documented here. The format follows
   less. The relay's bytes are still refused until the tunnel says yes.
 - File uploads in wasm keep up to 768 KiB unacknowledged instead of 256 KiB. The pinned XFTP
   server grants about 1 MiB, so an upload moves three times as much per round trip.
+- Tunnel Worker: it looks the relay's name up while the per-IP counter decides, rather than
+  after. A refused tunnel still reads `rate_limited` or `too_many_tunnels`, and now costs a
+  DNS lookup too.
 
 ## [0.1.0] - 2026-11-24
 
