@@ -60,3 +60,39 @@ fn group_messages_go_without_pq() {
     assert!(!t.e.agent.pq_sent.is_empty());
     assert!(t.e.agent.pq_sent.iter().all(|(_, pq)| !pq));
 }
+
+fn listed_pq(out: &[crate::types::Event], id: i64) -> Option<bool> {
+    out.iter().rev().find_map(|e| match e {
+        crate::types::Event::Chats { friends, .. } => {
+            friends.iter().find(|f| f.id == id).map(|f| f.pq)
+        }
+        _ => None,
+    })
+}
+
+#[test]
+fn a_friends_pq_is_what_the_ratchet_negotiated_and_false_with_a_classical_peer() {
+    let mut t = T::started();
+    let (bob, bob_conn) = t.friend("bob");
+    t.e.agent.classical.push(bob_conn);
+    let (carol, carol_conn) = t.friend("carol");
+    assert!(t.e.friend(bob).unwrap().pq, "PQ was asked for with both");
+    t.peer_says(&bob_conn, 1, ChatEvent::MsgNew(MsgContainer::text("hi")));
+    let out = t.peer_says(&carol_conn, 1, ChatEvent::MsgNew(MsgContainer::text("hi")));
+    let out = [out, t.req(Request::Refresh)].concat();
+    assert_eq!(listed_pq(&out, bob), Some(false));
+    assert_eq!(listed_pq(&out, carol), Some(true));
+    t.e.agent.classical.push(carol_conn);
+    let out = t.peer_says(
+        &carol_conn,
+        2,
+        ChatEvent::MsgNew(MsgContainer::text("again")),
+    );
+    assert_eq!(
+        listed_pq(&out, carol),
+        Some(false),
+        "the list goes out again"
+    );
+    let t = t.restarted();
+    assert!(!t.e.friend(carol).unwrap().pq_on, "kept");
+}

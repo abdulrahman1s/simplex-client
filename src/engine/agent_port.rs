@@ -208,6 +208,9 @@ pub trait AgentPort {
     /// `rejectContact`: the request is forgotten; nothing is sent.
     fn reject_request(&mut self, store: &mut Store, invitation: &[u8]) -> Result<(), AgentFailure>;
 
+    /// Whether `conn`'s ratchet uses the PQ KEM both ways, as negotiated (chat `connPQEnabled`).
+    fn pq_on(&self, conn: &ConnId) -> bool;
+
     /// The ratchet's associated data of `conn` (`getConnectionRatchetAdHash` hashes it):
     /// what the security code is made from.
     fn ratchet_ad(&mut self, store: &mut Store, conn: &ConnId) -> Result<Vec<u8>, AgentFailure>;

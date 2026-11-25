@@ -19,6 +19,14 @@ All notable changes to this project are documented here. The format follows
   spaces, and data with a `type` or `text` key, are refused. Data under a tag not
   registered still arrives as a message with its fallback text. **Breaking:** `Request`,
   `types::Event` and `client::Event` have new variants and `Config` a new field.
+- `Friend.pq` (JS `friend.pq`): whether the connection's ratchet uses the post-quantum KEM
+  both ways, as negotiated, not as asked for. It is what the ratchet used for the last
+  message sent and the last received (`rcSndKEM`, `rcRcvKEM`), checked after each one as
+  simplex-chat 7.1.4 keeps `pqSndEnabled` and `pqRcvEnabled` (`connPQEnabled`), so it is
+  false until a message has gone each way and stays false with a peer without PQ. The chat
+  list goes out again when it changes. A live test checks it against the official CLI
+  7.1.4. **Breaking:** `Friend` has a new field and the `AgentPort` trait a new method,
+  `pq_on`.
 
 ## [0.2.0] - 2026-11-25
 

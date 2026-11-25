@@ -9,6 +9,12 @@ use crate::engine::records::ConnKind;
 
 impl<A: AgentPort> Engine<A> {
     pub(crate) fn on_agent(&mut self, event: AgentEvent) {
+        let pq_after = match &event {
+            AgentEvent::Con { conn }
+            | AgentEvent::Msg { conn, .. }
+            | AgentEvent::Sent { conn, .. } => Some(*conn),
+            _ => None,
+        };
         let r = match event {
             AgentEvent::Invitation { conn, full, short } => self.on_invitation(&conn, full, short),
             AgentEvent::Conf { conn, conn_info } => self.on_conf(&conn, &conn_info),
@@ -69,6 +75,9 @@ impl<A: AgentPort> Engine<A> {
         if let Err(e) = r {
             self.log
                 .line(format_args!("an agent event failed: {}", e.detail));
+        }
+        if let Some(conn) = pq_after {
+            self.note_pq(&conn);
         }
     }
 }

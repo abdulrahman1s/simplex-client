@@ -46,6 +46,10 @@ pub struct Friend {
     /// The random name the user goes by with them, when connected incognito.
     #[serde(default)]
     pub incognito: Option<String>,
+    /// The connection's ratchet uses the post-quantum KEM both ways, as negotiated with them:
+    /// false until a message each way shows it, and while either side is without.
+    #[serde(default)]
+    pub pq: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

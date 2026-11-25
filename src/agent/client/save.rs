@@ -39,6 +39,15 @@ impl AgentClient {
     }
 
     /// The connection's record and ratchet to change; nothing changes in memory until `save`.
+    /// Whether `id`'s ratchet used the PQ KEM for the last message sent and the last received
+    /// (Ratchet.hs `rcSndKEM`, `rcRcvKEM`, which `sendMessage` and `MsgMeta.pqEncryption`
+    /// report): what was negotiated, not what was asked for.
+    #[must_use]
+    pub fn pq_on(&self, id: ConnId) -> bool {
+        let ratchet = self.conn(id).ok().and_then(|c| c.ratchet.as_ref());
+        ratchet.is_some_and(|r| r.pq_sending().0 && r.pq_receiving().0)
+    }
+
     pub(crate) fn editable(&self, id: ConnId) -> Result<(ConnRecord, Option<Ratchet>)> {
         let c = self.conn(id)?;
         Ok((c.rec.clone(), c.ratchet.clone()))

@@ -204,6 +204,10 @@ impl AgentPort for NativeAgent {
         self.client.close();
     }
 
+    fn pq_on(&self, conn: &ConnId) -> bool {
+        self.client.pq_on(native_conn(conn))
+    }
+
     fn ratchet_ad(&mut self, _: &mut Store, conn: &ConnId) -> Result<Vec<u8>, AgentFailure> {
         let c = self.client.conn(native_conn(conn)).map_err(failed)?;
         let ratchet = c.ratchet.as_ref();

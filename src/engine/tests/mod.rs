@@ -35,6 +35,7 @@ mod live_manage;
 mod live_member_contact;
 mod live_msg;
 mod live_offline;
+mod live_pq;
 mod live_prefs;
 mod live_repair;
 mod live_timed;
