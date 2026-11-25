@@ -26,9 +26,14 @@ pub mod records;
 pub mod resync;
 pub mod rotation;
 pub mod short_link;
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 #[cfg(feature = "native")]
-mod testing;
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "test doubles: a broken fixture panics"
+)]
+pub mod testing;
 #[cfg(test)]
 #[cfg(feature = "native")]
 pub(crate) mod tests;

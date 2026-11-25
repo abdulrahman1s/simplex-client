@@ -8,6 +8,8 @@ mod error;
 mod event;
 mod groups;
 mod handle;
+#[cfg(feature = "testing")]
+mod in_memory;
 mod local;
 mod messages;
 mod objects;

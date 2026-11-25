@@ -3,12 +3,12 @@ use std::io;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use super::certs::{Identity, identity, signed_key};
 use super::support::*;
 use crate::crypto::{
     Alg, KeyPair, PublicKey, dh, pad, sb_decrypt, sb_encrypt, sbc_hkdf, sbc_init, unpad,
 };
 use crate::encoding::{Version, VersionRange};
+use crate::smp::testing::{Identity, identity, signed_key};
 use crate::smp::{
     BLOCK_SIZE, HandshakeConfig, HandshakeError, Reader, ServerHello, SmpError, TlsFacts, Writer,
     client_handshake, negotiate,

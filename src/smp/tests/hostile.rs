@@ -1,6 +1,6 @@
 //! Random and mutated input, fixed seed, into every parser that sees a hostile server's bytes: none may panic.
-use super::certs::identity;
 use crate::smp::signed_key::verify_signed_key;
+use crate::smp::testing::identity;
 use crate::smp::{Response, ServerHello, parse_payload, parse_rcv_body};
 use crate::tls::{Pin, TlsClient, certificate_public_key, verify_server_chain};
 

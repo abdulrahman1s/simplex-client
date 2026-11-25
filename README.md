@@ -605,6 +605,15 @@ The protocol, limits and settings are in [worker/README.md](worker/README.md).
 |---|---|---|
 | `native` | yes | Threads, TCP and TLS, the SQLite store, the engine and `Client` |
 | `wasm` | no | The client in a browser, Node.js or Bun, through a WebSocket tunnel or TCP; use with `--no-default-features` |
+| `testing` | no | The in-memory SMP server and agent test doubles (`agent::testing`) and `ClientBuilder::start_in_memory`, for end-to-end tests without a network |
+
+```rust
+// [dev-dependencies] simplex-client = { git = "…", features = ["testing"] }
+let server = simplex_client::agent::testing::FakeSmp::new();
+let alice = Client::builder(dir_a).key("k").start_in_memory(&server)?;
+let bob = Client::builder(dir_b).key("k").start_in_memory(&server)?;
+bob.connect(&alice.create_invite()?)?;
+```
 
 ## Protocol versions tracked
 
@@ -618,6 +627,8 @@ nix develop                    # pinned toolchain (1.99.1, wasm32 target)
 cargo fmt --all --check
 cargo clippy --all-targets -- -D warnings
 cargo test
+cargo clippy --features testing --all-targets -- -D warnings
+cargo test --features testing --test in_memory
 cargo clippy --target wasm32-unknown-unknown --no-default-features --features wasm --all-targets -- -D warnings
 cargo test --target wasm32-unknown-unknown --no-default-features --features wasm
 cargo deny check

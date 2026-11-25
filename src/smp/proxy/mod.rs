@@ -1,8 +1,9 @@
 //! Private message routing: a relay of our own forwards sender commands to the destination relay, which sees only the proxy (Protocol.hs, Client.hs, simplexmq 7.1.4).
 mod broker_error;
 mod client_error;
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 #[cfg(feature = "native")]
+#[allow(clippy::unwrap_used, reason = "test support: a broken fixture panics")]
 pub(crate) mod destination;
 mod error;
 mod fwd;
