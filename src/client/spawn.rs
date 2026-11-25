@@ -1,5 +1,7 @@
 //! The engine thread: the store, the agent and the engine are made on it and never leave it.
 
+use std::fs::{File, OpenOptions, TryLockError};
+use std::path::Path;
 use std::thread::{self, JoinHandle};
 
 use crossbeam_channel::{Receiver, Sender, bounded};
@@ -14,6 +16,10 @@ use crate::types::{Config, Event, Request};
 
 /// The store's file in the client's folder.
 pub(super) const STORE_FILE: &str = "chat.db";
+
+/// Locked while a client has the folder's store open, so a second one fails instead of
+/// writing the same store; a separate file, so SQLite's own locks are left alone.
+const LOCK_FILE: &str = "chat.db.lock";
 
 /// Events the engine thread may get ahead of the dispatcher by; the engine's own outbox
 /// (`machine::OUT_CAP`) holds the rest.
@@ -46,7 +52,8 @@ where
     let thread = thread::Builder::new()
         .name("simplex-engine".into())
         .spawn(move || {
-            let (mut engine, smp) = match open(&config, &log, clock, agent) {
+            // The lock goes when this thread ends, so `close()` has released it on return.
+            let (mut engine, smp, _lock) = match open(&config, &log, clock, agent) {
                 Ok(started) => started,
                 Err(e) => {
                     // The builder waits on this; if it is gone there is nobody to tell.
@@ -84,15 +91,30 @@ fn open<A, F>(
     log: &Log,
     clock: Box<dyn Clock>,
     agent: F,
-) -> Result<(Engine<A>, Receiver<A::Smp>)>
+) -> Result<(Engine<A>, Receiver<A::Smp>, File)>
 where
     A: AgentPort,
     F: FnOnce(&Config, &Log) -> (A, Receiver<A::Smp>),
 {
     std::fs::create_dir_all(&config.dir)?;
+    let lock = lock(&config.dir)?;
     let store = Store::open(&config.dir.join(STORE_FILE), &config.key)?;
     let (agent, smp) = agent(config, log);
     let mut engine = Engine::new(store, agent, clock, log.clone());
     engine.start(config)?;
-    Ok((engine, smp))
+    Ok((engine, smp, lock))
+}
+
+/// An exclusive lock on the folder's lock file, released when the file is closed.
+fn lock(dir: &Path) -> Result<File> {
+    let file = OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(dir.join(LOCK_FILE))?;
+    match file.try_lock() {
+        Ok(()) => Ok(file),
+        Err(TryLockError::WouldBlock) => Err(Error::Locked(dir.to_owned())),
+        Err(TryLockError::Error(e)) => Err(e.into()),
+    }
 }

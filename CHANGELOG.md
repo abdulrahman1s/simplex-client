@@ -27,6 +27,11 @@ All notable changes to this project are documented here. The format follows
   list goes out again when it changes. A live test checks it against the official CLI
   7.1.4. **Breaking:** `Friend` has a new field and the `AgentPort` trait a new method,
   `pq_on`.
+- `ClientBuilder::start` takes an exclusive OS file lock (`std::fs::File::try_lock` on
+  `chat.db.lock` in the client's folder), held by the engine thread until `close()` returns.
+  A second client on the same folder, in this process or another, fails with the new
+  `Error::Locked(folder)` instead of writing the same store. **Breaking:** `client::Error`
+  has a new variant.
 
 ### Fixed
 

@@ -52,3 +52,20 @@ fn wait_for(client: &Client, pick: impl Fn(&Event) -> bool) -> Event {
         }
     }
 }
+
+#[test]
+fn a_second_client_on_the_same_store_fails_while_the_first_runs_and_starts_after_it_closes() {
+    let dir = Dir::new();
+    let (first, _net) = start(builder(&dir), FakeAgent::default());
+    let (smp, rx) = unbounded::<AgentEvent>();
+    let clock = Box::new(FakeClock::new(1_795_000_000_000));
+    let second = builder(&dir).start_with(clock, move |_, _| (FakeAgent::default(), rx));
+    let Err(super::Error::Locked(locked)) = second else {
+        panic!("the second client started")
+    };
+    assert_eq!(locked, dir.0);
+    drop(smp);
+    first.close();
+    let (again, _net) = start(builder(&dir), FakeAgent::default());
+    again.close();
+}

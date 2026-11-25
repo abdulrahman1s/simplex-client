@@ -536,6 +536,10 @@ The protocol, limits and settings are in [worker/README.md](worker/README.md).
   `Client.start` refuses a missing or empty `key`. The passphrase goes through Argon2id
   (19 MiB, 2 passes, 1 lane) with a random salt per store, kept in clear in the store; opening
   takes about 13 ms natively and 25 ms in wasm. A long random passphrase is still best.
+- **One client per store.** `ClientBuilder::start` takes an exclusive OS lock on
+  `chat.db.lock` in the client's folder and holds it until `close()` returns, so a second
+  client on the same folder, in this process or another, fails with `Error::Locked` instead
+  of writing the same store. `Store::open` below `Client` takes no lock.
 - **Older stores** (sealed before Argon2id) still open with their old unsalted HKDF key, and
   their key is not upgraded in place. They get the counter checks and the snapshot MAC on
   their first open, but someone holding a copy from before that open can still roll rows back.
