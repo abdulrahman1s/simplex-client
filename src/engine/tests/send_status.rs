@@ -7,6 +7,8 @@ use super::{T, messages};
 use crate::chat::group::GroupMemberRole;
 use crate::engine::agent_port::{AgentEvent, AgentFailure};
 
+mod files;
+
 fn tagged(tag: u64, r: Request) -> Request {
     Request::Tagged {
         tag,

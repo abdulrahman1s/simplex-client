@@ -91,6 +91,7 @@ impl<A: AgentPort> Engine<A> {
                 Some(to.len())
             }
         };
+        self.tag_file(FileKey::of(chat, m.id), &sent);
         self.start_upload(FileKey::of(chat, m.id), source, name, members);
         Ok(())
     }

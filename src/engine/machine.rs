@@ -12,6 +12,7 @@ use super::files::Files;
 use super::jobs::Jobs;
 use super::log::Log;
 use super::relays::Relays;
+use super::send_tags::SendTag;
 use super::state::State;
 use crate::store::Store;
 
@@ -40,8 +41,9 @@ pub struct Engine<A: AgentPort> {
     pub(crate) tagging: Option<u64>,
     /// The tag of each message a tagged request sent, by connection and agent id. Eviction:
     /// an entry leaves with its `Sent` or failure, which the agent reports for every message,
-    /// even on a deleted connection, except one forgotten undelivered after 2 days.
-    pub(crate) send_tags: BTreeMap<(ConnId, AgentMsgId), u64>,
+    /// even on a deleted connection, except one forgotten undelivered after 2 days; a failed
+    /// part of a file takes the parts still going to that recipient with it.
+    pub(crate) send_tags: BTreeMap<(ConnId, AgentMsgId), SendTag>,
     out: VecDeque<Event>,
 }
 

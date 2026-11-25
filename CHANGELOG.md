@@ -50,8 +50,12 @@ All notable changes to this project are documented here. The format follows
   `Raw(Failed)`; then `Sent` or `Failed { detail }` for the friend, or for each `member` of
   a group, as the agent reports `SENT` or `MERR`. Underneath, `Request::Tagged { tag,
   request }` wraps any request, and `types::Event::SendStatus { tag, member, status }` (JS
-  `sendStatus`) tells its outcome. A file's message goes after its upload, so only its
-  `Queued` or `Refused` is told; the JS methods do not tag their sends yet. **Breaking:**
+  `sendStatus`) tells its outcome. A file is told once per recipient: `Sent` when the last
+  part of their description has gone after the upload (its offer alone is not the file),
+  `Failed` when the offer or a part fails, and `Failed` with no member when the upload
+  fails or the file is cancelled or deleted first. Tags are kept in memory, so a send still
+  going when the client stops is told nothing after the restart. The JS methods do not tag
+  their sends yet. **Breaking:**
   those methods return `Result<SendHandle>` instead of `Result<()>` (a `send(…)?` used as a
   `match` arm's value needs a `;`), and `Request` and both `Event`s have new variants.
 - `ClientBuilder::roster_deltas(true)`: the client tells what changed instead of whole chat

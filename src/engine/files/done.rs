@@ -61,11 +61,17 @@ impl<A: AgentPort> Engine<A> {
         if !self.files.finish(key, job) {
             return Ok(());
         }
+        let tag = self.files.tags.remove(&key);
         let outcome = match result {
-            Ok((descriptions, expires)) => self.on_uploaded(key, descriptions, expires),
+            Ok((descriptions, expires)) => {
+                self.on_uploaded(key, descriptions, expires, tag.as_ref())
+            }
             Err(e) => Err(fail(Code::RequestFailed, format!("upload failed: {e}"))),
         };
-        if outcome.is_err() {
+        if let Err(e) = &outcome {
+            if let Some(t) = &tag {
+                self.file_failed(key, t.tag, &e.detail);
+            }
             self.end_failed(key)?;
         }
         outcome

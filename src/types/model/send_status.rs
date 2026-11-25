@@ -12,8 +12,10 @@ pub enum SendStatus {
     Queued { item: Option<i64> },
     /// Refused before anything went, for the reason `Event::Failed` would give.
     Refused { code: ErrorCode, detail: String },
-    /// The relay took it: for the friend, or for one member of a group.
+    /// The relay took it: for the friend, or for one member of a group. A file is sent once
+    /// the last part of the recipient's description is, after its upload.
     Sent,
-    /// It could not be delivered: for the friend, or for one member of a group.
+    /// It could not be delivered: for the friend, or for one member of a group. With no
+    /// member, a file's upload failed, or the file was cancelled or deleted before it went.
     Failed { detail: String },
 }

@@ -34,7 +34,11 @@ impl<A: AgentPort> Engine<A> {
             }
             Some(_) | None => {}
         }
-        self.stop_transfer(FileKey::of(chat, item));
+        let key = FileKey::of(chat, item);
+        self.stop_transfer(key);
+        if let Some(t) = self.files.tags.remove(&key) {
+            self.file_failed(key, t.tag, "the file was cancelled");
+        }
         rec.active = false;
         rec.accepted = false;
         self.save_file(chat, item, &rec)?;
@@ -69,7 +73,11 @@ impl<A: AgentPort> Engine<A> {
         if rec.way != Way::Received || !from_sender(&it, from) || over {
             return Ok(());
         }
-        self.stop_transfer(FileKey::of(chat, item));
+        let key = FileKey::of(chat, item);
+        self.stop_transfer(key);
+        if let Some(t) = self.files.tags.remove(&key) {
+            self.file_failed(key, t.tag, "the file was cancelled");
+        }
         rec.active = false;
         rec.accepted = false;
         rec.sender_cancelled = true;
