@@ -108,7 +108,7 @@ impl<A: AgentPort> Engine<A> {
 
     /// Deletes a connection at the agent; one it no longer has is only logged.
     pub(super) fn drop_conn(&mut self, conn: &ConnId) -> Result<()> {
-        if let Err(e) = self.agent.delete(&mut self.store, conn) {
+        if let Err(e) = self.agent.delete(&mut self.store, conn, false) {
             self.log
                 .line(format_args!("address not deleted: {}", e.detail()));
         }

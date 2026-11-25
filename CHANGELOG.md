@@ -75,12 +75,16 @@ All notable changes to this project are documented here. The format follows
 
 - Removing a friend (and a group member, and leaving a group) deleted the connection with
   everything still waiting to be sent on it, so the peer never got `x.direct.del` and a
-  message sent just before was sometimes lost. The agent's `delete` now does what
-  `deleteConnectionsAsync` with `waitDelivery` does in simplexmq: the receive queue goes at
-  once, so nothing more arrives, and the connection stays until what waits on it is
-  delivered or given up, across a restart too, or 2 days at most
-  (`connDeleteDeliveryTimeout`). A live test removes a friend right after writing to them
-  and sees the official CLI 7.1.4 get both the message and the deletion.
+  message sent just before was sometimes lost. `AgentPort::delete` and the agent's `delete`
+  take a `wait` flag, which does what `deleteConnectionsAsync` with `waitDelivery` does in
+  simplexmq: the receive queue goes at once, so nothing more arrives, and the connection
+  stays until what waits on it is delivered or given up, across a restart too, or 2 days
+  at most (`connDeleteDeliveryTimeout`). As in simplex-chat 7.1.4, the engine waits only
+  after telling the peer: removing a friend once `x.direct.del` went, leaving a group,
+  removing a member, and deleting a group as its owner; every other deletion is at once. A
+  live test removes a friend right after writing to them and sees the official CLI 7.1.4
+  get both the message and the deletion. **Breaking:** `AgentPort::delete` and
+  `AgentClient::delete` take the `wait` flag.
 
 ## [0.2.0] - 2026-11-25
 

@@ -87,7 +87,7 @@ fn delete_forgets_the_connection_and_deletes_its_queue() {
     a.agent
         .send(&mut a.store, ca, pq_of(&a.agent, ca), b"x".to_vec())
         .unwrap();
-    a.agent.delete(&mut a.store, ca).unwrap();
+    a.agent.delete(&mut a.store, ca, true).unwrap();
     // The queue goes at once; the connection once "x" is delivered.
     pump(&mut [&mut a, &mut b], WAIT, |n| {
         (r.smp.count("DEL") == 1 && n[0].agent.conn(ca).is_err()).then_some(())

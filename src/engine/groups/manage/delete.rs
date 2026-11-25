@@ -22,13 +22,15 @@ impl<A: AgentPort> Engine<A> {
         if !owner_role && g.status.current() {
             return Err(fail(Code::NotAllowed, "only an owner deletes the group"));
         }
-        if owner_role && g.status.active() {
+        // Commands.hs `doSendDel`: the connections wait for their sends only if it went.
+        let told = owner_role && g.status.active();
+        if told {
             self.send_to_group(group, &ChatMessage::new(ChatEvent::GrpDel)?, None)?;
         }
         let chat = ChatRef::Group(group);
         self.forget_files(owner(chat))?;
         self.delete_group_link_if_exists(group)?;
-        self.drop_group_conns(group)?;
+        self.drop_group_conns(group, told)?;
         self.forget_group_items(chat)?;
         self.forget_timed(chat)?;
         let mut prefixes = vec![

@@ -14,10 +14,11 @@ use crate::agent::records::{self, Batch};
 pub const DELETE_DELIVERY_TIMEOUT_MS: i64 = 2 * 24 * 60 * 60 * 1000;
 
 impl AgentClient {
-    /// Nothing more is received on `conn`; what was sent on it before still goes, so the
-    /// connection's record stays until those sends are delivered, given up or 2 days old.
-    pub fn delete(&mut self, store: &mut Store, conn: ConnId) -> Result<()> {
-        if self.conn(conn)?.sends.is_empty() {
+    /// Nothing more is received on `conn`. With `wait` (`waitDelivery`), what was sent on it
+    /// before still goes, so the connection's record stays until those sends are delivered,
+    /// given up or 2 days old; without, it goes now with them.
+    pub fn delete(&mut self, store: &mut Store, conn: ConnId, wait: bool) -> Result<()> {
+        if !wait || self.conn(conn)?.sends.is_empty() {
             return self.delete_now(store, conn);
         }
         let (mut rec, _) = self.editable(conn)?;

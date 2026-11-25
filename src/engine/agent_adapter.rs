@@ -180,8 +180,10 @@ impl AgentPort for NativeAgent {
             .map_err(failed)
     }
 
-    fn delete(&mut self, store: &mut Store, conn: &ConnId) -> Result<(), AgentFailure> {
-        self.client.delete(store, native_conn(conn)).map_err(failed)
+    fn delete(&mut self, store: &mut Store, conn: &ConnId, wait: bool) -> Result<(), AgentFailure> {
+        self.client
+            .delete(store, native_conn(conn), wait)
+            .map_err(failed)
     }
 
     fn subscribe_all(&mut self, store: &mut Store) -> Result<(), AgentFailure> {

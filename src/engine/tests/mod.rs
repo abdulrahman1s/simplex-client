@@ -10,6 +10,7 @@ mod conn_events;
 mod contact;
 pub(crate) mod data;
 mod decrypt_error;
+mod delete_wait;
 mod fake_agent;
 mod files;
 mod forward;

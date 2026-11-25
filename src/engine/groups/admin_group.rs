@@ -31,7 +31,7 @@ impl<A: AgentPort> Engine<A> {
             return Ok(());
         }
         self.delete_group_link_if_exists(ctx.group)?;
-        self.drop_group_conns(ctx.group)?;
+        self.drop_group_conns(ctx.group, false)?;
         let mut g = self.group(ctx.group)?;
         g.status = MemberStatus::GroupDeleted;
         self.save_group(g)?;

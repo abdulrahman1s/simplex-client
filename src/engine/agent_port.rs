@@ -167,8 +167,10 @@ pub trait AgentPort {
         receipt: Option<Vec<u8>>,
     ) -> Result<(), AgentFailure>;
     /// Deletes the connection once what was sent on it is delivered (`deleteConnectionsAsync`
-    /// with `waitDelivery`), so an `x.direct.del` sent just before still goes out.
-    fn delete(&mut self, store: &mut Store, conn: &ConnId) -> Result<(), AgentFailure>;
+    /// Deletes the connection; with `wait`, once what was sent on it is delivered
+    /// (`deleteConnectionsAsync` with `waitDelivery`), as chat does after telling the peer
+    /// (`x.direct.del`, `x.grp.leave`, …), so that still goes out.
+    fn delete(&mut self, store: &mut Store, conn: &ConnId, wait: bool) -> Result<(), AgentFailure>;
     fn subscribe_all(&mut self, store: &mut Store) -> Result<(), AgentFailure>;
     fn on_smp(&mut self, store: &mut Store, event: Self::Smp);
     /// `now_ms`: the engine clock's wall time, the same clock `next_wake` is in.
