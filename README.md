@@ -511,7 +511,12 @@ above, `request_failed`, `no_connection`, `bad_link`, `call_failed` and `stream_
 the engine, and `closed`, `timeout`, `bad_argument`, `bad_option`, `wrong_key`, `file_gone`,
 `file_failed` and `file_cancelled` from the client itself. Calls that only queue a request
 (`send`, `react`, `edit`, `delete`, …) resolve once the engine has taken it and reject only
-for a limit; other refusals arrive as a `raw` event.
+for a limit; other refusals arrive as a `raw` event. A send (`send`, `reply`, `sendLink`,
+`sendLive`, `sendData`, `forward`) resolves with its tag instead, and what becomes of it,
+its refusal too, arrives as `sendStatus` events with that tag: `queued` with the message it
+made, then `sent` or `failed` for the friend or each group member. `sendFile` resolves with
+its message, whose id the `queued` status names, and is `sent` once its description went
+after the upload.
 
 ## Browser tunnel (Cloudflare Worker)
 

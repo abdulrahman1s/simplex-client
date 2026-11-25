@@ -30,9 +30,13 @@ impl Core {
         self.settle_net();
         let mut verdicts = Outcome::default();
         for (r, parts) in requests {
+            let tag = match &r {
+                Request::Tagged { tag, .. } => Some(*tag),
+                _ => None,
+            };
             let done = self.engine.handle(r);
             if let Some(parts) = parts {
-                verdicts.verdict(parts, &done);
+                verdicts.verdict(parts, &done, tag);
             }
             self.settle_net();
         }

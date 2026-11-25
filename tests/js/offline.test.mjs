@@ -64,8 +64,12 @@ test("a group's message is a Message whose reply quotes it in the same group", a
   const club = await client.createGroup("Club");
 
   const hello = next(client, "message", (m) => m.text === "hello");
-  await club.send("hello");
+  const queued = next(client, "sendStatus", (s) => s.status === "queued");
+  const tag = await club.send("hello");
   const message = await hello;
+  assert.equal(typeof tag, "number", "a send resolves with its tag");
+  const status = await queued;
+  assert.deepEqual([status.tag, status.item], [tag, message.id]);
   assert.ok(message instanceof Message);
   assert.ok(message.mine);
   assert.equal(message.author, null, "the user's own message has no other author");
@@ -111,8 +115,12 @@ test("what breaks one of the official client's limits rejects with the limit's c
   await assert.rejects(client.createGroup("#club"), (e) => e.code === "invalid_name");
 
   const hello = next(client, "message", (m) => m.text === "hello");
-  await club.send("hello");
+  const queued = next(client, "sendStatus", (s) => s.status === "queued");
+  const tag = await club.send("hello");
   const message = await hello;
+  assert.equal(typeof tag, "number", "a send resolves with its tag");
+  const status = await queued;
+  assert.deepEqual([status.tag, status.item], [tag, message.id]);
   await assert.rejects(message.react("🤡"), (e) => e.code === "reaction_not_allowed");
   await message.react("👍");
   client.close();

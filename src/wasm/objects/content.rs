@@ -46,18 +46,18 @@ macro_rules! send_link {
         #[wasm_bindgen]
         impl $t {
             /// Sends `message` here as the user's own, marked forwarded; its file only when it
-            /// is here, else its caption.
-            #[wasm_bindgen(unchecked_return_type = "Promise<void>")]
+            /// is here, else its caption. Resolves with the send's tag.
+            #[wasm_bindgen(unchecked_return_type = "Promise<number>")]
             pub fn forward(&self, message: &Message) -> js_sys::Promise {
                 let (from, item) = (message.info().chat, message.info().id);
                 let to = self.chat();
-                self.shared().queue(Request::Forward { from, item, to })
+                self.shared().queue_send(Request::Forward { from, item, to })
             }
 
             /// Sends `data` for programs as the content type `tag`; the official apps show
             /// `fallbackText`. Nothing is kept here, and a client started with `tag` in
-            /// `dataTags` hears it as `data`.
-            #[wasm_bindgen(js_name = sendData, unchecked_return_type = "Promise<void>")]
+            /// `dataTags` hears it as `data`. Resolves with the send's tag.
+            #[wasm_bindgen(js_name = sendData, unchecked_return_type = "Promise<number>")]
             pub fn send_data(
                 &self,
                 tag: &str,
@@ -70,7 +70,7 @@ macro_rules! send_link {
                 if let Some(why) = crate::chat::app_data::refusal(tag, &json) {
                     return settled(Err(error("bad_argument", why)));
                 }
-                self.shared().queue(Request::SendData {
+                self.shared().queue_send(Request::SendData {
                     chat: self.chat(),
                     tag: tag.to_owned(),
                     json,
@@ -78,15 +78,17 @@ macro_rules! send_link {
                 })
             }
 
-            /// Starts a live message here, seen as it is written; `message.updateLive` sends the rest.
-            #[wasm_bindgen(js_name = sendLive, unchecked_return_type = "Promise<void>")]
+            /// Starts a live message here, seen as it is written; `message.updateLive` sends the
+            /// rest. Resolves with the send's tag.
+            #[wasm_bindgen(js_name = sendLive, unchecked_return_type = "Promise<number>")]
             pub fn send_live(&self, text: &str) -> js_sys::Promise {
                 let (chat, text) = (self.chat(), text.to_owned());
-                self.shared().queue(Request::SendLive { chat, text })
+                self.shared().queue_send(Request::SendLive { chat, text })
             }
 
-            /// Sends `text` with the preview of the link it has: `{ uri, title, description, image? }`.
-            #[wasm_bindgen(js_name = sendLink, unchecked_return_type = "Promise<void>")]
+            /// Sends `text` with the preview of the link it has: `{ uri, title, description,
+            /// image? }`. Resolves with the send's tag.
+            #[wasm_bindgen(js_name = sendLink, unchecked_return_type = "Promise<number>")]
             pub fn send_link(
                 &self,
                 text: &str,
@@ -94,7 +96,7 @@ macro_rules! send_link {
                 link: JsValue,
             ) -> js_sys::Promise {
                 match preview(&link) {
-                    Ok(preview) => self.shared().queue(Request::SendLink {
+                    Ok(preview) => self.shared().queue_send(Request::SendLink {
                         chat: self.chat(),
                         text: text.to_owned(),
                         preview,

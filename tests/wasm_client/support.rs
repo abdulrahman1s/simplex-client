@@ -4,6 +4,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use serde_json::{Value, json};
+use simplex_client::types::Request;
 use simplex_client::wasm::Client;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
@@ -126,4 +127,14 @@ pub fn with_snapshot(bytes: &[u8], key: &str) -> Result<Client, JsValue> {
     let snap = js_sys::Uint8Array::from(bytes);
     js_sys::Reflect::set(&o, &"snapshot".into(), &snap).unwrap();
     Client::open(&o)
+}
+
+/// The requests as the calls made them, with a send's tag taken off.
+pub fn untagged(list: Vec<Request>) -> Vec<Request> {
+    list.into_iter()
+        .map(|r| match r {
+            Request::Tagged { request, .. } => *request,
+            r => r,
+        })
+        .collect()
 }

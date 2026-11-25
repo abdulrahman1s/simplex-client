@@ -18,6 +18,20 @@ export type ClientEvent =
   | "friendAdd" | "friendRemove" | "groupAdd" | "groupRemove" | "groupInvite"
   | "memberAdd" | "offline" | "online" | "change" | "raw" | "fileProgress"
   | "data" | "sendStatus";
+
+/** What a `sendStatus` handler gets: what became of a send, by the tag its call resolved
+ * with; `member` names the group member it is for. `queued` names the message it made
+ * (none for `sendData`), then each recipient gets one `sent` or `failed`; `failed` with no
+ * member is a file whose upload failed or was cancelled or deleted. */
+export type SendStatusEvent = {
+  tag: number;
+  member: number | null;
+} & (
+  | { status: "queued"; item: number | null }
+  | { status: "refused"; code: string; detail: string }
+  | { status: "sent" }
+  | { status: "failed"; detail: string }
+);
 "#;
 
 /// A running client in this tab or process. Methods return Promises that reject with
@@ -57,8 +71,8 @@ impl Client {
     /// (a `GroupInvite`), `memberAdd` (a `Member` who connected with you: someone new, or each
     /// one already there when you join), `offline`, `online`, `change` (the store
     /// changed: save it), `data` (`{ chat, member, tag, data }` under a tag in `dataTags`),
-    /// `sendStatus` (`{ tag, member, status }` of a tagged request) and `raw` (every engine
-    /// event, as JSON).
+    /// `sendStatus` (a `SendStatusEvent`: what became of a send, by the tag it resolved with)
+    /// and `raw` (every engine event, as JSON).
     pub fn on(
         &self,
         #[wasm_bindgen(unchecked_param_type = "ClientEvent")] name: &str,

@@ -54,10 +54,15 @@ All notable changes to this project are documented here. The format follows
   part of their description has gone after the upload (its offer alone is not the file),
   `Failed` when the offer or a part fails, and `Failed` with no member when the upload
   fails or the file is cancelled or deleted first. Tags are kept in memory, so a send still
-  going when the client stops is told nothing after the restart. The JS methods do not tag
-  their sends yet. **Breaking:**
+  going when the client stops is told nothing after the restart. In JS, `send`, `reply`,
+  `sendLink`, `sendLive`, `sendData` and `forward` resolve with their tag, `sendFile` goes
+  tagged too (its `queued` status names the message it resolves with), and a `sendStatus`
+  handler gets `{ tag, member, status, item?, code?, detail? }` (TypeScript
+  `SendStatusEvent`), the code named as rejections name it. **Breaking:**
   those methods return `Result<SendHandle>` instead of `Result<()>` (a `send(…)?` used as a
-  `match` arm's value needs a `;`), and `Request` and both `Event`s have new variants.
+  `match` arm's value needs a `;`), and `Request` and both `Event`s have new variants. In JS
+  those sends resolve with a number instead of `undefined`, and a refusal of one other than a
+  limit arrives as its `sendStatus` instead of a `raw` `Failed` event.
 - `ClientBuilder::roster_deltas(true)`: the client tells what changed instead of whole chat
   lists. The new `Event::FriendUpdate` and `Event::GroupUpdate` join the adds and removes,
   and `Raw(Chats)` comes only after the new `Client::refresh()` asks for it. `friends()` and
