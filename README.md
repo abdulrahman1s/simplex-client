@@ -144,7 +144,8 @@ Each send (`send`, `reply`, `send_file`, `send_link`, `send_live`, `send_data`, 
 returns a `SendHandle`, and what becomes of it arrives as `Event::SendStatus { handle,
 member, status }`: `Queued { item }` with the message it made, or `Refused { code, detail }`
 at once; then `Sent` or `Failed { detail }` for the friend, or for each `member` of a group.
-A file's message goes after its upload, so only its `Queued` or `Refused` is told.
+A file is `Sent` once the last part of its description went after the upload, and `Failed`
+with no member when the upload fails or the file is cancelled or deleted first.
 
 ### Events
 
