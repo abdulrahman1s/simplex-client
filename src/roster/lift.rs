@@ -16,8 +16,12 @@ pub(crate) enum Note {
     Request(FriendRequest),
     FriendAdd(Friend),
     FriendRemove(Friend),
+    /// A friend still connected changed; only for a roster that tells deltas.
+    FriendUpdate(Friend),
     GroupAdd(ChatGroup),
     GroupRemove(ChatGroup),
+    /// A group the user is still in changed; only for a roster that tells deltas.
+    GroupUpdate(ChatGroup),
     GroupInvite(ChatGroup),
     /// A member connected with the user (`MemberJoined`): someone new to the group, or each
     /// member already there when the user joins. The engine names them only.

@@ -53,6 +53,13 @@ All notable changes to this project are documented here. The format follows
   `Queued` or `Refused` is told; the JS methods do not tag their sends yet. **Breaking:**
   those methods return `Result<SendHandle>` instead of `Result<()>` (a `send(…)?` used as a
   `match` arm's value needs a `;`), and `Request` and both `Event`s have new variants.
+- `ClientBuilder::roster_deltas(true)`: the client tells what changed instead of whole chat
+  lists. The new `Event::FriendUpdate` and `Event::GroupUpdate` (JS `friendUpdate`,
+  `groupUpdate`) join the adds and removes, and `Raw(Chats)` comes only after the new
+  `Client::refresh()` asks for it. `friends()` and `groups()` stay current, and
+  `create_group` still resolves. Off by default, so nothing changes for a client that does
+  not ask. The engine still builds each list (one per batch of changes) for the client to
+  compare. **Breaking:** `client::Event` has new variants.
 
 ### Fixed
 

@@ -13,6 +13,9 @@ pub(crate) struct Roster {
     requests: BTreeSet<i64>,
     /// The first list only fills the cache: what a client already had is not news.
     seeded: bool,
+    /// Also tell a friend or group that changed (`FriendUpdate`, `GroupUpdate`), for a client
+    /// that hears changes instead of whole lists.
+    pub(crate) deltas: bool,
 }
 
 impl Roster {
@@ -44,6 +47,12 @@ impl Roster {
             .values()
             .filter(|f| f.ready && !ready(&old, f.id));
         out.extend(added.filter(|_| news).cloned().map(Note::FriendAdd));
+        if self.deltas && news {
+            let changed =
+                |f: &&Friend| f.ready && old.get(&f.id).is_some_and(|o| o.ready && o != *f);
+            let changed = self.friends.values().filter(changed);
+            out.extend(changed.cloned().map(Note::FriendUpdate));
+        }
 
         let old = std::mem::replace(&mut self.groups, by_id(groups, |g| g.id));
         let is = |list: &BTreeMap<i64, ChatGroup>, id, m| {
@@ -62,6 +71,9 @@ impl Roster {
                 }
                 Membership::Member if news && !was(Membership::Member) => {
                     out.push(Note::GroupAdd(g.clone()));
+                }
+                Membership::Member if news && self.deltas && old.get(&g.id) != Some(g) => {
+                    out.push(Note::GroupUpdate(g.clone()));
                 }
                 Membership::Invited
                 | Membership::Member

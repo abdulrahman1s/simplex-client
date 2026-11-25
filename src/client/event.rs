@@ -22,10 +22,16 @@ pub enum Event {
     FriendAdd(Friend),
     /// A friend was removed, or removed the user.
     FriendRemove(Friend),
+    /// A connected friend changed: name, picture, preferences, timer, PQ, … Only with
+    /// [`ClientBuilder::roster_deltas`](super::ClientBuilder::roster_deltas).
+    FriendUpdate(Friend),
     /// The user made or joined a group.
     GroupAdd(Group),
     /// The user left or was removed from a group, or it was deleted.
     GroupRemove(Group),
+    /// A group the user is in changed: its profile, members, role, … Only with
+    /// [`ClientBuilder::roster_deltas`](super::ClientBuilder::roster_deltas).
+    GroupUpdate(Group),
     /// The user was invited into a group.
     GroupInvite(GroupInvite),
     /// A member connected with the user: someone new to the group, or, right after the user
@@ -50,7 +56,8 @@ pub enum Event {
         tag: String,
         json: serde_json::Map<String, serde_json::Value>,
     },
-    /// An engine event without a variant of its own, and every chat list (`Chats`).
+    /// An engine event without a variant of its own, and every chat list (`Chats`); with
+    /// `roster_deltas`, only the list `Client::refresh` asked for.
     Raw(types::Event),
 }
 
@@ -77,8 +84,10 @@ impl Event {
             Note::Request(r) => Self::Request(FriendRequest::new(c(), r)),
             Note::FriendAdd(f) => Self::FriendAdd(Friend::new(c(), f)),
             Note::FriendRemove(f) => Self::FriendRemove(Friend::new(c(), f)),
+            Note::FriendUpdate(f) => Self::FriendUpdate(Friend::new(c(), f)),
             Note::GroupAdd(g) => Self::GroupAdd(Group::new(c(), g)),
             Note::GroupRemove(g) => Self::GroupRemove(Group::new(c(), g)),
+            Note::GroupUpdate(g) => Self::GroupUpdate(Group::new(c(), g)),
             Note::GroupInvite(g) => Self::GroupInvite(GroupInvite::new(Group::new(c(), g))),
             Note::MemberAdd { group, name } => Self::MemberAdd(Member::named(c(), group, name)),
             Note::Offline(offline) => Self::Offline(offline),

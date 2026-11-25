@@ -41,6 +41,12 @@ impl Client {
             .collect()
     }
 
+    /// Asks the engine for the whole chat list; it arrives as `Raw(Chats)`, with
+    /// [`ClientBuilder::roster_deltas`](super::ClientBuilder::roster_deltas) too.
+    pub fn refresh(&self) -> Result<()> {
+        self.request(Request::Refresh)
+    }
+
     /// Makes a group with the user as its owner and waits until the chat list shows it.
     pub fn create_group(&self, name: &str) -> Result<Group> {
         let Answer::Group(g) = self.ask(Want::NewGroup, Request::NewGroup(name.to_owned()))? else {

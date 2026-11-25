@@ -1,5 +1,6 @@
 //! The dispatcher thread: answers go to the calls waiting for them, the rest to `events()`.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::thread::{self, JoinHandle};
 
@@ -19,6 +20,8 @@ pub(super) struct Shared {
     pub(super) waiters: Waiters,
     pub(super) profile: Mutex<ChatProfile>,
     pub(super) roster: Mutex<Roster>,
+    /// `Client::refresh` asked for the whole list, which a client hearing deltas then hears.
+    pub(super) refresh: AtomicBool,
 }
 
 impl Shared {
@@ -119,12 +122,22 @@ impl Dispatcher {
         let notes = self.shared.note(&e);
         if let Some(e) = self.shared.waiters.route(e)
             && raw(&e)
+            && self.wants_list(&e)
         {
             self.put(Queued::Raw(e));
         }
         notes
             .into_iter()
             .for_each(|n| self.put(Queued::Note(Box::new(n))));
+    }
+
+    /// A chat list goes to `events()` unless the client hears deltas and did not ask.
+    fn wants_list(&self, e: &Event) -> bool {
+        let Event::Chats { .. } = e else {
+            return true;
+        };
+        let deltas = self.shared.roster.lock().is_ok_and(|r| r.deltas);
+        !deltas || self.shared.refresh.swap(false, Ordering::Relaxed)
     }
 
     fn put(&mut self, q: Queued) {

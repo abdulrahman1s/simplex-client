@@ -28,6 +28,7 @@ pub struct ClientBuilder {
     pub(super) log: Option<Log>,
     pub(super) timeout: Duration,
     pub(super) events_cap: usize,
+    pub(super) roster_deltas: bool,
 }
 
 impl ClientBuilder {
@@ -45,6 +46,7 @@ impl ClientBuilder {
             log: None,
             timeout: Duration::from_secs(60),
             events_cap: EVENTS_CAP,
+            roster_deltas: false,
         }
     }
 
@@ -97,6 +99,14 @@ impl ClientBuilder {
     /// of a message (`Request::SendData` sends them).
     pub fn data_tag(mut self, tag: impl Into<String>) -> Self {
         self.config.data_tags.insert(tag.into());
+        self
+    }
+
+    /// Hear what changed instead of whole chat lists: `FriendUpdate` and `GroupUpdate` join
+    /// the adds and removes, and `Raw(Chats)` comes only after [`Client::refresh`] asks for
+    /// it. `friends()` and `groups()` stay current either way. Off by default.
+    pub fn roster_deltas(mut self, on: bool) -> Self {
+        self.roster_deltas = on;
         self
     }
 
