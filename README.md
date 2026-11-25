@@ -165,6 +165,22 @@ A file's message goes after its upload, so only its `Queued` or `Refused` is tol
 
 The engine's own events are `simplex_client::types::Event` (`cargo doc --open`).
 
+Friends and groups from before a restart are not announced again: `FriendAdd` and `GroupAdd`
+are for what is new. The client's list is complete as soon as `start` returns, so read it
+there, then follow the events:
+
+```rust
+let client = Client::builder("./bot-data").key(key).start()?;
+let mut known: HashMap<i64, Friend> = client.friends().into_iter().map(|f| (f.id(), f)).collect();
+for event in client.events() {
+    match event {
+        Event::FriendAdd(f) => { known.insert(f.id(), f); }
+        Event::FriendRemove(f) => { known.remove(&f.id()); }
+        _ => {}
+    }
+}
+```
+
 ## WebAssembly
 
 The `wasm` feature builds the whole client for `wasm32-unknown-unknown`: the engine, the

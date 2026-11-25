@@ -18,6 +18,9 @@ impl Client {
         f.map(|f| Friend::new(self.clone(), f))
     }
 
+    /// Every friend, connected or still connecting. Complete as soon as
+    /// [`ClientBuilder::start`](super::ClientBuilder::start) returns, so a program learns the
+    /// friends it had before a restart here, then follows `FriendAdd` and `FriendRemove`.
     #[must_use]
     pub fn friends(&self) -> Vec<Friend> {
         let list: Vec<_> = self.roster().friends.values().cloned().collect();

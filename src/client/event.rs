@@ -18,7 +18,8 @@ pub enum Event {
     MessageUpdate(Message),
     /// Someone asked to connect through the user's address.
     Request(FriendRequest),
-    /// A friend finished connecting and can be written to.
+    /// A friend finished connecting and can be written to. Friends from before a restart are
+    /// not announced again: [`Client::friends`] lists them all as soon as `start` returns.
     FriendAdd(Friend),
     /// A friend was removed, or removed the user.
     FriendRemove(Friend),

@@ -60,6 +60,11 @@ All notable changes to this project are documented here. The format follows
   `create_group` still resolves. Off by default, so nothing changes for a client that does
   not ask. The engine still builds each list (one per batch of changes) for the client to
   compare. **Breaking:** `client::Event` has new variants.
+- Documented how a program learns the friends it had before a restart: `client.friends()`
+  (and `groups()`) is complete as soon as `ClientBuilder::start` returns, and `FriendAdd`
+  is only for friends new since. A test holds the client to it. A `FriendAdd` replay at
+  start was not added: it would announce as new what is not, and every program would have to
+  tell the two apart.
 
 ### Fixed
 

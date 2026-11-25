@@ -186,3 +186,28 @@ fn a_client_hearing_deltas_gets_no_chat_list_until_it_asks() {
         Some("team".into())
     );
 }
+
+#[test]
+fn after_a_restart_friends_are_listed_when_start_returns_and_not_announced_again() {
+    let dir = Dir::new();
+    let mut agent = FakeAgent::default();
+    agent.on_invitation = vec![invitation()];
+    let (client, smp) = start(builder(&dir), agent);
+    client.create_invite().unwrap();
+    smp.send(AgentEvent::Conf {
+        conn: ConnId(1),
+        conn_info: x_info("bob"),
+    })
+    .unwrap();
+    smp.send(AgentEvent::Con { conn: ConnId(1) }).unwrap();
+    let bob = friend_added(&client);
+    client.close();
+    drop(smp);
+
+    let (client, _smp) = start(builder(&dir), FakeAgent::default());
+    let listed: Vec<_> = client.friends().iter().map(Friend::id).collect();
+    assert_eq!(listed, [bob.id()], "complete as soon as start returns");
+    while let Ok(e) = client.next_event(std::time::Duration::from_millis(200)) {
+        assert!(!matches!(e, Event::FriendAdd(_)), "not announced again");
+    }
+}
