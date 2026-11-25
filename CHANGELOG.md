@@ -55,12 +55,12 @@ All notable changes to this project are documented here. The format follows
   those methods return `Result<SendHandle>` instead of `Result<()>` (a `send(…)?` used as a
   `match` arm's value needs a `;`), and `Request` and both `Event`s have new variants.
 - `ClientBuilder::roster_deltas(true)`: the client tells what changed instead of whole chat
-  lists. The new `Event::FriendUpdate` and `Event::GroupUpdate` (JS `friendUpdate`,
-  `groupUpdate`) join the adds and removes, and `Raw(Chats)` comes only after the new
-  `Client::refresh()` asks for it. `friends()` and `groups()` stay current, and
-  `create_group` still resolves. Off by default, so nothing changes for a client that does
-  not ask. The engine still builds each list (one per batch of changes) for the client to
-  compare. **Breaking:** `client::Event` has new variants.
+  lists. The new `Event::FriendUpdate` and `Event::GroupUpdate` join the adds and removes,
+  and `Raw(Chats)` comes only after the new `Client::refresh()` asks for it. `friends()` and
+  `groups()` stay current, and `create_group` still resolves. Off by default, so nothing
+  changes for a client that does not ask. The engine still builds each list (one per batch
+  of changes) for the client to compare. JS has no such option yet. **Breaking:**
+  `client::Event` has new variants.
 - Documented how a program learns the friends it had before a restart: `client.friends()`
   (and `groups()`) is complete as soon as `ClientBuilder::start` returns, and `FriendAdd`
   is only for friends new since. A test holds the client to it. A `FriendAdd` replay at

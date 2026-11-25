@@ -16,7 +16,8 @@ const EVENTS: &str = r#"
 export type ClientEvent =
   | "ready" | "message" | "messageUpdate" | "request"
   | "friendAdd" | "friendRemove" | "groupAdd" | "groupRemove" | "groupInvite"
-  | "memberAdd" | "offline" | "online" | "change" | "raw" | "fileProgress";
+  | "memberAdd" | "offline" | "online" | "change" | "raw" | "fileProgress"
+  | "data" | "sendStatus";
 "#;
 
 /// A running client in this tab or process. Methods return Promises that reject with
@@ -55,7 +56,9 @@ impl Client {
     /// `friendRemove` (a `Friend`), `groupAdd` and `groupRemove` (a `Group`), `groupInvite`
     /// (a `GroupInvite`), `memberAdd` (a `Member` who connected with you: someone new, or each
     /// one already there when you join), `offline`, `online`, `change` (the store
-    /// changed: save it) and `raw` (every engine event, as JSON).
+    /// changed: save it), `data` (`{ chat, member, tag, data }` under a tag in `dataTags`),
+    /// `sendStatus` (`{ tag, member, status }` of a tagged request) and `raw` (every engine
+    /// event, as JSON).
     pub fn on(
         &self,
         #[wasm_bindgen(unchecked_param_type = "ClientEvent")] name: &str,
