@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-25
+
 ### Added
 
 - Application data. `Request::SendData { chat, tag, json, fallback_text }`
@@ -88,7 +90,9 @@ All notable changes to this project are documented here. The format follows
   does not check its relays (`NativeAgent::without_relay_tests`) and uses no XFTP relay, so
   files do not go. CI builds and lints the feature and runs `tests/in_memory.rs`, where two
   clients connect, talk and send application data, and a friend removed right after a
-  message gets both.
+  message gets both, and a client hearing roster deltas gets a friend's change as one.
+
+### Fixed
 
 - Removing a friend (and a group member, and leaving a group) deleted the connection with
   everything still waiting to be sent on it, so the peer never got `x.direct.del` and a
@@ -461,6 +465,7 @@ All notable changes to this project are documented here. The format follows
 - A group member's chat version range follows each JSON message they send, not only the
   handshake (`updateMemberChatVRange`).
 
-[Unreleased]: https://github.com/abdulrahman1s/simplex-client/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/abdulrahman1s/simplex-client/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/abdulrahman1s/simplex-client/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/abdulrahman1s/simplex-client/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/abdulrahman1s/simplex-client/releases/tag/v0.1.0
