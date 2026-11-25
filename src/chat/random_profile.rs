@@ -40,8 +40,9 @@ mod tests {
     fn a_random_name_is_one_of_the_adjectives_then_one_of_the_nouns() {
         let (adjectives, nouns) = lists();
         assert_eq!((adjectives.len(), nouns.len()), (2093, 1013));
+        // One adjective can begin another ("Comic", "Comical"), so any split may be the one.
         let name = random_name().unwrap();
-        let adjective = adjectives.iter().find(|a| name.starts_with(*a)).unwrap();
-        assert!(nouns.contains(&&name[adjective.len()..]), "{name}");
+        let split = |a: &&str| name.strip_prefix(*a).is_some_and(|n| nouns.contains(&n));
+        assert!(adjectives.iter().any(split), "{name}");
     }
 }
