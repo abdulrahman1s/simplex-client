@@ -15,13 +15,13 @@ use crate::types::{ErrorCode, Event, RequestKind};
 /// The file of a message: where it is here and how far it got. A GIF that is here is its path.
 fn file_of(m: &ChatMessage) -> Option<(Option<&Path>, FileState)> {
     match &m.body {
-        MessageBody::Image(f) | MessageBody::Video(f) | MessageBody::File(f) => {
-            Some((f.local.as_deref(), f.state.clone()))
-        }
+        MessageBody::Image(f)
+        | MessageBody::Video(f)
+        | MessageBody::File(f)
+        | MessageBody::Voice(f) => Some((f.local.as_deref(), f.state.clone())),
         MessageBody::Gif(p) => Some((Some(Path::new(p)), FileState::Received(p.into()))),
         MessageBody::Text(_)
         | MessageBody::Notice(_)
-        | MessageBody::Voice { .. }
         | MessageBody::Call(_)
         | MessageBody::Stream(_)
         | MessageBody::Deleted => None,

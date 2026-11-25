@@ -46,6 +46,7 @@ pub enum Call {
     SubscribeAll,
     SynchronizeRatchet {
         conn: ConnId,
+        force: bool,
     },
     SetDisabledRelays(Vec<String>),
 }
@@ -242,8 +243,14 @@ impl AgentPort for FakeAgent {
         Ok(self.ratchet_ad.clone())
     }
 
-    fn synchronize_ratchet(&mut self, _: &mut Store, conn: &ConnId) -> Result<(), AgentFailure> {
-        self.calls.push(Call::SynchronizeRatchet { conn: *conn });
+    fn synchronize_ratchet(
+        &mut self,
+        _: &mut Store,
+        conn: &ConnId,
+        force: bool,
+    ) -> Result<(), AgentFailure> {
+        self.calls
+            .push(Call::SynchronizeRatchet { conn: *conn, force });
         self.fail_next.take().map_or(Ok(()), Err)
     }
 

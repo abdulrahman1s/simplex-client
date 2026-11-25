@@ -17,6 +17,16 @@ use crate::engine::records::file::{FileRecord, Way};
 use crate::engine::records::{ItemRecord, keys};
 use crate::engine::requests::sized;
 
+/// What a sent file says besides itself: a picture's or video's preview, a video's or voice
+/// message's length, its caption, and whether it is forwarded (`mcForward`).
+#[derive(Clone, Copy)]
+pub struct FileMeta<'a> {
+    pub preview: Option<&'a [u8]>,
+    pub duration: Option<u32>,
+    pub text: &'a str,
+    pub forward: bool,
+}
+
 /// Every friend's connection this engine makes is PQ.
 pub(super) const PQ: bool = true;
 
@@ -26,14 +36,18 @@ impl<A: AgentPort> Engine<A> {
         chat: ChatRef,
         path: &Path,
         kind: FileKind,
-        preview: Option<&[u8]>,
-        duration: Option<u32>,
-        text: &str,
+        meta: FileMeta<'_>,
     ) -> Result<()> {
+        let FileMeta {
+            preview,
+            duration,
+            text,
+            forward,
+        } = meta;
         if self.files.servers.is_empty() {
             return Err(fail(Code::RequestFailed, "no file server"));
         }
-        self.may_send_file(chat)?;
+        self.may_send_file(chat, kind)?;
         self.room_for_transfer()?;
         let (source, size) = self.files.store.source(&self.files.dir, path)?;
         let name = source
@@ -42,6 +56,9 @@ impl<A: AgentPort> Engine<A> {
             .ok_or_else(|| fail(Code::RequestFailed, "file has no name"))?;
         let mut container = MsgContainer::simple(content(kind, text, preview, duration));
         container.file = Some(FileInvitation::xftp(&name, size));
+        let timed = self.outgoing_timed(chat)?;
+        container.ttl = timed.map(|t| t.ttl);
+        container.forward = forward.then_some(true);
         let msg = ChatMessage::new(ChatEvent::MsgNew(container))?;
         sized(&msg)?;
         let sent = self.send_offer(chat, &msg)?;
@@ -55,6 +72,8 @@ impl<A: AgentPort> Engine<A> {
             state: FileState::Sending { percent: 0 },
         };
         let mut item = ItemRecord::new(MessageAuthor::Me, show(kind, media), self.clock.wall_ms());
+        item.timed = timed;
+        item.forwarded = forward;
         item.shared_id = msg.msg_id.map(|m| m.0);
         let m = self.add_item(chat, &item)?;
         for (_, conn, agent_id) in &sent {

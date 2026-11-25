@@ -1,7 +1,7 @@
 //! The user's call requests (Commands.hs `APISendCallInvitation`, `APISendCallOffer`, `APISendCallAnswer`, `APISendCallExtraInfo`, `APIEndCall`, `APIRejectCall`).
 
 use crate::types::Event;
-use crate::types::model::{CallRequest, CallSignal};
+use crate::types::model::{CallRequest, CallSignal, ChatFeature};
 
 use super::line::Over;
 use super::state::{Call, Kind, Phase, RING_TTL_MS};
@@ -16,7 +16,6 @@ use crate::chat::{ChatEvent, ChatMessage, encode_chat_message};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
-use crate::engine::records::friend::Feature;
 
 /// What chat messages are sized for on a post-quantum connection.
 const PQ: bool = true;
@@ -101,7 +100,7 @@ impl<A: AgentPort> Engine<A> {
         if !f.reachable() {
             return Err(fail(Code::CallFailed, "not connected"));
         }
-        if !f.enabled(Feature::Calls).for_user {
+        if !self.enabled(&f, ChatFeature::Calls).for_user {
             return Err(fail(
                 Code::CallFailed,
                 "calls are not allowed with this friend",

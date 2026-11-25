@@ -39,6 +39,12 @@ impl FriendRequest {
         self.shared.queue(Request::Accept(self.info.id))
     }
 
+    /// Accepts by a random name only: they never see the user's profile.
+    #[wasm_bindgen(js_name = acceptIncognito, unchecked_return_type = "Promise<void>")]
+    pub fn accept_incognito(&self) -> js_sys::Promise {
+        self.shared.queue(Request::AcceptIncognito(self.info.id))
+    }
+
     #[wasm_bindgen(unchecked_return_type = "Promise<void>")]
     pub fn reject(&self) -> js_sys::Promise {
         self.shared.queue(Request::Reject(self.info.id))

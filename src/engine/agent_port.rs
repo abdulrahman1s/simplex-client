@@ -212,10 +212,14 @@ pub trait AgentPort {
     /// what the security code is made from.
     fn ratchet_ad(&mut self, store: &mut Store, conn: &ConnId) -> Result<Vec<u8>, AgentFailure>;
 
-    /// `synchronizeRatchet` without force: offers `conn`'s peer a new ratchet, allowed while
-    /// its sync state is `Allowed` or `Required`.
-    fn synchronize_ratchet(&mut self, store: &mut Store, conn: &ConnId)
-    -> Result<(), AgentFailure>;
+    /// `synchronizeRatchet`: offers `conn`'s peer a new ratchet, allowed while its sync state
+    /// is `Allowed` or `Required`, or at any time with `force`.
+    fn synchronize_ratchet(
+        &mut self,
+        store: &mut Store,
+        conn: &ConnId,
+        force: bool,
+    ) -> Result<(), AgentFailure>;
 
     /// What tests relays for the checks: the network, for the real agent. `None` where relays
     /// can't be tested (no threads); no check runs then, so nothing is judged offline by one.

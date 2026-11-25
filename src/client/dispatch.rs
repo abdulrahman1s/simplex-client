@@ -45,7 +45,11 @@ impl Shared {
 /// Engine events that have no variant of their own in `client::Event`.
 const fn raw(e: &Event) -> bool {
     match e {
-        Event::Ready(_) | Event::Messages(_) | Event::Updated(_) | Event::Offline(_) => false,
+        Event::Ready(_)
+        | Event::Messages(_)
+        | Event::Updated(_)
+        | Event::Offline(_)
+        | Event::Cleared(_) => false,
         Event::Features { .. }
         | Event::Profile(_)
         | Event::Chats { .. }

@@ -7,27 +7,16 @@ use super::client::Client;
 use super::convert::{closed, error};
 use super::files::{Parts, Receiving, Sending};
 use super::files_events::{named, settle_now};
+use super::files_opts::{kind, options};
 use super::objects::{Friend, Group, Message};
 use super::shared::Shared;
+use crate::types::Request;
 use crate::types::model::ChatRef;
-use crate::types::{FileKind, Request};
 
 fn promise() -> (js_sys::Promise, Option<Parts>) {
     let mut parts = None;
     let promise = js_sys::Promise::new(&mut |resolve, reject| parts = Some((resolve, reject)));
     (promise, parts)
-}
-
-fn kind(kind: Option<String>) -> Result<FileKind, JsValue> {
-    let Some(kind) = kind else {
-        return Ok(FileKind::File);
-    };
-    serde_json::from_value(serde_json::Value::String(kind)).map_err(|_| {
-        error(
-            "bad_argument",
-            "kind is \"image\", \"gif\", \"video\" or \"file\"",
-        )
-    })
 }
 
 /// Keeps `bytes` in memory until the upload ends and asks the engine to send them; resolves
@@ -38,10 +27,12 @@ fn send_file(
     bytes: Vec<u8>,
     name: &str,
     kind_name: Option<String>,
+    opts: &JsValue,
 ) -> js_sys::Promise {
     let (promise, parts) = promise();
     let queued = (|| {
         let kind = kind(kind_name)?;
+        let opts = options(opts)?;
         let parts = parts.ok_or_else(closed)?;
         let path = {
             let mut core = shared.core.borrow_mut();
@@ -54,7 +45,7 @@ fn send_file(
             });
             path
         };
-        let (preview, duration, text) = (None, None, String::new());
+        let (preview, duration, text) = (opts.preview, opts.duration, opts.caption);
         shared.tell(Request::SendFile {
             chat,
             path,
@@ -72,11 +63,22 @@ fn send_file(
 
 #[wasm_bindgen]
 impl Friend {
-    /// Sends `bytes` as a file named `name`, a `kind` of `"image"`, `"gif"`, `"video"` or
-    /// `"file"` (the default). Resolves with the message; `fileProgress` follows the upload.
+    /// Sends `bytes` as a file named `name`, a `kind` of `"image"`, `"gif"`, `"video"`,
+    /// `"voice"` or `"file"` (the default), with `{ caption, duration, preview }` if given (a
+    /// voice message or video gives its `duration` in seconds). Resolves with the message;
+    /// `fileProgress` follows the upload.
     #[wasm_bindgen(js_name = sendFile, unchecked_return_type = "Promise<Message>")]
-    pub fn send_file(&self, bytes: Vec<u8>, name: &str, kind: Option<String>) -> js_sys::Promise {
-        send_file(self.shared(), self.chat(), bytes, name, kind)
+    pub fn send_file(
+        &self,
+        bytes: Vec<u8>,
+        name: &str,
+        kind: Option<String>,
+        #[wasm_bindgen(
+            unchecked_param_type = "{ caption?: string, duration?: number, preview?: Uint8Array }"
+        )]
+        options: JsValue,
+    ) -> js_sys::Promise {
+        send_file(self.shared(), self.chat(), bytes, name, kind, &options)
     }
 }
 
@@ -84,8 +86,17 @@ impl Friend {
 impl Group {
     /// Sends `bytes` as a file to every member; as `Friend.sendFile`.
     #[wasm_bindgen(js_name = sendFile, unchecked_return_type = "Promise<Message>")]
-    pub fn send_file(&self, bytes: Vec<u8>, name: &str, kind: Option<String>) -> js_sys::Promise {
-        send_file(self.shared(), self.chat(), bytes, name, kind)
+    pub fn send_file(
+        &self,
+        bytes: Vec<u8>,
+        name: &str,
+        kind: Option<String>,
+        #[wasm_bindgen(
+            unchecked_param_type = "{ caption?: string, duration?: number, preview?: Uint8Array }"
+        )]
+        options: JsValue,
+    ) -> js_sys::Promise {
+        send_file(self.shared(), self.chat(), bytes, name, kind, &options)
     }
 }
 

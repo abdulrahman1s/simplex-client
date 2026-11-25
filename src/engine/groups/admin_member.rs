@@ -4,6 +4,7 @@ use crate::types::model::ChatNotice;
 
 use super::admin::insufficient;
 use super::inbound::GroupCtx;
+use super::manage::convert::to_wire;
 use super::rank::{at_least, role_required_to_change};
 use crate::chat::group::GroupMemberRole;
 use crate::chat::ids::MemberId;
@@ -44,6 +45,8 @@ impl<A: AgentPort> Engine<A> {
         if !at_least(&sender.role, &role_required_to_change(from, &role)) {
             return Err(insufficient("x.grp.mem.role"));
         }
+        let who = target.as_ref().map(|m| m.profile.display_name.clone());
+        let shown = to_wire(&role);
         match target {
             Some(mut m) => {
                 m.role = role;
@@ -55,7 +58,13 @@ impl<A: AgentPort> Engine<A> {
             }
         }
         self.state.chats_dirty = true;
-        Ok(())
+        // `RGEMemberRole`, or `RGEUserRole` when it is the user's.
+        let notice = ChatNotice::MemberRole {
+            by: Some(sender.profile.display_name),
+            who: who.unwrap_or_default(),
+            role: shown,
+        };
+        self.group_notice(ctx.group, Some(ctx.author), notice)
     }
 
     /// Subscriber.hs 3770 `xGrpMemDel`: the sender must be admin and at least the member's role.

@@ -58,6 +58,10 @@ pub fn load(store: &mut Store) -> Result<(State, Option<UserRecord>), StoreError
     for m in all::<MemberRecord>(store, keys::MEMBER_PREFIX)? {
         state.members.insert((m.group, m.id), m);
     }
+    state.timed.extend(super::timed::index::load_due(store)?);
+    state
+        .timed_unread
+        .extend(super::timed::index::load_unread(store)?);
     let user = get::<UserRecord>(store, keys::USER)?;
     Ok((state, user))
 }
@@ -66,6 +70,23 @@ impl<A: AgentPort> Engine<A> {
     pub(crate) fn put<T: Serialize>(&mut self, key: &[u8], record: &T) -> Result<(), StoreError> {
         let bytes = encode(record)?;
         self.store.put(NS, key, &bytes)
+    }
+
+    pub(crate) fn save_settings(&mut self, s: SettingsRecord) -> Result<(), StoreError> {
+        self.put(keys::SETTINGS, &s)?;
+        self.state.settings = s;
+        Ok(())
+    }
+
+    /// The user's profile as the page sees it, with the settings kept beside it.
+    pub(crate) fn profile_wire(&self) -> crate::types::model::ChatProfile {
+        let mut p = self.state.user.to_wire();
+        p.item_ttl = self.state.settings.item_ttl;
+        if let Some(a) = &self.state.address.record {
+            p.auto_accept = a.auto_accept;
+            p.auto_reply.clone_from(&a.auto_reply);
+        }
+        p
     }
 
     pub(crate) fn save_friend(&mut self, f: FriendRecord) -> Result<(), StoreError> {

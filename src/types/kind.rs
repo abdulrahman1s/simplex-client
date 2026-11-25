@@ -22,6 +22,12 @@ pub enum RequestKind {
     Delete,
     React,
     Mute,
+    Timer,
+    Prefs,
+    /// An admin's or owner's change to a group, or deleting one.
+    GroupAdmin,
+    /// What the user keeps for themselves: deletions here, read marks, aliases, message TTLs.
+    Local,
     Block,
     Code,
     Members,
@@ -36,6 +42,8 @@ pub enum FileKind {
     Image,
     Gif,
     Video,
+    /// A voice message: its `duration` in seconds goes with it.
+    Voice,
     File,
 }
 

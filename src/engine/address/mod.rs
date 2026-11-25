@@ -9,6 +9,7 @@ mod info;
 mod joined;
 mod load;
 mod request;
+mod settings;
 
 use std::collections::BTreeMap;
 

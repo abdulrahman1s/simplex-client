@@ -2,7 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{ChatRef, Picture, Playing, Presence};
+use std::collections::BTreeMap;
+
+use super::{ChatFeature, ChatPrefs, ChatRef, Picture, Playing, PrefEnabled, Presence};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Friend {
@@ -22,6 +24,28 @@ pub struct Friend {
     pub muted: bool,
     pub seen: Vec<String>,
     pub picture: Option<Picture>,
+    /// Seconds new messages last, when disappearing messages are on for both sides.
+    #[serde(default)]
+    pub timer: Option<i64>,
+    /// The user's preferences for this friend, over their own (`Request::SetPrefs`).
+    #[serde(default)]
+    pub prefs: ChatPrefs,
+    /// What is on between them, feature by feature.
+    #[serde(default)]
+    pub features: BTreeMap<ChatFeature, PrefEnabled>,
+    /// The user's own name for them, never sent; empty when none.
+    #[serde(default)]
+    pub alias: String,
+    /// Seconds after which messages are deleted here: `None` follows the user's own setting,
+    /// `Some(0)` keeps them.
+    #[serde(default)]
+    pub item_ttl: Option<i64>,
+    /// The address their profile shows, to pass on or connect through.
+    #[serde(default)]
+    pub address: Option<String>,
+    /// The random name the user goes by with them, when connected incognito.
+    #[serde(default)]
+    pub incognito: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

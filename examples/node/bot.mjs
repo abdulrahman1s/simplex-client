@@ -59,6 +59,7 @@ bot.on("friendAdd", (friend) => friend.send("Hi! I say back what you write."));
 bot.on("message", async (message) => {
   if (message.mine || !message.text) return;
   await message.reply(message.text);
+  await message.chat.markRead(); // read, so a disappearing message starts its count
 });
 bot.on("offline", () => console.log("offline"));
 bot.on("online", () => console.log("online"));

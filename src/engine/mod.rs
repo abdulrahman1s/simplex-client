@@ -14,9 +14,12 @@ mod groups;
 mod inbound;
 mod items;
 pub mod jobs;
+mod link;
 mod load;
+mod local;
 pub mod log;
 pub mod machine;
+mod prefs;
 mod presets;
 mod profile;
 mod quote;
@@ -28,6 +31,7 @@ pub mod run;
 mod start;
 pub mod state;
 mod time;
+mod timed;
 
 #[cfg(test)]
 #[cfg(feature = "native")]

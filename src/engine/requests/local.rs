@@ -2,7 +2,7 @@
 
 use crate::types::model::ChatRef;
 
-use crate::engine::agent_port::AgentPort;
+use crate::engine::agent_port::{AgentPort, ConnId};
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
 use crate::engine::records::FriendRecord;
@@ -14,6 +14,16 @@ impl<A: AgentPort> Engine<A> {
             .get(&id)
             .cloned()
             .ok_or_else(|| fail(Code::RequestFailed, "no such friend"))
+    }
+
+    /// The connection with a friend, or with `member` of a group.
+    pub(crate) fn conn_of(&self, chat: ChatRef, member: Option<i64>) -> Result<ConnId> {
+        let conn = match (chat, member) {
+            (ChatRef::Direct(f), _) => Some(self.friend(f)?.conn),
+            (ChatRef::Group(g), Some(m)) => self.member(g, m)?.conn,
+            (ChatRef::Group(_), None) => None,
+        };
+        conn.ok_or_else(|| fail(Code::RequestFailed, "no connection to fix"))
     }
 
     /// A muted group still marks mentions of the user (codec: `enableNtfs: mentions`): the

@@ -22,7 +22,7 @@ use super::size::{encode_sized, sized};
 pub(crate) fn has_content(body: &MessageBody) -> bool {
     match body {
         MessageBody::Text(_)
-        | MessageBody::Voice { .. }
+        | MessageBody::Voice(_)
         | MessageBody::Gif(_)
         | MessageBody::Image(_)
         | MessageBody::Video(_)
@@ -109,7 +109,7 @@ impl<A: AgentPort> Engine<A> {
                     text: text.to_owned(),
                 },
                 mentions: MsgMentions::new(),
-                ttl: None,
+                ttl: it.timed.map(|t| t.ttl),
                 live: None,
                 scope: None,
                 as_group: in_group.then_some(false),

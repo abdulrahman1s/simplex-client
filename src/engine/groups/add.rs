@@ -37,6 +37,13 @@ impl<A: AgentPort> Engine<A> {
         if !f.reachable() {
             return Err(fail(Code::RequestFailed, "the friend is not connected"));
         }
+        // `CEContactIncognitoCantInvite`: they would learn the user's own profile in the group.
+        if f.incognito.is_some() {
+            return Err(fail(
+                Code::NotAllowed,
+                "a friend met incognito can't be invited",
+            ));
+        }
         // `assertUserGroupRole gInfo $ max GRAdmin memRole` (Commands.hs:2848).
         if !g.status.current() {
             return Err(fail(

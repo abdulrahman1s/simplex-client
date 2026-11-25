@@ -11,6 +11,7 @@ mod files;
 mod files_events;
 mod files_js;
 mod files_meta;
+mod files_opts;
 mod handlers;
 mod objects;
 mod options;

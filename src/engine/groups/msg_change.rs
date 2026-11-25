@@ -17,6 +17,13 @@ use crate::engine::machine::Engine;
 use crate::engine::records::{ItemRecord, MemberRecord};
 use crate::limits::RCV_DELETE_WINDOW_MS;
 
+/// What an `x.msg.update` changes.
+pub(crate) struct Update {
+    pub content: MsgContent,
+    pub mentions: MsgMentions,
+    pub live: bool,
+}
+
 fn dropped(why: &str) -> crate::engine::error::EngineError {
     fail(Code::RequestFailed, why.to_owned())
 }
@@ -27,11 +34,15 @@ impl<A: AgentPort> Engine<A> {
         &mut self,
         ctx: GroupCtx,
         shared: &[u8],
-        content: MsgContent,
-        mentions: MsgMentions,
+        update: Update,
         scope: Option<&MsgScope>,
         at: i64,
     ) -> Result<()> {
+        let Update {
+            content,
+            mentions,
+            live,
+        } = update;
         let chat = ChatRef::Group(ctx.group);
         let m = self.member(ctx.group, ctx.author)?;
         member_can_send(&m, scope)?;
@@ -58,7 +69,9 @@ impl<A: AgentPort> Engine<A> {
         if changed.body == item.body && changed.mentions == item.mentions {
             return Err(dropped("x.msg.update: not changed"));
         }
-        changed.edited = true;
+        // A live message's updates are its writing, not edits (`edited = itemLive /= Just True`).
+        changed.edited |= !item.live;
+        changed.live = item.live && live;
         self.save_changed(chat, id, &changed)
     }
 

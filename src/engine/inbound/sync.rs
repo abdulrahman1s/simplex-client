@@ -37,7 +37,7 @@ impl<A: AgentPort> Engine<A> {
     /// agent reports `Required` once per failure, and `Started` waits for the peer, so this
     /// cannot loop.
     fn repair(&mut self, conn: &ConnId) -> Result<()> {
-        if let Err(e) = self.agent.synchronize_ratchet(&mut self.store, conn) {
+        if let Err(e) = self.agent.synchronize_ratchet(&mut self.store, conn, false) {
             self.log.line(format_args!(
                 "connection {}: could not start a re-sync: {}",
                 conn.0,
@@ -45,6 +45,21 @@ impl<A: AgentPort> Engine<A> {
             ));
             return Ok(());
         }
+        self.conn_event(conn, By::User, |member| ChatNotice::RatchetSync {
+            status: SyncStatus::Started,
+            member,
+        })
+    }
+
+    /// SyncRatchet: the user asks for a new ratchet with a friend or a member, as the apps'
+    /// "fix connection" (`APISyncContactRatchet`, `APISyncGroupMemberRatchet`); `force` asks
+    /// even while the connection works.
+    pub(crate) fn sync_ratchet(&mut self, conn: &ConnId, force: bool) -> Result<()> {
+        self.agent
+            .synchronize_ratchet(&mut self.store, conn, force)
+            .map_err(|e| {
+                crate::engine::error::fail(crate::engine::error::Code::RequestFailed, e.detail())
+            })?;
         self.conn_event(conn, By::User, |member| ChatNotice::RatchetSync {
             status: SyncStatus::Started,
             member,

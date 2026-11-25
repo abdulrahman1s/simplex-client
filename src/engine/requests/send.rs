@@ -1,13 +1,13 @@
 //! Send: a text message to a friend or a group, maybe replying to one of theirs or the user's.
 
 use crate::types::Event;
-use crate::types::model::{ChatRef, MessageAuthor, MessageBody};
+use crate::types::model::{ChatRef, MessageAuthor, MessageBody, Timed};
 
 use crate::chat::container::MsgContainer;
-use crate::chat::content::MsgContent;
 use crate::chat::{ChatEvent, ChatMessage};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
+use crate::engine::link::Outgoing;
 use crate::engine::machine::Engine;
 use crate::engine::quote::outgoing;
 use crate::engine::records::{ItemRecord, keys};
@@ -24,19 +24,18 @@ impl<A: AgentPort> Engine<A> {
         text: &str,
         reply_to: Option<i64>,
         mentions: &[(String, i64)],
+        out: Outgoing<'_>,
     ) -> Result<()> {
         let id = match chat {
             ChatRef::Direct(id) => id,
-            ChatRef::Group(g) => return self.send_group_text(g, text, reply_to, mentions),
+            ChatRef::Group(g) => return self.send_group_text(g, text, reply_to, mentions, out),
         };
         let f = self.friend(id)?;
         if !f.reachable() {
             return Err(fail(Code::RequestFailed, "not connected"));
         }
-        let content = MsgContent::Text {
-            text: text.to_owned(),
-        };
-        let (container, reply) = match reply_to {
+        let content = crate::engine::link::content_of(text.to_owned(), out.link);
+        let (mut container, reply) = match reply_to {
             Some(item) => {
                 let q = self
                     .item(ChatRef::Direct(id), item)?
@@ -46,12 +45,24 @@ impl<A: AgentPort> Engine<A> {
             }
             None => (MsgContainer::simple(content), None),
         };
+        let timed = self.outgoing_timed(ChatRef::Direct(id))?;
+        let timed = timed.map(|t| Timed {
+            delete_at: t.delete_at.filter(|_| !out.live),
+            ..t
+        });
+        container.ttl = timed.map(|t| t.ttl);
+        container.forward = out.forward.then_some(true);
+        container.live = out.live.then_some(true);
         let msg = ChatMessage::new(ChatEvent::MsgNew(container))?;
         let body = encode_sized(&msg, PQ)?;
         let agent_id = self.agent.send(&mut self.store, &f.conn, f.pq, body)?;
         let now = self.clock.wall_ms();
         let mut item = ItemRecord::new(MessageAuthor::Me, MessageBody::Text(text.to_owned()), now);
         item.reply = reply;
+        item.timed = timed;
+        item.link = out.link.cloned();
+        item.forwarded = out.forward;
+        item.live = out.live;
         item.shared_id = msg.msg_id.map(|m| m.0);
         let m = self.add_item(ChatRef::Direct(id), &item)?;
         self.put_index(&keys::sent(&f.conn, agent_id), m.id)?;

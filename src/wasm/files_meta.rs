@@ -11,16 +11,16 @@ impl Message {
     /// The attached file as `{name, size, kind}`, or `null` for a message without one.
     #[wasm_bindgen(
         getter,
-        unchecked_return_type = "{ name: string, size: number, kind: \"file\" | \"image\" | \"video\" } | null"
+        unchecked_return_type = "{ name: string, size: number, kind: \"file\" | \"image\" | \"video\" | \"voice\" } | null"
     )]
     pub fn file(&self) -> JsValue {
         let (kind, media) = match &self.info().body {
             MessageBody::File(m) => ("file", m),
             MessageBody::Image(m) => ("image", m),
             MessageBody::Video(m) => ("video", m),
+            MessageBody::Voice(m) => ("voice", m),
             MessageBody::Text(_)
             | MessageBody::Notice(_)
-            | MessageBody::Voice { .. }
             | MessageBody::Gif(_)
             | MessageBody::Call(_)
             | MessageBody::Stream(_)

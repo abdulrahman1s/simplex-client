@@ -2,7 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::chat::preferences::{FeatureAllowed, Preferences};
+use super::ChatLocal;
+use crate::chat::preferences::Preferences;
 use crate::chat::version::VersionRange;
 use crate::engine::agent_port::ConnId;
 
@@ -44,64 +45,23 @@ pub struct FriendRecord {
     /// Their chat version range, from the last message that carried one (`peerChatVRange`).
     #[serde(default)]
     pub chat_v: Option<VersionRange>,
+    /// The user's preferences for this friend over their own (`Contact.userPreferences`): what
+    /// `SetPrefs` set, and the timer, set or taken from their profile (`engine::timed`).
+    #[serde(default)]
+    pub my_prefs: Option<Preferences>,
+    #[serde(default)]
+    pub local: ChatLocal,
+    /// The address their profile shows, if any (`Profile.contactLink`).
+    #[serde(default)]
+    pub address: Option<String>,
+    /// The random name the user goes by with them, when connected incognito; they never see
+    /// the user's own profile.
+    #[serde(default)]
+    pub incognito: Option<String>,
 }
 
 const fn pq_on() -> bool {
     true
-}
-
-/// The chat features whose preferences the engine enforces or shows (Types/Preferences.hs `ChatFeature`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Feature {
-    FullDelete,
-    Reactions,
-    Voice,
-    Files,
-    Calls,
-}
-
-/// `PrefEnabled`: whether a feature is on for the user's side and for the friend's.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct PrefEnabled {
-    pub for_user: bool,
-    pub for_contact: bool,
-}
-
-impl Feature {
-    /// `defaultChatPrefs`, which is also what the user sends: nothing is set per contact.
-    const fn default_allow(self) -> FeatureAllowed {
-        match self {
-            Self::FullDelete => FeatureAllowed::No,
-            Self::Reactions | Self::Voice | Self::Calls => FeatureAllowed::Yes,
-            Self::Files => FeatureAllowed::Always,
-        }
-    }
-
-    fn of(self, p: &Preferences) -> Option<FeatureAllowed> {
-        let pref = match self {
-            Self::FullDelete => &p.full_delete,
-            Self::Reactions => &p.reactions,
-            Self::Voice => &p.voice,
-            Self::Files => &p.files,
-            Self::Calls => &p.calls,
-        };
-        pref.as_ref().map(|a| a.allow)
-    }
-}
-
-/// `prefEnabled True user contact` (Types/Preferences.hs).
-fn pref_enabled(user: FeatureAllowed, contact: FeatureAllowed) -> PrefEnabled {
-    use FeatureAllowed::{Always, No};
-    let (for_user, for_contact) = match (user, contact) {
-        (Always, No) => (false, true),
-        (No, Always) => (true, false),
-        (_, No) | (No, _) => (false, false),
-        _ => (true, true),
-    };
-    PrefEnabled {
-        for_user,
-        for_contact,
-    }
 }
 
 impl FriendRecord {
@@ -126,18 +86,11 @@ impl FriendRecord {
             verified: None,
             pq: true,
             chat_v: None,
+            my_prefs: None,
+            local: ChatLocal::default(),
+            address: None,
+            incognito: None,
         }
-    }
-
-    /// `featureAllowed`'s input: the user's preference against theirs (a missing one is the default).
-    #[must_use]
-    pub fn enabled(&self, f: Feature) -> PrefEnabled {
-        let theirs = self
-            .prefs
-            .as_ref()
-            .and_then(|p| f.of(p))
-            .unwrap_or(f.default_allow());
-        pref_enabled(f.default_allow(), theirs)
     }
 
     /// Whether messages can be sent to them.

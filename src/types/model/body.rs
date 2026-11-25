@@ -12,7 +12,8 @@ use super::conn_event::{DecryptError, IntegrityError, SwitchPhase, SyncStatus};
 pub enum MessageBody {
     Text(String),
     Notice(ChatNotice),
-    Voice { secs: u32, wave: Vec<u8> },
+    /// A voice message (`MCVoice`): its file, and its length in `duration`.
+    Voice(Media),
     Gif(String),
     Image(Media),
     Video(Media),
@@ -34,6 +35,12 @@ pub enum ChatNotice {
         who: String,
     },
     MemberLeft(String),
+    /// An admin changed a member's role, or the user's (`RGEMemberRole`, `RGEUserRole`).
+    MemberRole {
+        by: Option<String>,
+        who: String,
+        role: super::MemberRole,
+    },
     /// A moderator blocked or unblocked a member for everyone (`RGEMemberBlocked`).
     MemberBlocked {
         by: Option<String>,
@@ -48,6 +55,9 @@ pub enum ChatNotice {
     YouRemoved(String),
     GroupDeleted,
     GroupNameChanged(String),
+    /// The chat's disappearing-messages timer changed (`CISndChatFeature`/`CIRcvChatFeature`
+    /// `CFTimedMessages`): seconds, or `None` when messages no longer disappear.
+    Timer(Option<i64>),
     NameChanged {
         from: String,
         to: String,

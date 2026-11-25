@@ -11,6 +11,15 @@ use crate::engine::records::{ConnKind, ConnRecord, MemberStatus};
 impl<A: AgentPort> Engine<A> {
     pub(crate) fn join_group(&mut self, group: i64) -> Result<()> {
         let mut g = self.group(group)?;
+        // Upstream joins with the incognito profile the inviting friend knows; this engine has
+        // none for groups, so it does not join rather than show the user's own.
+        let from = g.invited_by_friend.and_then(|f| self.state.friends.get(&f));
+        if from.is_some_and(|f| f.incognito.is_some()) {
+            return Err(fail(
+                Code::NotAllowed,
+                "a group from a friend met incognito is not joined here",
+            ));
+        }
         let (Some(inv), Some(host), MemberStatus::Invited) = (&g.invitation, g.host, g.status)
         else {
             return Err(fail(Code::RequestFailed, "no invitation to join"));

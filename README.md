@@ -14,7 +14,14 @@ small, plain API.
 - SMP queues over TLS, with the agent's double ratchet and the post-quantum KEM
 - Private message routing: messages reach other people's relays through one of yours, so
   their relay never sees your IP address
-- Chat messages, contacts, groups, replies, edits, deletes and reactions
+- Chat messages, contacts, groups, replies, edits, deletes and reactions, link previews,
+  forwarding, live messages
+- Disappearing messages, for a friend or a group
+- Chat preferences (full delete, reactions, voice, files, calls), your own and per friend
+- Group admin: roles, blocking for everyone, removing members, moderation, the group's name,
+  description and preferences, and deleting a group
+- Local housekeeping: delete for me, clear a chat, read up to a message, unread marks,
+  aliases, and deleting old messages after a TTL
 - XFTP file upload and download, with file crypto and descriptions, natively and in the
   browser, Node.js and Bun
 - Calls (signalling and frame crypto)
@@ -268,10 +275,11 @@ changes that, up to the 1 GiB every client keeps to).
 
 ```js
 const photo = await fs.promises.readFile("cat.jpg"); // or new Uint8Array(await file.arrayBuffer())
-await friend.sendFile(photo, "cat.jpg");
+await friend.sendFile(photo, "cat.jpg", "image", { caption: "Mine", preview: smallJpeg });
+await friend.sendFile(recording, "note.m4a", "voice", { duration: 12 }); // seconds
 
 client.on("message", async (message) => {
-  if (!message.file) return; // { name, size, kind } or null
+  if (!message.file) return; // { name, size, kind } or null; kind "voice" for a voice message
   const { name, bytes } = await message.download();
   console.log(`got ${name}: ${bytes.length} bytes`);
 });
@@ -280,6 +288,124 @@ client.on("fileProgress", ({ percent, sending }) => {
   console.log(`${sending ? "sending" : "receiving"}: ${percent}%`);
 });
 ```
+
+### Disappearing messages
+
+A timer makes new messages in a chat go after that many seconds: the user's own from when they
+are sent, received ones from when the chat is marked read. Each one goes with its file, and
+timers last across restarts.
+
+```js
+await friend.setTimer(86400); // a day; the friend is offered it in your profile
+await friend.setTimer(null);  // off, for both of you
+await group.setTimer(3600);   // the group's timer: owners only
+
+client.on("message", (message) => {
+  if (message.ttl) console.log(`lasts ${message.ttl}s, goes at ${message.expiresAt}`);
+});
+```
+
+A friend's timer comes with their profile and becomes yours for them, as in the official
+apps. `friend.timer` and `group.timer` say which timer applies. A received message counts down
+only once it is read, so a bot that never calls `markRead()` keeps them; call it after
+handling a message if they should go.
+
+### Chat preferences
+
+Each friend gets your preferences in your profile, and the features on between you follow
+both sides' (Types/Preferences.hs `prefEnabled`). Set your own, or override them for one
+friend; each feature is `"always"`, `"yes"` or `"no"`, and one left out falls back to your own,
+then to the default.
+
+```js
+await client.setPrefs({ voice: "no", full_delete: "yes" }); // to each friend it changes
+await friend.setPrefs({ voice: "always" });                // just for this friend
+console.log(friend.features.voice); // { for_user: false, for_contact: true }
+```
+
+`"always"` keeps a feature on for your friend's messages even when they said no to it for
+yours. A friend's reaction, voice message, call or full delete that you don't allow is
+refused, as the official apps refuse it.
+
+### Group admin
+
+Admins and owners manage a group the way the official apps do, with the same role checks
+(`assertUserGroupRole`): changing a role needs admin and at least both roles, blocking for
+everyone needs moderator, removing needs admin, and the group's profile and preferences need
+the owner.
+
+```js
+const [member] = (await group.members()).filter((m) => m.name === "bob");
+await member.setRole("moderator");  // "observer" | "author" | "member" | "moderator" | "admin" | "owner"
+await member.blockForAll(true);     // hides their messages for every member
+await member.remove(true);          // true: what they wrote shows deleted for everyone
+await member.contact("hi!");        // a direct chat, where the group allows direct messages
+await message.moderate();           // a member's message, deleted for everyone
+await group.setProfile("crew", "Welcome!");
+await group.setPrefs({ voice: { on: false }, files: { on: true, role: "moderator" } });
+await group.delete();               // an owner deletes it for every member too
+```
+
+### Incognito
+
+A friend made incognito knows you only by a random name (an adjective and a noun, from the
+official apps' lists), with the default preferences and no picture; your profile changes never
+reach them.
+
+```js
+const link = await client.createInvite({ incognito: true });
+await client.connect(theirLink, { incognito: true });
+client.on("request", (r) => r.acceptIncognito());
+console.log(friend.raw.incognito); // the name they know you by
+```
+
+Groups always get your own profile; joining one incognito is not supported yet.
+
+### Your address
+
+```js
+await client.setAddressSettings({ autoAccept: true, autoReply: "Hi! I'm a bot." });
+await client.shareAddress(true); // shows it in the profile every friend gets
+console.log(friend.raw.address); // a friend's shared address, if they show one
+```
+
+### Link previews
+
+The page makes a link's preview (the client fetches nothing) and sends it with the text:
+
+```js
+await friend.sendLink("see https://simplex.chat", {
+  uri: "https://simplex.chat", title: "SimpleX", description: "Private messaging",
+  image: smallJpeg, // optional
+});
+client.on("message", (m) => m.link && console.log(m.link.title));
+
+await carol.forward(message); // as yours, marked forwarded; message.forwarded on arrival
+
+// A live message: your friend sees it as you type, then you finish it.
+await friend.sendLive("Hel");
+client.once("message").then((m) => m.updateLive("Hello!", true)); // m.live until done
+```
+
+A forwarded file goes again only when it is here (sent from here, or downloaded and still in
+memory in wasm); otherwise its caption goes as text, as the official apps do.
+
+### Your own housekeeping
+
+These stay on your device and nobody is told:
+
+```js
+await message.deleteForMe();        // with its file
+await message.markReadUpTo();       // later messages stay unread
+await friend.clear();               // every message, with their files
+await friend.setAlias("Mum");       // your own name for them
+await group.setUnreadMark(true);
+await client.setMessageTtl(7 * 86400); // delete messages older than a week, every chat
+await friend.setMessageTtl(0);         // except this one; null follows your own again
+```
+
+Old messages are looked for every half hour, as the official apps do, and a group's messages
+of the last 12 hours stay whatever time they say they were sent.
 
 ## Limits
 

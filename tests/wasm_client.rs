@@ -2,6 +2,8 @@
 #![cfg(all(target_arch = "wasm32", feature = "wasm"))]
 #![allow(clippy::unwrap_used, reason = "tests")]
 
+#[path = "wasm_client/admin.rs"]
+mod admin;
 #[path = "wasm_client/files.rs"]
 mod files;
 #[path = "wasm_client/limits.rs"]
@@ -10,6 +12,8 @@ mod limits;
 mod objects;
 #[path = "wasm_client/support.rs"]
 mod support;
+#[path = "wasm_client/timer.rs"]
+mod timer;
 
 use std::rc::Rc;
 
@@ -68,7 +72,10 @@ async fn a_refused_tunnel_reply_gives_a_clean_offline_event() {
     fake_tunnel("refuse");
     let client = start(json!({ "timeout": 300 })).unwrap();
     let offline = Heard::on(&client, "offline");
-    let answer = settle(client.create_invite().into()).await.err().unwrap();
+    let answer = settle(client.create_invite(JsValue::UNDEFINED).into())
+        .await
+        .err()
+        .unwrap();
     assert_eq!(from_js(&answer)["code"], "timeout");
     assert_eq!(offline.all(), [Value::Null]);
 
@@ -98,11 +105,11 @@ async fn a_handler_may_call_the_client_and_close_rejects_waiting_calls() {
     assert_eq!(from_js(&client.user())["name"], "Bob");
     assert!(raw.all().iter().any(|e| e["t"] == "profile"));
 
-    let invite = client.create_invite();
+    let invite = client.create_invite(JsValue::UNDEFINED);
     client.close();
     let answer = settle(invite.into()).await.err().unwrap();
     assert_eq!(from_js(&answer)["code"], "closed");
-    let late = settle(client.connect("simplex:/x").into())
+    let late = settle(client.connect("simplex:/x", JsValue::UNDEFINED).into())
         .await
         .err()
         .unwrap();

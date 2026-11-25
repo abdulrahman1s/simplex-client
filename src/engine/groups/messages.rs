@@ -50,10 +50,16 @@ impl<A: AgentPort> Engine<A> {
             content,
             mentions,
             scope,
+            live,
             ..
         } = e
         {
-            return self.on_group_msg_update(ctx, &msg_id.0, content, mentions, scope.as_ref(), at);
+            let update = super::msg_change::Update {
+                content,
+                mentions,
+                live: live == Some(true),
+            };
+            return self.on_group_msg_update(ctx, &msg_id.0, update, scope.as_ref(), at);
         }
         if let ChatEvent::MsgDel {
             msg_id,

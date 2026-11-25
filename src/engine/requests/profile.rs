@@ -7,7 +7,7 @@ use crate::chat::{ChatEvent, ChatMessage, encode_chat_message};
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
-use crate::engine::profile::{MAX_PICTURE_URI, sent_profile};
+use crate::engine::profile::{MAX_PICTURE_URI, sent_profile, sent_profile_to};
 use crate::engine::records::UserRecord;
 use crate::limits::{MAX_BIO_BYTES, is_valid_name, json_len};
 
@@ -37,13 +37,15 @@ impl<A: AgentPort> Engine<A> {
             paper: p.paper,
             status: p.status,
             picture: self.state.user.picture.clone(),
+            prefs: self.state.user.prefs.clone(),
+            contact_link: self.state.user.contact_link.clone(),
         };
         self.update_profile(user)
     }
 
     /// Commands.hs `updateProfile_`: checked and encoded before anything is kept, nothing sent
     /// when the profile as friends see it did not change.
-    pub(super) fn update_profile(&mut self, user: UserRecord) -> Result<()> {
+    pub(crate) fn update_profile(&mut self, user: UserRecord) -> Result<()> {
         let new = sent_profile(&user);
         if let Some(image) = &new.image
             && image.0.len() > MAX_PICTURE_URI
@@ -54,42 +56,42 @@ impl<A: AgentPort> Engine<A> {
             ));
         }
         let changed = new != sent_profile(&self.state.user);
-        let body = changed
-            .then(|| {
-                let msg = ChatMessage::new(ChatEvent::Info {
-                    profile: new,
-                    member_key: None,
-                })?;
-                encode_chat_message(&msg, true)
-            })
-            .transpose()?;
+        if changed {
+            // Each friend's copy differs only in their overrides, so one that fits says all fit.
+            let msg = ChatMessage::new(ChatEvent::Info {
+                profile: new,
+                member_key: None,
+            })?;
+            encode_chat_message(&msg, true)?;
+        }
+        // Each friend whose profile this changes is sent theirs (`updateProfile_`).
+        let told: Vec<i64> = (self.state.friends.values())
+            .filter(|f| f.reachable())
+            .filter(|f| sent_profile_to(&user, f) != sent_profile_to(&self.state.user, f))
+            .map(|f| f.id)
+            .collect();
         self.save_user(user)?;
-        self.emit(Event::Profile(self.state.user.to_wire()));
-        if let Some(body) = body {
-            self.send_to_friends(&body);
+        self.emit(Event::Profile(self.profile_wire()));
+        for friend in told {
+            // One friend's relay failing is no reason to keep the profile from the rest.
+            if let Err(e) = self.send_profile(friend) {
+                self.log
+                    .line(format_args!("profile not sent: {}", e.detail));
+            }
         }
         Ok(())
     }
 
-    fn send_to_friends(&mut self, body: &[u8]) {
-        let conns: Vec<_> = self
-            .state
-            .friends
-            .values()
-            .filter(|f| f.reachable())
-            .map(|f| f.conn)
-            .collect();
-        for conn in conns {
-            // One friend's relay failing is no reason to keep the profile from the rest.
-            if let Err(e) = self.agent.send(
-                &mut self.store,
-                &conn,
-                self.state.pq_of(&conn),
-                body.to_vec(),
-            ) {
-                self.log
-                    .line(format_args!("profile not sent: {}", e.detail()));
-            }
-        }
+    /// `x.info` with the profile as this friend sees it, their timer included
+    /// (Types.hs `userProfileDirect`).
+    pub(crate) fn send_profile(&mut self, friend: i64) -> Result<()> {
+        let f = self.friend(friend)?;
+        let msg = ChatMessage::new(ChatEvent::Info {
+            profile: sent_profile_to(&self.state.user, &f),
+            member_key: None,
+        })?;
+        let body = encode_chat_message(&msg, true)?;
+        self.agent.send(&mut self.store, &f.conn, f.pq, body)?;
+        Ok(())
     }
 }

@@ -105,4 +105,16 @@ impl Group {
     pub fn mark_read(&self) -> js_sys::Promise {
         self.shared.queue(Request::MarkRead(self.chat()))
     }
+
+    /// Seconds new messages last, when disappearing messages are on; otherwise `undefined`.
+    #[wasm_bindgen(getter)]
+    pub fn timer(&self) -> Option<f64> {
+        self.info.timer.map(num)
+    }
+
+    /// Disappearing messages for the group (owners only): new messages last `seconds`, or `null` turns it off.
+    #[wasm_bindgen(js_name = setTimer, unchecked_return_type = "Promise<void>")]
+    pub fn set_timer(&self, seconds: Option<f64>) -> js_sys::Promise {
+        super::timer::set_timer(&self.shared, self.chat(), seconds)
+    }
 }

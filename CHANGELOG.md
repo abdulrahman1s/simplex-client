@@ -17,6 +17,130 @@ All notable changes to this project are documented here. The format follows
   `changes_do_not_follow`), and deltas of an older snapshot are skipped. **Breaking:**
   `StoreError` has this new variant, so an exhaustive `match` on it needs an arm. The README and the
   Node bot example keep a log of changes instead of saving the whole store on every change.
+- Disappearing messages, as SimpleX Chat 7.1.4 has them. `Request::SetTimer { chat, ttl }`
+  (`friend.set_timer`, `group.set_timer`; JS `friend.setTimer(seconds)`,
+  `group.setTimer(seconds)`, `null` for off) offers a friend a timer in the profile they are
+  sent, or sets a group's as an owner. Each message then carries its `ttl` and is deleted with
+  its file: the user's own counts from sending, a received one from when `MarkRead` reads it.
+  A friend's timer is taken over from their profile without an answer, as the official apps
+  do, and the conversation gets a `ChatNotice::Timer` whenever the timer that applies changes.
+  The timers last across restarts: what came due while the client was off goes at the next
+  start. `Friend.timer` and `ChatGroup.timer` give the timer that applies, and
+  `ChatMessage.timed` (JS `message.ttl`, `message.expiresAt`) a message's own. **Breaking:**
+  `Request`, `RequestKind` and `ChatNotice` have new variants and `ChatMessage`, `Friend` and
+  `ChatGroup` new fields.
+
+- Chat preferences, the user's own and per friend, as SimpleX Chat 7.1.4 has them.
+  `Request::SetPrefs { friend, prefs }` (`client.set_prefs`, `friend.set_prefs`; JS
+  `client.setPrefs({ voice: "no" })`, `friend.setPrefs(...)`) sets full delete, reactions,
+  voice, files, calls and the "allow" of disappearing messages to `always`, `yes` or `no`,
+  for every friend or over the user's own for one. Each friend whose profile it changes is
+  sent the new one (`APIUpdateProfile`, `APISetContactPrefs`). What is on between the user and
+  a friend follows both sides (`prefEnabled`; only disappearing messages are symmetric), and
+  shows in `Friend.features` (JS `friend.features`); `Friend.prefs` and `ChatProfile.prefs` hold
+  what the user set. A voice message from a friend the user does not allow is no longer kept.
+  **Breaking:** `Request` and `RequestKind` have new variants, `Friend` and `ChatProfile` new
+  fields, and `UserRecord` is no longer `Eq`.
+
+- Group admin, as SimpleX Chat 7.1.4 has it: `Request::SetMemberRole`, `BlockMemberForAll`,
+  `RemoveMember` (with or without the member's messages), `DeleteGroup`, `SetGroupProfile`
+  (name and description), `SetGroupPrefs` and `Moderate`, with the senders' role checks from
+  Commands.hs (`APIMembersRole`, `APIBlockMembersForAll`, `APIRemoveMembers`, `APIDeleteChat`,
+  `APIUpdateGroupProfile`, `APIDeleteMemberChatItem`). Rust: `member.set_role`,
+  `block_for_all`, `remove`, `group.delete`, `set_profile`, `set_prefs`, `message.moderate`;
+  JS the same in camelCase. A role change goes to every current member and the member too; a
+  block to the others; a removal to all before the member's connection goes once delivered; an
+  invited member's new role goes in their invitation again. Deleting a group removes
+  everything kept about it. `GroupMember.role`, `blocked_for_all`, `ChatGroup.role` and
+  `description` show the result, and a role change made by anyone now leaves a
+  `ChatNotice::MemberRole`. A live test runs all of it against two official CLIs.
+  **Breaking:** `Request`, `RequestKind` and `ChatNotice` have new variants, `GroupMember` and
+  `ChatGroup` new fields.
+
+- What the user keeps for themselves, as SimpleX Chat 7.1.4 has it: `Request::DeleteForMe`
+  (`APIDeleteChatItem` internal), `ClearChat` (`APIClearChat`), `MarkReadUpTo`
+  (`APIChatItemsRead`), `SetUnreadMark` (`APIChatUnread`), `SetAlias` (`APISetContactAlias`,
+  `APISetGroupAlias`) and `SetMessageTtl` (`APISetChatItemTTL`, `APISetChatTTL`), which
+  deletes messages older than a TTL every half hour, for every chat or one, keeping a group's
+  last 12 hours. Rust: `message.delete_for_me`, `mark_read_up_to`, `friend.clear`,
+  `set_unread_mark`, `set_alias`, `set_message_ttl` (and on `Group`), `client.set_message_ttl`;
+  JS the same in camelCase. `Friend.alias`, `item_ttl`, `ChatGroup.alias`, `item_ttl`,
+  `ChatPreview.marked_unread` and `ChatProfile.item_ttl` show them, and `Event::Cleared` says a
+  chat was cleared. **Breaking:** `Request`, `RequestKind` and `Event` have new variants, and
+  `Friend`, `ChatGroup`, `ChatPreview` and `ChatProfile` new fields.
+
+- Voice messages: `FileKind::Voice` (JS `"voice"`) sends `MCVoice` with its length, refused
+  where the friend or the group does not allow the user's voice messages (Commands.hs
+  `featureAllowed SCFVoice forUser`, Internal.hs `prohibitedGroupContent`). Received ones show
+  as `MessageBody::Voice(Media)` with their `duration` instead of a plain file. JS `sendFile`
+  takes `{ caption, duration, preview }` as a fourth argument, which it could not send before.
+  **Breaking:** `MessageBody::Voice` holds a `Media` instead of `secs` and `wave`, and
+  `FileKind` has a new variant.
+
+- Link previews: `Request::SendLink { chat, text, preview, reply_to }` (`client.send_link`;
+  JS `friend.sendLink(text, { uri, title, description, image })`) sends `MCLink`, and a
+  received link's preview is kept in `ChatMessage.link` (JS `message.link`) instead of being
+  dropped; group history keeps it too. **Breaking:** `Request` has a new variant and
+  `ChatMessage` a new field.
+
+- Forwarding: `Request::Forward { from, item, to }` (`friend.forward(&message)`,
+  `group.forward`; JS the same) sends a message to another chat as the user's own with
+  `forward: true` (`APIForwardChatItems`, `mcForward`): text and link previews as they are, a
+  file again when it is here, else its caption. A received forward shows in
+  `ChatMessage.forwarded` (JS `message.forwarded`). **Breaking:** `Request` has a new variant,
+  `ChatMessage` a new field, and the engine's `send_file` takes a `FileMeta`.
+
+- Live messages, written as the other side watches: `Request::SendLive` and `UpdateLive { done }`
+  (`friend.send_live`, `message.update_live`; JS `sendLive`, `updateLive`) send `live: true`
+  until done (`APISendMessages` live, `APIUpdateChatItem`). Received ones show in
+  `ChatMessage.live`, and their updates are not marked edited (`edited = itemLive /= Just
+  True`). A disappearing live message counts from when it is done. An edit now carries the
+  message's timer, as upstream's does. **Breaking:** `Request` has new variants and
+  `ChatMessage` a new field.
+
+- Direct chats with group members: `Request::ContactMember { group, member, text }`
+  (`member.contact`; JS the same) makes a one-time invitation and sends it with `text` over the
+  member's group connection in `x.grp.direct.inv` (`APICreateMemberContact`,
+  `APISendMemberContactInvitation`), where the group allows the user direct messages. The member
+  shows as a friend, connecting, until they accept. **Breaking:** `Request` has a new variant.
+
+- "Fix connection": `Request::SyncRatchet { chat, member, force }` (`friend.fix_connection`,
+  `member.fix_connection`; JS `fixConnection`) starts a ratchet re-sync with a friend or a group
+  member, with `force` even while the connection works (`APISyncContactRatchet`,
+  `APISyncGroupMemberRatchet`). The engine already started one by itself when a connection
+  needed it. The agent port's `synchronize_ratchet` takes `force`. **Breaking:** `Request` has a
+  new variant and `AgentPort::synchronize_ratchet` a new argument.
+
+- Address settings: `Request::SetAddressSettings { auto_accept, auto_reply }`
+  (`client.set_address_settings`; JS `setAddressSettings({ autoAccept, autoReply })`) accepts
+  requests to the address as they come and sends the auto-reply to each friend made through it
+  once connected, however the request was accepted (`APISetAddressSettings`, Subscriber.hs
+  `autoAccept`, `sendAutoReply`).
+  `Request::ShareAddress(on)` (JS `shareAddress`) shows the address in the profile every
+  friend gets (`APISetProfileAddress`), and deleting the address takes it out. A friend's shown
+  address is in `Friend.address`; the settings in `ChatProfile`. **Breaking:** `Request` has
+  new variants, `Friend` and `ChatProfile` new fields, and `UserRecord` and `AddressRecord` new
+  fields.
+
+- Incognito: `Request::CreateIncognitoInvite`, `ConnectIncognito(link)` and
+  `AcceptIncognito(request)` (`client.create_incognito_invite`, `connect_incognito`,
+  `request.accept_incognito`; JS `createInvite({ incognito: true })`,
+  `connect(link, { incognito: true })`, `request.acceptIncognito()`) make a friend who knows
+  the user only by a random name from upstream's word lists (`generateRandomProfile`), with
+  the default preferences and no picture, in the invitation's link data, the handshake and
+  every later profile. `Friend.incognito` holds the name. A retried invitation stays incognito.
+  Joining a group through an incognito friend, inviting one into a group, and connecting to a
+  group link incognito are refused, as none of them could keep the user's profile out
+  (`CEContactIncognitoCantInvite`); an incognito friend is judged against the default
+  preferences, as they were sent (`mergeUserChatPrefs'`). **Breaking:** `Request` has new variants and
+  `Friend` a new field; JS `createInvite` and `connect` take an optional options argument.
+
+### Fixed
+
+- The profile sent to friends said disappearing messages were allowed, so an official app
+  offered its user a timer, but this client kept their messages for good. The timer is now
+  kept. A profile change now goes to each friend with their own timer in it, so renaming no
+  longer turns a friend's timer off.
 
 ### Changed
 

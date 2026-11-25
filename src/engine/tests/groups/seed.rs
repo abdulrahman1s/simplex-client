@@ -61,6 +61,7 @@ impl T {
             unread: 0,
             link: None,
             link_conn: None,
+            local: crate::engine::records::ChatLocal::default(),
         };
         for (n, member) in members.iter().enumerate() {
             let host = !owner && n == 0;

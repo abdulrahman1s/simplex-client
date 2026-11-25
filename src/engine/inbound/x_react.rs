@@ -1,13 +1,12 @@
 //! A friend's reaction: one of the set, on an item with content, within their three (Subscriber.hs `directMsgReaction`, `reactionAllowed`).
 
 use crate::types::Event;
-use crate::types::model::{ChatRef, Reaction};
+use crate::types::model::{ChatFeature, ChatRef, Reaction};
 
 use crate::chat::reaction::MsgReaction;
 use crate::engine::agent_port::AgentPort;
 use crate::engine::error::Result;
 use crate::engine::machine::Engine;
-use crate::engine::records::friend::Feature;
 use crate::engine::requests::has_content;
 use crate::limits::MAX_REACTIONS;
 
@@ -60,7 +59,10 @@ impl<A: AgentPort> Engine<A> {
             MsgReaction::Emoji(c) => display(*c),
             MsgReaction::Unknown(_) => return Ok(()),
         };
-        if !self.friend(friend)?.enabled(Feature::Reactions).for_contact {
+        if !self
+            .enabled(&self.friend(friend)?, ChatFeature::Reactions)
+            .for_contact
+        {
             return Ok(());
         }
         let Some((id, mut item)) = self.item_by_shared(ChatRef::Direct(friend), None, shared)?

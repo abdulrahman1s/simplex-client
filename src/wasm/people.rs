@@ -10,9 +10,18 @@ use crate::types::Request;
 #[wasm_bindgen]
 impl Client {
     /// A one-time invitation link for one person.
+    /// `{ incognito: true }`: whoever joins knows the user by a random name only.
     #[wasm_bindgen(js_name = createInvite, unchecked_return_type = "Promise<string>")]
-    pub fn create_invite(&self) -> js_sys::Promise {
-        self.shared.ask(Want::Invite, Request::CreateInvite)
+    pub fn create_invite(
+        &self,
+        #[wasm_bindgen(unchecked_param_type = "{ incognito?: boolean }")] options: JsValue,
+    ) -> js_sys::Promise {
+        let request = if incognito(&options) {
+            Request::CreateIncognitoInvite
+        } else {
+            Request::CreateInvite
+        };
+        self.shared.ask(Want::Invite, request)
     }
 
     /// The user's long-lived address, made on first use.
@@ -28,8 +37,59 @@ impl Client {
 
     /// Connects through an invitation, an address or a group link.
     #[wasm_bindgen(unchecked_return_type = "Promise<void>")]
-    pub fn connect(&self, link: &str) -> js_sys::Promise {
-        self.shared.queue(Request::Connect(link.trim().to_owned()))
+    pub fn connect(
+        &self,
+        link: &str,
+        #[wasm_bindgen(unchecked_param_type = "{ incognito?: boolean }")] options: JsValue,
+    ) -> js_sys::Promise {
+        let link = link.trim().to_owned();
+        if incognito(&options) {
+            return self.shared.queue(Request::ConnectIncognito(link));
+        }
+        self.shared.queue(Request::Connect(link))
+    }
+
+    /// The user's chat preferences, sent to every friend they change: `{ voice: "no", … }`.
+    #[wasm_bindgen(js_name = setPrefs, unchecked_return_type = "Promise<void>")]
+    pub fn set_prefs(&self, prefs: JsValue) -> js_sys::Promise {
+        super::objects::timer::set_prefs(&self.shared, None, &prefs)
+    }
+
+    /// Messages older than `seconds` are deleted here in every chat; `null` or `0` keeps them.
+    #[wasm_bindgen(js_name = setMessageTtl, unchecked_return_type = "Promise<void>")]
+    pub fn set_message_ttl(&self, seconds: Option<f64>) -> js_sys::Promise {
+        super::objects::local::set_ttl(&self.shared, None, seconds)
+    }
+
+    /// `{ autoAccept, autoReply }`: requests to the address are accepted as they come, and
+    /// `autoReply` sent to each new friend once connected.
+    #[wasm_bindgen(js_name = setAddressSettings, unchecked_return_type = "Promise<void>")]
+    pub fn set_address_settings(
+        &self,
+        #[wasm_bindgen(
+            unchecked_param_type = "{ autoAccept?: boolean, autoReply?: string | null }"
+        )]
+        settings: JsValue,
+    ) -> js_sys::Promise {
+        let json = super::convert::from_js(&settings);
+        let auto_accept = json
+            .get("autoAccept")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+        let auto_reply = json
+            .get("autoReply")
+            .and_then(|v| v.as_str())
+            .map(str::to_owned);
+        self.shared.queue(Request::SetAddressSettings {
+            auto_accept,
+            auto_reply,
+        })
+    }
+
+    /// Shows the address in the profile every friend gets, or takes it out.
+    #[wasm_bindgen(js_name = shareAddress, unchecked_return_type = "Promise<void>")]
+    pub fn share_address(&self, on: bool) -> js_sys::Promise {
+        self.shared.queue(Request::ShareAddress(on))
     }
 
     #[wasm_bindgen(js_name = setName, unchecked_return_type = "Promise<void>")]
@@ -90,4 +150,10 @@ impl Client {
         }
         map
     }
+}
+
+/// `{ incognito: true }` in a call's options.
+fn incognito(options: &JsValue) -> bool {
+    let json = super::convert::from_js(options);
+    json.get("incognito").and_then(serde_json::Value::as_bool) == Some(true)
 }

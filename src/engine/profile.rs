@@ -4,19 +4,48 @@ use crate::types::model::Picture;
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
 
-use super::records::UserRecord;
+use super::prefs::merge::{full, sent_to};
+use super::records::{FriendRecord, UserRecord};
 use crate::chat::compress::compress_to_limit;
 use crate::chat::image::ImageData;
 use crate::chat::limits::MAX_CONN_INFO_LENGTH_PQ;
 use crate::chat::profile::Profile;
 use crate::chat::{ChatEvent, ChatMessage, Result, parse_chat_messages};
 
-/// The user's profile as sent: the full default preferences, the line about them, the picture.
+/// The user's profile as sent: their preferences in full, the line about them, the picture.
 #[must_use]
 pub fn sent_profile(user: &UserRecord) -> Profile {
     let mut p = Profile::new(&user.name, "");
+    p.preferences = Some(full(user.prefs.as_ref()));
+    p.contact_link.clone_from(&user.contact_link);
     p.short_descr = Some(user.about.clone()).filter(|a| !a.is_empty());
     p.image = user.picture.as_ref().map(data_uri);
+    p
+}
+
+/// Who the user is to a friend met incognito: the random name, the default preferences, no
+/// picture and no line about them (`generateRandomProfile`).
+#[must_use]
+pub fn incognito_user(name: &str) -> UserRecord {
+    UserRecord::named(name)
+}
+
+/// The user as a friend knows them: themselves, or their incognito profile.
+#[must_use]
+pub fn user_for(user: &UserRecord, f: &FriendRecord) -> UserRecord {
+    f.incognito
+        .as_deref()
+        .map_or_else(|| user.clone(), incognito_user)
+}
+
+/// The profile as one friend is sent it: the user's timer for them in its preferences
+/// (Types.hs `userProfileDirect` with `mergePreferences`, no fallback to a user-wide timer).
+/// Incognito, the user's own preferences stay out too.
+#[must_use]
+pub fn sent_profile_to(user: &UserRecord, f: &FriendRecord) -> Profile {
+    let user = &user_for(user, f);
+    let mut p = sent_profile(user);
+    p.preferences = Some(sent_to(user.prefs.as_ref(), f.my_prefs.as_ref()));
     p
 }
 

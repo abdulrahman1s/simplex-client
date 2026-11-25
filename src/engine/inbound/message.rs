@@ -80,8 +80,11 @@ impl<A: AgentPort> Engine<A> {
         match msg.event {
             ChatEvent::MsgNew(c) => self.on_msg_new(friend, shared, c),
             ChatEvent::MsgUpdate {
-                msg_id, content, ..
-            } => self.on_msg_update(friend, &msg_id.0, &content),
+                msg_id,
+                content,
+                live,
+                ..
+            } => self.on_msg_update(friend, &msg_id.0, &content, live == Some(true)),
             ChatEvent::MsgDel { msg_id, .. } => self.on_msg_del(friend, &msg_id.0, broker_ms),
             ChatEvent::MsgReact {
                 msg_id,

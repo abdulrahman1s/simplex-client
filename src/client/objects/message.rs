@@ -1,8 +1,9 @@
 //! A message: answer it, react to it, change or delete it.
 
 use super::{Author, Chat, Member};
-use crate::client::{Client, Result};
+use crate::client::{Client, Error, Result};
 use crate::types::model::{ChatMessage, ChatRef, MessageAuthor};
+use crate::types::{ErrorCode, Request, RequestKind};
 
 #[derive(Clone, Debug)]
 pub struct Message {
@@ -31,6 +32,12 @@ impl Message {
     #[must_use]
     pub fn text(&self) -> &str {
         self.info.text()
+    }
+
+    /// A disappearing message: its ttl, and when it goes (a received one once it is read).
+    #[must_use]
+    pub const fn timed(&self) -> Option<crate::types::model::Timed> {
+        self.info.timed
     }
 
     /// Sent by the user.
@@ -90,6 +97,54 @@ impl Message {
 
     pub fn delete(&self) -> Result<()> {
         self.client.delete(&self.info)
+    }
+
+    /// Still being written by its author.
+    #[must_use]
+    pub const fn live(&self) -> bool {
+        self.info.live
+    }
+
+    /// The user's live message, its text so far; `done` finishes it.
+    pub fn update_live(&self, text: &str, done: bool) -> Result<()> {
+        self.client.update_live(&self.info, text, done)
+    }
+
+    /// Forwarded from another chat.
+    #[must_use]
+    pub const fn forwarded(&self) -> bool {
+        self.info.forwarded
+    }
+
+    /// The preview of the link the text has.
+    #[must_use]
+    pub const fn link(&self) -> Option<&crate::types::model::LinkInfo> {
+        self.info.link.as_ref()
+    }
+
+    /// Deletes this message here only, with its file.
+    pub fn delete_for_me(&self) -> Result<()> {
+        self.client.delete_for_me(&self.info)
+    }
+
+    /// Reads the conversation up to and including this message.
+    pub fn mark_read_up_to(&self) -> Result<()> {
+        self.client.mark_read_up_to(&self.info)
+    }
+
+    /// A moderator deletes a member's message in a group for everyone.
+    pub fn moderate(&self) -> Result<()> {
+        let ChatRef::Group(group) = self.info.chat else {
+            return Err(Error::Failed {
+                request: RequestKind::GroupAdmin,
+                code: ErrorCode::RequestFailed,
+                detail: "only a group's message is moderated".into(),
+            });
+        };
+        self.client.request(Request::Moderate {
+            group,
+            item: self.info.id,
+        })
     }
 
     /// Downloads the file this message offers into the client's folder.

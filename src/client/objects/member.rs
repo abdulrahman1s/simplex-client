@@ -1,8 +1,9 @@
 //! Someone in a group, as the group's list or a message names them.
 
 use super::{Friend, Group};
-use crate::client::Client;
-use crate::types::model::GroupMember;
+use crate::client::{Client, Error, Result};
+use crate::types::model::{GroupMember, MemberRole};
+use crate::types::{ErrorCode, Request, RequestKind};
 
 #[derive(Clone, Debug)]
 pub struct Member {
@@ -59,5 +60,67 @@ impl Member {
     #[must_use]
     pub const fn info(&self) -> Option<&GroupMember> {
         self.info.as_ref()
+    }
+
+    /// An admin changes the member's role; the group is told.
+    pub fn set_role(&self, role: MemberRole) -> Result<()> {
+        let member = self.listed_id()?;
+        let group = self.group;
+        self.client.request(Request::SetMemberRole {
+            group,
+            member,
+            role,
+        })
+    }
+
+    /// A moderator blocks or unblocks the member's messages for everyone.
+    pub fn block_for_all(&self, on: bool) -> Result<()> {
+        let member = self.listed_id()?;
+        let group = self.group;
+        self.client
+            .request(Request::BlockMemberForAll { group, member, on })
+    }
+
+    /// An admin removes the member; with `messages` what they wrote shows deleted for all.
+    pub fn remove(&self, messages: bool) -> Result<()> {
+        let member = self.listed_id()?;
+        let group = self.group;
+        self.client.request(Request::RemoveMember {
+            group,
+            member,
+            messages,
+        })
+    }
+
+    /// Asks the member to talk directly, with `text` if given; they show as a friend,
+    /// connecting, until they accept.
+    pub fn contact(&self, text: Option<&str>) -> Result<()> {
+        let member = self.listed_id()?;
+        let group = self.group;
+        self.client.request(Request::ContactMember {
+            group,
+            member,
+            text: text.map(str::to_owned),
+        })
+    }
+
+    /// "Fix connection": a new ratchet with the member; `force` asks even while it works.
+    pub fn fix_connection(&self, force: bool) -> Result<()> {
+        let member = Some(self.listed_id()?);
+        let chat = crate::types::model::ChatRef::Group(self.group);
+        self.client.request(Request::SyncRatchet {
+            chat,
+            member,
+            force,
+        })
+    }
+
+    /// Only a member from the group's list has a number to act on.
+    fn listed_id(&self) -> Result<i64> {
+        self.id().ok_or_else(|| Error::Failed {
+            request: RequestKind::GroupAdmin,
+            code: ErrorCode::RequestFailed,
+            detail: "a member not from the group's list".into(),
+        })
     }
 }

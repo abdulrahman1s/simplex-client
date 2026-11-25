@@ -41,6 +41,10 @@ pub(super) fn content(
             image,
             duration: i64::from(duration.unwrap_or(0)),
         },
+        FileKind::Voice => MsgContent::Voice {
+            text,
+            duration: i64::from(duration.unwrap_or(0)),
+        },
         FileKind::File => MsgContent::File { text },
     }
 }
@@ -57,9 +61,9 @@ pub(super) fn kind_of(content: &MsgContent, name: &str) -> FileKind {
         MsgContent::Image { .. } if is_gif(name) => FileKind::Gif,
         MsgContent::Image { .. } => FileKind::Image,
         MsgContent::Video { .. } => FileKind::Video,
+        MsgContent::Voice { .. } => FileKind::Voice,
         MsgContent::Text { .. }
         | MsgContent::Link { .. }
-        | MsgContent::Voice { .. }
         | MsgContent::File { .. }
         | MsgContent::Report { .. }
         | MsgContent::Chat { .. }
@@ -80,11 +84,12 @@ pub(super) fn preview_of(content: &MsgContent) -> Option<Vec<u8>> {
 
 pub(super) fn duration_of(content: &MsgContent) -> Option<u32> {
     match content {
-        MsgContent::Video { duration, .. } => u32::try_from(*duration).ok(),
+        MsgContent::Video { duration, .. } | MsgContent::Voice { duration, .. } => {
+            u32::try_from(*duration).ok()
+        }
         MsgContent::Text { .. }
         | MsgContent::Link { .. }
         | MsgContent::Image { .. }
-        | MsgContent::Voice { .. }
         | MsgContent::File { .. }
         | MsgContent::Report { .. }
         | MsgContent::Chat { .. }
@@ -102,16 +107,19 @@ pub(super) fn show(kind: FileKind, media: Media) -> MessageBody {
         (FileKind::Gif, Some(p)) if here => MessageBody::Gif(p.to_string_lossy().into_owned()),
         (FileKind::Image | FileKind::Gif, _) => MessageBody::Image(media),
         (FileKind::Video, _) => MessageBody::Video(media),
+        (FileKind::Voice, _) => MessageBody::Voice(media),
         (FileKind::File, _) => MessageBody::File(media),
     }
 }
 
 pub(super) fn media_of(body: &MessageBody) -> Option<&Media> {
     match body {
-        MessageBody::Image(m) | MessageBody::Video(m) | MessageBody::File(m) => Some(m),
+        MessageBody::Image(m)
+        | MessageBody::Video(m)
+        | MessageBody::File(m)
+        | MessageBody::Voice(m) => Some(m),
         MessageBody::Text(_)
         | MessageBody::Notice(_)
-        | MessageBody::Voice { .. }
         | MessageBody::Gif(_)
         | MessageBody::Call(_)
         | MessageBody::Stream(_)
@@ -163,11 +171,13 @@ pub(super) fn with_state(
 /// here has no caption to change.
 pub(crate) fn edit_caption(body: &mut MessageBody, text: String) {
     match body {
-        MessageBody::Image(m) | MessageBody::Video(m) | MessageBody::File(m) => m.caption = text,
+        MessageBody::Image(m)
+        | MessageBody::Video(m)
+        | MessageBody::File(m)
+        | MessageBody::Voice(m) => m.caption = text,
         MessageBody::Gif(_) => {}
         MessageBody::Text(_)
         | MessageBody::Notice(_)
-        | MessageBody::Voice { .. }
         | MessageBody::Call(_)
         | MessageBody::Stream(_)
         | MessageBody::Deleted => *body = MessageBody::Text(text),

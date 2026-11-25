@@ -22,7 +22,7 @@ impl<A: AgentPort> Engine<A> {
             features: features_with(&hello.relays),
             reactions: Some(REACTION_EMOJI.iter().map(|e| (*e).to_owned()).collect()),
         });
-        self.emit(Event::Ready(self.state.user.to_wire()));
+        self.emit(Event::Ready(self.profile_wire()));
         self.configure_files(hello)?;
         self.configure_relays(hello);
         self.agent

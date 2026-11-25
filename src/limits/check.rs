@@ -54,8 +54,16 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
             }
             text_fits(text)
         }
-        Request::Edit { text, .. } | Request::SendFile { text, .. } => text_fits(text),
-        Request::NewGroup(name) => {
+        Request::Edit { text, .. }
+        | Request::SendFile { text, .. }
+        | Request::SendLink { text, .. }
+        | Request::SendLive { text, .. }
+        | Request::SetAddressSettings {
+            auto_reply: Some(text),
+            ..
+        }
+        | Request::UpdateLive { text, .. } => text_fits(text),
+        Request::NewGroup(name) | Request::SetGroupProfile { name, .. } => {
             if !is_valid_name(name.trim()) {
                 return refuse(
                     ErrorCode::InvalidName,
@@ -68,6 +76,9 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::SetPicture(_)
         | Request::SetGroupPicture { .. }
         | Request::CreateInvite
+        | Request::CreateIncognitoInvite
+        | Request::ConnectIncognito(_)
+        | Request::AcceptIncognito(_)
         | Request::Connect(_)
         | Request::Accept(_)
         | Request::Reject(_)
@@ -81,6 +92,27 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::DeleteGroupLink(_)
         | Request::Delete { .. }
         | Request::SetMuted { .. }
+        | Request::SetTimer { .. }
+        | Request::SetPrefs { .. }
+        | Request::SetMemberRole { .. }
+        | Request::BlockMemberForAll { .. }
+        | Request::RemoveMember { .. }
+        | Request::DeleteGroup(_)
+        | Request::SetGroupPrefs { .. }
+        | Request::Moderate { .. }
+        | Request::DeleteForMe { .. }
+        | Request::ClearChat(_)
+        | Request::MarkReadUpTo { .. }
+        | Request::SetUnreadMark { .. }
+        | Request::SetAlias { .. }
+        | Request::SetMessageTtl { .. }
+        | Request::Forward { .. }
+        | Request::ContactMember { .. }
+        | Request::SyncRatchet { .. }
+        | Request::ShareAddress(_)
+        | Request::SetAddressSettings {
+            auto_reply: None, ..
+        }
         | Request::SetBlocked { .. }
         | Request::SetMemberBlocked { .. }
         | Request::ShowCode(_)

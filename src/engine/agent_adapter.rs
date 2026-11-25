@@ -216,9 +216,10 @@ impl AgentPort for NativeAgent {
         &mut self,
         store: &mut Store,
         conn: &ConnId,
+        force: bool,
     ) -> Result<(), AgentFailure> {
         self.client
-            .synchronize_ratchet(store, native_conn(conn), false)
+            .synchronize_ratchet(store, native_conn(conn), force)
             .map_err(failed)
     }
 

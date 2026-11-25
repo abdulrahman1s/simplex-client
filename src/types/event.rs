@@ -47,6 +47,8 @@ pub enum Event {
         group: i64,
         members: Vec<GroupMember>,
     },
+    /// Every message of the conversation was deleted here (`Request::ClearChat`).
+    Cleared(ChatRef),
     Offline(bool),
     Preview {
         chat: ChatRef,

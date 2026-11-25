@@ -12,6 +12,7 @@ use crate::engine::agent_port::AgentPort;
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
 use crate::engine::records::MemberStatus;
+use crate::engine::timed::rules::group_ttl;
 
 impl<A: AgentPort> Engine<A> {
     fn sender_is_owner(&self, ctx: GroupCtx, event: &str) -> Result<()> {
@@ -52,7 +53,9 @@ impl<A: AgentPort> Engine<A> {
         }
         let renamed = g.profile.display_name != p.display_name;
         let name = p.display_name.clone();
+        let timer = group_ttl(&g);
         g.profile = p;
+        let timer_now = group_ttl(&g);
         self.save_group(g)?;
         self.state.chats_dirty = true;
         if renamed {
@@ -62,7 +65,7 @@ impl<A: AgentPort> Engine<A> {
                 ChatNotice::GroupNameChanged(name),
             )?;
         }
-        Ok(())
+        self.group_timer_notice(ctx.group, ctx.author, timer, timer_now)
     }
 
     /// Subscriber.hs 3817: owner only.
@@ -72,9 +75,11 @@ impl<A: AgentPort> Engine<A> {
         if g.profile.group_preferences.as_ref() == Some(&p) {
             return Ok(());
         }
+        let timer = group_ttl(&g);
         g.profile.group_preferences = Some(p);
+        let timer_now = group_ttl(&g);
         self.save_group(g)?;
         self.state.chats_dirty = true;
-        Ok(())
+        self.group_timer_notice(ctx.group, ctx.author, timer, timer_now)
     }
 }

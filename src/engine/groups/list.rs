@@ -2,11 +2,13 @@
 
 use crate::types::model::{ChatGroup, GroupMember, Membership};
 
+use super::manage::convert::to_wire;
 use crate::chat::group::GroupMemberRole;
 use crate::engine::agent_port::AgentPort;
 use crate::engine::machine::Engine;
 use crate::engine::profile::picture_of;
 use crate::engine::records::{GroupRecord, MemberRecord, MemberStatus};
+use crate::engine::timed::rules::group_ttl;
 
 /// Codec `membership`.
 pub(crate) const fn membership(status: MemberStatus) -> Membership {
@@ -38,6 +40,8 @@ pub(crate) fn member_wire(m: &MemberRecord) -> GroupMember {
         owner: m.role == GroupMemberRole::Owner,
         blocked: m.hidden(),
         picture: m.profile.image.as_ref().and_then(|i| picture_of(&i.0)),
+        role: to_wire(&m.role),
+        blocked_for_all: m.blocked_by_admin,
         ..GroupMember::default()
     }
 }
@@ -52,6 +56,7 @@ impl<A: AgentPort> Engine<A> {
             me: true,
             owner: g.my_role == GroupMemberRole::Owner,
             picture: u.picture.clone(),
+            role: to_wire(&g.my_role),
             ..GroupMember::default()
         }
     }
@@ -71,6 +76,11 @@ impl<A: AgentPort> Engine<A> {
             link: g.link.clone(),
             picture: g.profile.image.as_ref().and_then(|i| picture_of(&i.0)),
             owner: g.my_role == GroupMemberRole::Owner,
+            role: to_wire(&g.my_role),
+            description: g.profile.description.clone(),
+            alias: g.local.alias.clone(),
+            item_ttl: g.local.item_ttl,
+            timer: group_ttl(g).flatten(),
             ..ChatGroup::default()
         }
     }
