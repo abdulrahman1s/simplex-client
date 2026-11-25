@@ -9,7 +9,7 @@ use super::files::{Files, Parts};
 use super::outcome::{Outcome, Settled};
 use super::payload::Payload;
 use crate::engine::{Engine, NativeAgent};
-use crate::types::model::{ChatMessage, ChatRef, FileState, MessageBody};
+use crate::types::model::{ChatMessage, ChatRef, FileState, MessageBody, SendStatus};
 use crate::types::{ErrorCode, Event, RequestKind};
 
 /// The file of a message: where it is here and how far it got. A GIF that is here is its path.
@@ -62,8 +62,33 @@ impl Files {
             detail,
         } = e
         {
-            self.refused(*request, (*code, detail), out, engine);
+            self.refused(*request, (*code, detail), engine);
         }
+        if let Event::SendStatus {
+            tag,
+            status: SendStatus::Refused { code, detail },
+            ..
+        } = e
+        {
+            self.send_refused(*tag, (*code, detail), out);
+        }
+    }
+
+    /// A `sendFile` whose tagged request the engine refused fails, and its bytes go.
+    fn send_refused(&mut self, tag: u64, (code, detail): (ErrorCode, &str), out: &mut Outcome) {
+        let Some(at) = self.sending.iter().position(|s| s.tag == tag) else {
+            return;
+        };
+        let Some(s) = self.sending.remove(at) else {
+            return;
+        };
+        self.mem.take(&s.path);
+        let (resolve, reject) = s.parts;
+        out.settled.push(Settled {
+            resolve,
+            reject,
+            result: Err(failure(code.name(), detail)),
+        });
     }
 
     /// A `sendFile` resolves with the message its file went out with.
@@ -124,28 +149,15 @@ impl Files {
         settle_now(self.receiving.remove(at).parts, result);
     }
 
-    /// The engine refused a file request. Requests are handled in order, so a refused send is
-    /// the oldest waiting; a refused download is the oldest whose file the engine did not take
-    /// on (a failed cancel or locate shares the kind, but leaves a started download alone).
+    /// The engine refused a download: the oldest whose file the engine did not take on (a
+    /// failed cancel or locate shares the kind, but leaves a started download alone).
     fn refused(
         &mut self,
         request: RequestKind,
         (code, detail): (ErrorCode, &str),
-        out: &mut Outcome,
         engine: &mut Engine<NativeAgent>,
     ) {
-        if request == RequestKind::SendFile
-            && let Some(s) = self.sending.pop_front()
-        {
-            self.mem.take(&s.path);
-            let (resolve, reject) = s.parts;
-            let result = Err(failure(code.name(), detail));
-            out.settled.push(Settled {
-                resolve,
-                reject,
-                result,
-            });
-        } else if request == RequestKind::File
+        if request == RequestKind::File
             && let Some(at) = (self.receiving.iter())
                 .position(|r| !r.started && !engine.file_wanted(r.chat, r.item))
         {

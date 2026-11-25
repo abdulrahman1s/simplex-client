@@ -18,6 +18,8 @@ pub(super) type Parts = (js_sys::Function, js_sys::Function);
 /// A `sendFile` call waiting for the message its file went out with.
 pub(super) struct Sending {
     pub(super) path: PathBuf,
+    /// The tag its request went with, which a refusal is told against.
+    pub(super) tag: u64,
     pub(super) parts: Parts,
 }
 
@@ -33,7 +35,7 @@ pub(super) struct Receiving {
 pub(super) struct Files {
     pub(super) mem: MemFiles,
     runner: FileRunner,
-    /// Eviction: settled by its message, by a failed `SendFile`, or at close.
+    /// Eviction: settled by its message, by its request's refusal, or at close.
     pub(super) sending: VecDeque<Sending>,
     /// Eviction: settled when the file arrives, fails or is cancelled, or at close.
     pub(super) receiving: Vec<Receiving>,

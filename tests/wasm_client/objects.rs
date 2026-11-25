@@ -8,7 +8,7 @@ use simplex_client::types::{Event, Request};
 use wasm_bindgen::JsValue;
 use wasm_bindgen_test::wasm_bindgen_test as test;
 
-use super::support::{Heard, call, fake_tunnel, get, settle, sleep, start};
+use super::support::{Heard, call, fake_tunnel, get, settle, sleep, start, untagged};
 
 fn chats(friends: Vec<Friend>, requests: Vec<FriendRequest>) -> Event {
     Event::Chats {
@@ -89,7 +89,7 @@ async fn a_message_objects_reply_quotes_it_in_its_chat() {
         reply_to: Some(9),
         mentions: Vec::new(),
     };
-    assert!(client.tap(false).contains(&sent));
+    assert!(untagged(client.tap(false)).contains(&sent));
     client.close();
 }
 
@@ -113,7 +113,7 @@ async fn a_new_friend_is_written_to_through_its_object() {
         reply_to: None,
         mentions: Vec::new(),
     };
-    assert!(client.tap(false).contains(&sent));
+    assert!(untagged(client.tap(false)).contains(&sent));
     client.close();
 }
 
@@ -127,5 +127,29 @@ async fn the_friends_cache_follows_the_chat_list() {
     client.inject(chats(Vec::new(), Vec::new()));
     assert_eq!(client.friends().size(), 0);
     assert_eq!(removed.all()[0]["name"], "bob");
+    client.close();
+}
+
+#[test]
+async fn a_send_resolves_with_its_tag_and_its_status_is_heard_against_it() {
+    let client = started().await;
+    let told = Heard::on(&client, "sendStatus");
+    client.inject(chats(vec![bob(true)], Vec::new()));
+    let friend = client.friends().get(&JsValue::from(4));
+    let tag = settle(call(&friend, "send", &["hi".into()])).await.unwrap();
+    let tag = tag.as_f64().unwrap();
+    let asked = client.tap(false);
+    let Some(Request::Tagged { tag: sent, request }) = asked.last() else {
+        panic!("{asked:?}")
+    };
+    #[allow(clippy::cast_precision_loss, reason = "tags are small counters")]
+    let sent = *sent as f64;
+    assert_eq!(sent, tag);
+    assert!(matches!(**request, Request::Send { .. }));
+    let heard = told.all();
+    assert_eq!(heard.len(), 1, "{heard:?}");
+    assert_eq!(heard[0]["tag"], tag);
+    assert_eq!(heard[0]["status"], "refused", "the engine has no friend 4");
+    assert_eq!(heard[0]["code"], "request_failed");
     client.close();
 }

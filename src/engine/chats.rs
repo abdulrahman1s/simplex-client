@@ -34,13 +34,26 @@ fn friend(user: Option<&Preferences>, f: &FriendRecord) -> Friend {
 }
 
 impl<A: AgentPort> Engine<A> {
-    pub(crate) fn chats(&self) -> Event {
-        let user = self.state.user.prefs.as_ref();
-        let friends = (self.state.friends.values())
-            .map(|f| Friend {
-                features: self.features(f),
-                ..friend(user, f)
+    /// A friend as the list shows them.
+    pub(super) fn friend_wire(&self, f: &FriendRecord) -> Friend {
+        Friend {
+            features: self.features(f),
+            ..friend(self.state.user.prefs.as_ref(), f)
+        }
+    }
+
+    pub(super) fn requests_wire(&self) -> Vec<FriendRequest> {
+        (self.state.address.requests.values())
+            .map(|r| FriendRequest {
+                id: r.id,
+                name: r.name.clone(),
             })
+            .collect()
+    }
+
+    pub(crate) fn chats(&self) -> Event {
+        let friends = (self.state.friends.values())
+            .map(|f| self.friend_wire(f))
             .collect();
         // A blocked friend is reachable from "Blocked", not from the list.
         let direct = self
@@ -71,16 +84,7 @@ impl<A: AgentPort> Engine<A> {
             .values()
             .map(|g| self.group_wire(g))
             .collect();
-        let requests = self
-            .state
-            .address
-            .requests
-            .values()
-            .map(|r| FriendRequest {
-                id: r.id,
-                name: r.name.clone(),
-            })
-            .collect();
+        let requests = self.requests_wire();
         Event::Chats {
             friends,
             groups,

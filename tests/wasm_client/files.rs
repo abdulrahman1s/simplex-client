@@ -8,7 +8,7 @@ use simplex_client::types::{Event, FileKind, Request};
 use wasm_bindgen::JsValue;
 use wasm_bindgen_test::wasm_bindgen_test as test;
 
-use super::support::{Heard, call, fake_tunnel, from_js, get, settle, sleep, start};
+use super::support::{Heard, call, fake_tunnel, from_js, get, settle, sleep, start, untagged};
 
 fn photo(state: FileState) -> ChatMessage {
     let media = Media {
@@ -75,10 +75,12 @@ async fn send_file_hands_the_engine_a_memory_path_and_rejects_with_its_refusal()
         "request_failed",
         "the engine has no friend 4"
     );
-    let asked = client.tap(false).into_iter().find_map(|r| match r {
-        Request::SendFile { path, kind, .. } => Some((path, kind)),
-        _ => None,
-    });
+    let asked = untagged(client.tap(false))
+        .into_iter()
+        .find_map(|r| match r {
+            Request::SendFile { path, kind, .. } => Some((path, kind)),
+            _ => None,
+        });
     let (path, kind) = asked.unwrap();
     assert!(
         path.starts_with("/mem") && path.ends_with("cat.png"),

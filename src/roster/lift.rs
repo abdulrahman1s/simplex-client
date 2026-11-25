@@ -1,6 +1,7 @@
 //! The engine's events as the high-level clients report them: one message per event, and the chat list as changes.
 
 use super::Roster;
+use super::cache::Changed;
 use crate::types::Event;
 use crate::types::model::{
     ChatGroup, ChatMessage, ChatNotice, ChatProfile, ChatRef, Friend, FriendRequest, MessageBody,
@@ -55,6 +56,19 @@ pub(crate) fn lift(e: &Event, roster: &mut Roster) -> Vec<Note> {
             requests,
             ..
         } => roster.update(friends, groups, requests),
+        Event::ChatsChanged {
+            friends,
+            groups,
+            removed_friends,
+            removed_groups,
+            requests,
+        } => roster.apply(&Changed {
+            friends,
+            groups,
+            removed_friends,
+            removed_groups,
+            requests: requests.as_deref(),
+        }),
         Event::Offline(offline) => vec![Note::Offline(*offline)],
         Event::SendStatus {
             tag,

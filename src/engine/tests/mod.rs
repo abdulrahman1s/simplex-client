@@ -5,6 +5,7 @@ mod address_join;
 mod address_settings;
 mod calls;
 mod change;
+mod chats_changed;
 mod codes;
 mod conn_events;
 mod contact;
@@ -27,6 +28,7 @@ mod live_autoreply;
 mod live_call;
 mod live_cli;
 mod live_data;
+mod live_file_status;
 mod live_forward;
 mod live_group;
 mod live_incognito;
@@ -44,6 +46,7 @@ mod live_timed;
 mod live_voice;
 mod local;
 mod local_chat;
+mod marked;
 mod msg_delete;
 mod prefs;
 mod prefs_set;
@@ -101,6 +104,7 @@ impl Dir {
             proxy_mode: crate::types::ProxyMode::default(),
             proxy_fallback: crate::types::ProxyFallback::default(),
             data_tags: std::collections::BTreeSet::new(),
+            roster_deltas: false,
         }
     }
 }
@@ -116,6 +120,8 @@ pub struct T {
     pub clock: FakeClock,
     pub dir: Dir,
     pub relays: relays_pass::Passing,
+    /// The last whole list, which the next is checked against (`marked.rs`).
+    pub listed: marked::Listed,
 }
 
 impl T {
@@ -130,6 +136,7 @@ impl T {
             clock,
             dir,
             relays,
+            listed: marked::Listed::default(),
         }
     }
 
@@ -154,6 +161,7 @@ impl T {
             clock,
             dir,
             relays,
+            listed: marked::Listed::default(),
         };
         t.out();
         t
@@ -170,7 +178,10 @@ impl T {
                 self.e.on_job(super::jobs::JobDone::Relay(d));
             }
         }
-        std::iter::from_fn(|| self.e.pop_out()).collect()
+        let marked = self.e.state.changed.clone();
+        let out: Vec<Event> = std::iter::from_fn(|| self.e.pop_out()).collect();
+        self.listed.check(&marked, &out);
+        out
     }
 
     pub fn req(&mut self, r: Request) -> Vec<Event> {

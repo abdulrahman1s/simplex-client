@@ -19,8 +19,8 @@ fn promise() -> (js_sys::Promise, Option<Parts>) {
     (promise, parts)
 }
 
-/// Keeps `bytes` in memory until the upload ends and asks the engine to send them; resolves
-/// with the message the file goes out with.
+/// Keeps `bytes` in memory until the upload ends and asks the engine to send them, tagged;
+/// resolves with the message the file goes out with, whose id the `queued` status names.
 fn send_file(
     shared: &Rc<Shared>,
     chat: ChatRef,
@@ -34,6 +34,7 @@ fn send_file(
         let kind = kind(kind_name)?;
         let opts = options(opts)?;
         let parts = parts.ok_or_else(closed)?;
+        let tag = shared.next_tag();
         let path = {
             let mut core = shared.core.borrow_mut();
             let files = &mut core.as_mut().ok_or_else(closed)?.files;
@@ -41,18 +42,23 @@ fn send_file(
                 (files.mem.put(name, bytes, false)).map_err(|e| error(e.code.name(), e.detail))?;
             files.sending.push_back(Sending {
                 path: path.clone(),
+                tag,
                 parts,
             });
             path
         };
         let (preview, duration, text) = (opts.preview, opts.duration, opts.caption);
-        shared.tell(Request::SendFile {
+        let send = Request::SendFile {
             chat,
             path,
             kind,
             preview,
             duration,
             text,
+        };
+        shared.tell(Request::Tagged {
+            tag,
+            request: Box::new(send),
         })
     })();
     match queued {
@@ -66,7 +72,8 @@ impl Friend {
     /// Sends `bytes` as a file named `name`, a `kind` of `"image"`, `"gif"`, `"video"`,
     /// `"voice"` or `"file"` (the default), with `{ caption, duration, preview }` if given (a
     /// voice message or video gives its `duration` in seconds). Resolves with the message;
-    /// `fileProgress` follows the upload.
+    /// `fileProgress` follows the upload, and `sendStatus` what became of it: its `queued`
+    /// status names the message's id, then `sent` or `failed` once the file went or not.
     #[wasm_bindgen(js_name = sendFile, unchecked_return_type = "Promise<Message>")]
     pub fn send_file(
         &self,

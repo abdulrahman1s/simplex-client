@@ -70,10 +70,11 @@ impl Friend {
         plain(&self.info)
     }
 
-    /// Resolves once the message is queued; `message` reports it, `messageUpdate` its delivery.
-    #[wasm_bindgen(unchecked_return_type = "Promise<void>")]
+    /// Resolves with the send's tag once the message is queued; `message` reports it,
+    /// `messageUpdate` its delivery, and `sendStatus` events with the tag what became of it.
+    #[wasm_bindgen(unchecked_return_type = "Promise<number>")]
     pub fn send(&self, text: &str) -> js_sys::Promise {
-        self.shared.queue(Request::Send {
+        self.shared.queue_send(Request::Send {
             chat: self.chat(),
             text: text.to_owned(),
             reply_to: None,

@@ -116,10 +116,10 @@ impl Message {
         plain(&self.info)
     }
 
-    /// Answers in the same conversation, quoting this message.
-    #[wasm_bindgen(unchecked_return_type = "Promise<void>")]
+    /// Answers in the same conversation, quoting this message; resolves with the send's tag.
+    #[wasm_bindgen(unchecked_return_type = "Promise<number>")]
     pub fn reply(&self, text: &str) -> js_sys::Promise {
-        self.shared.queue(Request::Send {
+        self.shared.queue_send(Request::Send {
             chat: self.info.chat,
             text: text.to_owned(),
             reply_to: Some(self.info.id),

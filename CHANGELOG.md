@@ -50,17 +50,31 @@ All notable changes to this project are documented here. The format follows
   `Raw(Failed)`; then `Sent` or `Failed { detail }` for the friend, or for each `member` of
   a group, as the agent reports `SENT` or `MERR`. Underneath, `Request::Tagged { tag,
   request }` wraps any request, and `types::Event::SendStatus { tag, member, status }` (JS
-  `sendStatus`) tells its outcome. A file's message goes after its upload, so only its
-  `Queued` or `Refused` is told; the JS methods do not tag their sends yet. **Breaking:**
+  `sendStatus`) tells its outcome. A file is told once per recipient: `Sent` when the last
+  part of their description has gone after the upload (its offer alone is not the file),
+  `Failed` when the offer or a part fails, and `Failed` with no member when the upload
+  fails or the file is cancelled or deleted first. Tags are kept in memory, so a send still
+  going when the client stops is told nothing after the restart. In JS, `send`, `reply`,
+  `sendLink`, `sendLive`, `sendData` and `forward` resolve with their tag, `sendFile` goes
+  tagged too (its `queued` status names the message it resolves with), and a `sendStatus`
+  handler gets `{ tag, member, status, item?, code?, detail? }` (TypeScript
+  `SendStatusEvent`), the code named as rejections name it. **Breaking:**
   those methods return `Result<SendHandle>` instead of `Result<()>` (a `send(…)?` used as a
-  `match` arm's value needs a `;`), and `Request` and both `Event`s have new variants.
-- `ClientBuilder::roster_deltas(true)`: the client tells what changed instead of whole chat
-  lists. The new `Event::FriendUpdate` and `Event::GroupUpdate` join the adds and removes,
-  and `Raw(Chats)` comes only after the new `Client::refresh()` asks for it. `friends()` and
-  `groups()` stay current, and `create_group` still resolves. Off by default, so nothing
-  changes for a client that does not ask. The engine still builds each list (one per batch
-  of changes) for the client to compare. JS has no such option yet. **Breaking:**
-  `client::Event` has new variants.
+  `match` arm's value needs a `;`), and `Request` and both `Event`s have new variants. In JS
+  those sends resolve with a number instead of `undefined`, and a refusal of one other than a
+  limit arrives as its `sendStatus` instead of a `raw` `Failed` event.
+- `ClientBuilder::roster_deltas(true)` (JS `rosterDeltas: true`): the client tells what
+  changed instead of whole chat lists. The new `Event::FriendUpdate` and `Event::GroupUpdate`
+  (JS `friendUpdate`, `groupUpdate`) join the adds and removes, and `Raw(Chats)` comes only
+  after the new `Client::refresh()` (JS `client.refresh()`) asks for it. `friends()` and
+  `groups()` stay current, and `create_group` still resolves. The engine sends only what
+  changed too: with the new `Config::roster_deltas` it marks each friend, group and request
+  where it is saved or dropped and sends `types::Event::ChatsChanged` with those alone, so a
+  change costs the same whatever the roster's size; the first list, a refresh and a change
+  to the user's preferences (which every friend shows) are whole. A test checks every list
+  the engine suite produces against the marks. Off by default, so nothing changes for a
+  client that does not ask. **Breaking:** `client::Event` and `types::Event` have new
+  variants and `Config` a new field.
 - Documented how a program learns the friends it had before a restart: `client.friends()`
   (and `groups()`) is complete as soon as `ClientBuilder::start` returns, and `FriendAdd`
   is only for friends new since. A test holds the client to it. A `FriendAdd` replay at

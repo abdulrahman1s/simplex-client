@@ -5,7 +5,7 @@ use simplex_client::types::Request;
 use simplex_client::types::model::ChatRef;
 use wasm_bindgen_test::wasm_bindgen_test as test;
 
-use super::support::{call, fake_tunnel, from_js, get, settle, sleep, start, to_js};
+use super::support::{call, fake_tunnel, from_js, get, settle, sleep, start, to_js, untagged};
 
 #[test]
 async fn send_data_queues_its_request_and_refuses_data_that_is_not_an_object() {
@@ -38,7 +38,7 @@ async fn send_data_queues_its_request_and_refuses_data_that_is_not_an_object() {
     );
     let refused = settle(refused).await.err().unwrap();
     assert_eq!(from_js(&refused)["code"], "bad_argument");
-    let asked = client.tap(false);
+    let asked = untagged(client.tap(false));
     let mut json = serde_json::Map::new();
     json.insert("q".into(), "lunch?".into());
     let want = Request::SendData {

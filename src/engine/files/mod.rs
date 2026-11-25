@@ -23,10 +23,11 @@ mod runner;
 mod send;
 mod state;
 mod store;
+mod tagged;
 pub(crate) mod transfers;
 mod uploaded;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -47,6 +48,7 @@ pub use store::{DiskFiles, FileStore};
 pub use transfers::{FileDone, FileKey, Transfers};
 pub(crate) use uploaded::descr_parts;
 
+use crate::engine::agent_port::ConnId;
 use crate::xftp::XftpServer;
 
 /// Transfers started at once; more are refused, so the queue behind the two threads is bounded.
@@ -70,7 +72,18 @@ pub struct Files {
     pub store: Box<dyn FileStore>,
     /// Eviction: an entry leaves when its job's result arrives or the transfer is cancelled.
     pub active: HashMap<FileKey, Active>,
+    /// The tag of a tagged file send while it uploads. Eviction: an entry leaves when the
+    /// upload's result arrives or the file is cancelled; none survives a restart.
+    pub(crate) tags: HashMap<FileKey, FileTag>,
     next_job: u64,
+}
+
+/// A tagged file send waiting for its upload, and the recipients its offer already failed.
+#[derive(Debug)]
+pub(crate) struct FileTag {
+    pub(crate) tag: u64,
+    /// Eviction: with the entry; bounded by the file's recipients.
+    pub(crate) failed: HashSet<ConnId>,
 }
 
 impl Default for Files {
@@ -81,6 +94,7 @@ impl Default for Files {
             transfers: Box::new(transfers::NoTransfers),
             store: Box::new(DiskFiles),
             active: HashMap::new(),
+            tags: HashMap::new(),
             next_job: 0,
         }
     }

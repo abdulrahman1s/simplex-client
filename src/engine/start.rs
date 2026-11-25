@@ -3,6 +3,7 @@
 use crate::types::{Config, Event, REACTION_EMOJI, features_with};
 
 use super::agent_port::AgentPort;
+use super::changes::Changes;
 use super::load::load;
 use super::machine::Engine;
 use super::records::UserRecord;
@@ -14,6 +15,7 @@ impl<A: AgentPort> Engine<A> {
         let (state, user) = load(&mut self.store)?;
         self.state = state;
         self.data_tags.clone_from(&hello.data_tags);
+        self.deltas = hello.roster_deltas;
         self.load_address()?;
         match user {
             Some(u) => self.state.user = u,
@@ -38,6 +40,7 @@ impl<A: AgentPort> Engine<A> {
         self.pump();
         // Out now, not lazily: what a waiting request answers must come after the list.
         self.state.chats_dirty = false;
+        self.state.changed = Changes::default();
         let chats = self.chats();
         self.emit(chats);
         self.announce_address();

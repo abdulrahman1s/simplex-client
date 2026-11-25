@@ -6,6 +6,7 @@ pub mod agent_adapter;
 mod agent_map;
 pub mod agent_port;
 mod calls;
+pub mod changes;
 mod chats;
 pub mod clock;
 mod data;

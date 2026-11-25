@@ -12,6 +12,8 @@ mod files;
 mod limits;
 #[path = "wasm_client/objects.rs"]
 mod objects;
+#[path = "wasm_client/roster.rs"]
+mod roster;
 #[path = "wasm_client/support.rs"]
 mod support;
 #[path = "wasm_client/timer.rs"]

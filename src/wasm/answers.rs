@@ -68,6 +68,7 @@ pub(super) fn answer(e: &Event) -> Option<(Want, bool, Result<Payload, Value>)> 
         | Event::Ready(_)
         | Event::Profile(_)
         | Event::Chats { .. }
+        | Event::ChatsChanged { .. }
         | Event::Address(None)
         | Event::Messages(_)
         | Event::Updated(_)

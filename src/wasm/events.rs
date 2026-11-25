@@ -1,11 +1,12 @@
 //! The engine's events as JS hears them: `raw` for each, then what it means (`message`, `friendAdd`, …).
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use super::outcome::Outcome;
 use super::payload::Payload;
 use super::runtime::Core;
 use crate::roster::{Note, lift};
 use crate::types::Event;
+use crate::types::model::SendStatus;
 
 impl Core {
     pub(super) fn hear(&mut self, e: &Event, out: &mut Outcome) {
@@ -48,10 +49,10 @@ fn named(note: Note) -> (&'static str, Payload) {
             tag,
             member,
             status,
-        } => {
-            let v = serde_json::json!({"tag": tag, "member": member, "status": status});
-            ("sendStatus", Payload::Json(v))
-        }
+        } => (
+            "sendStatus",
+            Payload::Json(send_status(tag, member, &status)),
+        ),
         Note::Data {
             chat,
             member,
@@ -67,4 +68,21 @@ fn named(note: Note) -> (&'static str, Payload) {
             },
         ),
     }
+}
+
+/// `{ tag, member, status, item?, code?, detail? }`, the code named as rejections name it.
+fn send_status(tag: u64, member: Option<i64>, status: &SendStatus) -> Value {
+    let mut v = json!({ "tag": tag, "member": member });
+    let more = match status {
+        SendStatus::Queued { item } => json!({ "status": "queued", "item": item }),
+        SendStatus::Refused { code, detail } => {
+            json!({ "status": "refused", "code": code.name(), "detail": detail })
+        }
+        SendStatus::Sent => json!({ "status": "sent" }),
+        SendStatus::Failed { detail } => json!({ "status": "failed", "detail": detail }),
+    };
+    if let (Some(v), Value::Object(more)) = (v.as_object_mut(), more) {
+        v.extend(more);
+    }
+    v
 }

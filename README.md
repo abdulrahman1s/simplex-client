@@ -144,7 +144,8 @@ Each send (`send`, `reply`, `send_file`, `send_link`, `send_live`, `send_data`, 
 returns a `SendHandle`, and what becomes of it arrives as `Event::SendStatus { handle,
 member, status }`: `Queued { item }` with the message it made, or `Refused { code, detail }`
 at once; then `Sent` or `Failed { detail }` for the friend, or for each `member` of a group.
-A file's message goes after its upload, so only its `Queued` or `Refused` is told.
+A file is `Sent` once the last part of its description went after the upload, and `Failed`
+with no member when the upload fails or the file is cancelled or deleted first.
 
 ### Events
 
@@ -161,7 +162,13 @@ A file's message goes after its upload, so only its `Queued` or `Refused` is tol
 | `Offline(bool)` | no relay is reachable, or one is again |
 | `Data { chat, member, tag, json }` | application data arrives under a tag you registered |
 | `SendStatus { handle, member, status }` | a send was queued or refused, then sent or failed |
+| `FriendUpdate(friend)` / `GroupUpdate(group)` | a friend or group changed (with `roster_deltas`) |
 | `Raw(event)` | anything else the engine reports, and every chat list |
+
+A client with many friends can start with `.roster_deltas(true)` (JS `rosterDeltas: true`):
+the engine then sends only the friends and groups that changed, which arrive as
+`FriendUpdate` and `GroupUpdate` beside the adds and removes, and a whole list only when
+`client.refresh()` asks for it.
 
 The engine's own events are `simplex_client::types::Event` (`cargo doc --open`).
 
@@ -511,7 +518,12 @@ above, `request_failed`, `no_connection`, `bad_link`, `call_failed` and `stream_
 the engine, and `closed`, `timeout`, `bad_argument`, `bad_option`, `wrong_key`, `file_gone`,
 `file_failed` and `file_cancelled` from the client itself. Calls that only queue a request
 (`send`, `react`, `edit`, `delete`, …) resolve once the engine has taken it and reject only
-for a limit; other refusals arrive as a `raw` event.
+for a limit; other refusals arrive as a `raw` event. A send (`send`, `reply`, `sendLink`,
+`sendLive`, `sendData`, `forward`) resolves with its tag instead, and what becomes of it,
+its refusal too, arrives as `sendStatus` events with that tag: `queued` with the message it
+made, then `sent` or `failed` for the friend or each group member. `sendFile` resolves with
+its message, whose id the `queued` status names, and is `sent` once its description went
+after the upload.
 
 ## Browser tunnel (Cloudflare Worker)
 

@@ -55,6 +55,7 @@ impl<A: AgentPort> Engine<A> {
         }
         self.store.apply(ops)?;
         self.state.groups.remove(&group);
+        self.state.changed.groups.insert(group);
         self.state.members.retain(|(g, _), _| *g != group);
         self.state.last.remove(&chat);
         self.state.chats_dirty = true;

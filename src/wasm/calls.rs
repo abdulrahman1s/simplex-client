@@ -34,6 +34,16 @@ impl Shared {
         promise
     }
 
+    /// `queue` for a send: it goes as `Request::Tagged`, and the promise resolves with the
+    /// tag its `sendStatus` events carry.
+    pub(super) fn queue_send(self: &Rc<Self>, r: Request) -> js_sys::Promise {
+        let tag = self.next_tag();
+        self.queue(Request::Tagged {
+            tag,
+            request: Box::new(r),
+        })
+    }
+
     /// Sends `r`; the promise settles with the engine's answer to `want`, or a timeout.
     pub(super) fn ask(self: &Rc<Self>, want: Want, r: Request) -> js_sys::Promise {
         let mut parts = None;

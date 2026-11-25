@@ -17,7 +17,21 @@ export type ClientEvent =
   | "ready" | "message" | "messageUpdate" | "request"
   | "friendAdd" | "friendRemove" | "groupAdd" | "groupRemove" | "groupInvite"
   | "memberAdd" | "offline" | "online" | "change" | "raw" | "fileProgress"
-  | "data" | "sendStatus";
+  | "data" | "sendStatus" | "friendUpdate" | "groupUpdate";
+
+/** What a `sendStatus` handler gets: what became of a send, by the tag its call resolved
+ * with; `member` names the group member it is for. `queued` names the message it made
+ * (none for `sendData`), then each recipient gets one `sent` or `failed`; `failed` with no
+ * member is a file whose upload failed or was cancelled or deleted. */
+export type SendStatusEvent = {
+  tag: number;
+  member: number | null;
+} & (
+  | { status: "queued"; item: number | null }
+  | { status: "refused"; code: string; detail: string }
+  | { status: "sent" }
+  | { status: "failed"; detail: string }
+);
 "#;
 
 /// A running client in this tab or process. Methods return Promises that reject with
@@ -57,8 +71,9 @@ impl Client {
     /// (a `GroupInvite`), `memberAdd` (a `Member` who connected with you: someone new, or each
     /// one already there when you join), `offline`, `online`, `change` (the store
     /// changed: save it), `data` (`{ chat, member, tag, data }` under a tag in `dataTags`),
-    /// `sendStatus` (`{ tag, member, status }` of a tagged request) and `raw` (every engine
-    /// event, as JSON).
+    /// `sendStatus` (a `SendStatusEvent`: what became of a send, by the tag it resolved with),
+    /// `friendUpdate` and `groupUpdate` (a `Friend` or `Group` that changed, when started with
+    /// `rosterDeltas: true`) and `raw` (every engine event, as JSON).
     pub fn on(
         &self,
         #[wasm_bindgen(unchecked_param_type = "ClientEvent")] name: &str,
@@ -97,6 +112,13 @@ impl Client {
         let r = serde_json::from_value(from_js(&request))
             .map_err(|e| error("bad_argument", format!("not a request: {e}")));
         settled(r.and_then(|r| self.shared.tell(r)))
+    }
+
+    /// Asks for the whole chat list: it arrives as a `raw` `Chats` event, also when started
+    /// with `rosterDeltas: true`, and brings `friends` and `groups` up to date with it.
+    #[wasm_bindgen(unchecked_return_type = "Promise<void>")]
+    pub fn refresh(&self) -> js_sys::Promise {
+        self.shared.queue(crate::types::Request::Refresh)
     }
 
     /// The user's profile as the engine last reported it.

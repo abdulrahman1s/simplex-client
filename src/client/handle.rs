@@ -51,10 +51,11 @@ impl Client {
         F: FnOnce(&Config, &Log) -> (A, Receiver<A::Smp>) + Send + 'static,
     {
         let log = b.log.unwrap_or_else(|| Log::new(std::io::stderr()));
+        let deltas = b.config.roster_deltas;
         let started = spawn::spawn(b.config, log.clone(), clock, agent)?;
         let shared = Arc::new(Shared::default());
         if let Ok(mut r) = shared.roster.lock() {
-            r.deltas = b.roster_deltas;
+            r.deltas = deltas;
         }
         let (tx, events) = bounded(b.events_cap.max(1));
         let outbox = Outbox {

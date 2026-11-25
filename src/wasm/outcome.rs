@@ -46,12 +46,19 @@ impl Outcome {
     }
 
     /// The engine's verdict on a request a promise waits for: taken, or refused by a limit.
-    /// Other failures still resolve it; they arrive as a `raw` `Failed` event, as before.
-    pub(super) fn verdict(&mut self, parts: Parts, done: &Result<(), EngineError>) {
+    /// Other failures still resolve it; they arrive as a `raw` `Failed` event, or for a
+    /// tagged send as its `sendStatus`. A tagged send resolves with its tag.
+    pub(super) fn verdict(
+        &mut self,
+        parts: Parts,
+        done: &Result<(), EngineError>,
+        tag: Option<u64>,
+    ) {
         let (resolve, reject) = parts;
+        let taken = tag.map_or(Payload::Nothing, |t| Payload::Json(t.into()));
         let result = match done {
             Err(e) if e.code.is_limit() => Err(failure(e.code.name(), &e.detail)),
-            Ok(()) | Err(_) => Ok(Payload::Nothing),
+            Ok(()) | Err(_) => Ok(taken),
         };
         self.settled.push(Settled {
             resolve,

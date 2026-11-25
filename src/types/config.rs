@@ -25,6 +25,9 @@ pub struct Config {
     pub proxy_fallback: ProxyFallback,
     /// The content types that arrive as `Event::Data` instead of a message.
     pub data_tags: BTreeSet<String>,
+    /// Send what changed in the chat list (`Event::ChatsChanged`) instead of the whole list
+    /// each time; the first list, and one `Request::Refresh` asks for, are whole.
+    pub roster_deltas: bool,
 }
 
 impl std::fmt::Debug for Config {
@@ -37,6 +40,7 @@ impl std::fmt::Debug for Config {
             .field("proxy_mode", &self.proxy_mode)
             .field("proxy_fallback", &self.proxy_fallback)
             .field("data_tags", &self.data_tags)
+            .field("roster_deltas", &self.roster_deltas)
             .finish()
     }
 }

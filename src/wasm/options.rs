@@ -68,6 +68,8 @@ pub(super) struct Options {
     pub(super) proxy_fallback: ProxyFallback,
     /// Content types heard as `data` instead of `message`.
     pub(super) data_tags: BTreeSet<String>,
+    /// Hear what changed in the chat list (`friendUpdate`, `groupUpdate`) instead of whole lists.
+    pub(super) roster_deltas: bool,
 }
 
 fn get(o: &JsValue, key: &str) -> Option<JsValue> {
@@ -82,6 +84,14 @@ fn text(o: &JsValue, key: &str) -> Result<Option<String>, JsValue> {
                 .ok_or_else(|| error("bad_option", format!("{key} is not a string")))
         })
         .transpose()
+}
+
+/// A boolean under `key`; false when left out.
+fn flag(o: &JsValue, key: &str) -> Result<bool, JsValue> {
+    get(o, key).map_or(Ok(false), |v| {
+        v.as_bool()
+            .ok_or_else(|| error("bad_option", format!("{key} is true or false")))
+    })
 }
 
 /// An array of strings under `key`, or nothing.
@@ -168,6 +178,7 @@ impl Options {
             proxy_mode,
             proxy_fallback,
             data_tags: strings(o, "dataTags")?.into_iter().collect(),
+            roster_deltas: flag(o, "rosterDeltas")?,
         })
     }
 }

@@ -1,7 +1,9 @@
 //! The upload is up: each recipient's description goes in `x.msg.file.descr` parts, to the friend or to each member the file was offered to (Subscriber.hs `SFDONE`, `sendFileDescriptions`).
 
-use crate::types::model::{ChatRef, FileState};
+use crate::types::Event;
+use crate::types::model::{ChatRef, FileState, SendStatus};
 
+use super::FileTag;
 use super::send::PQ;
 use super::transfers::FileKey;
 use crate::chat::file::FileDescr;
@@ -22,6 +24,7 @@ impl<A: AgentPort> Engine<A> {
         key: FileKey,
         descriptions: Vec<String>,
         expires: Option<i64>,
+        tag: Option<&FileTag>,
     ) -> Result<()> {
         let (chat, item) = (key.chat(), key.item);
         let members = self.take_file_members(chat, item)?;
@@ -29,6 +32,9 @@ impl<A: AgentPort> Engine<A> {
         if Self::file_state(&it, &rec).is_none() {
             // Deleted while it went up: nobody gets a description (`itemDeleted`).
             rec.active = false;
+            if let Some(t) = tag {
+                self.file_failed(key, t.tag, "the file was deleted");
+            }
             return self.save_file(chat, item, &rec);
         }
         let shared = it
@@ -41,10 +47,12 @@ impl<A: AgentPort> Engine<A> {
             ChatRef::Direct(friend) => {
                 let d = descriptions.first().ok_or_else(no_descriptions)?;
                 let conn = self.friend(friend)?.conn;
+                let mut sent = Vec::new();
                 for part in descr_parts(&shared, d, expires.as_ref()) {
                     let body = encode_chat_message(&ChatMessage::new(part)?, PQ)?;
-                    self.agent_send(&conn, self.state.pq_of(&conn), body)?;
+                    sent.push(self.agent_send(&conn, self.state.pq_of(&conn), body)?);
                 }
+                self.tag_description(key, tag, conn, &sent);
             }
             ChatRef::Group(group) => {
                 if descriptions.len() < members.len() {
@@ -55,19 +63,49 @@ impl<A: AgentPort> Engine<A> {
                     (rec.descr, rec.descr_complete) = (d.clone(), true);
                 }
                 for (member, d) in members.into_iter().zip(&descriptions) {
-                    for part in descr_parts(&shared, d, expires.as_ref()) {
-                        let msg = ChatMessage::new(part)?;
-                        if let Err(e) = self.send_to_member(group, member, &msg) {
-                            self.log
-                                .line(format_args!("a file description not sent: {}", e.detail));
-                        }
-                    }
+                    let parts = descr_parts(&shared, d, expires.as_ref());
+                    self.describe_to_member(key, tag, (group, member), parts)?;
                 }
             }
         }
         rec.active = false;
         self.save_file(chat, item, &rec)?;
         self.show_file(chat, item, &rec, FileState::Sent)
+    }
+
+    /// One member's description; a part not sent is logged, and told against the tag.
+    fn describe_to_member(
+        &mut self,
+        key: FileKey,
+        tag: Option<&FileTag>,
+        (group, member): (i64, i64),
+        parts: Vec<ChatEvent>,
+    ) -> Result<()> {
+        let mut sent = Vec::new();
+        for part in parts {
+            match self.send_to_member(group, member, &ChatMessage::new(part)?) {
+                Ok((conn, id)) => sent.push((conn, id)),
+                Err(e) => {
+                    self.log
+                        .line(format_args!("a file description not sent: {}", e.detail));
+                    if let Some(t) = tag {
+                        let status = SendStatus::Failed { detail: e.detail };
+                        let (tag, member) = (t.tag, Some(member));
+                        self.emit(Event::SendStatus {
+                            tag,
+                            member,
+                            status,
+                        });
+                    }
+                    return Ok(());
+                }
+            }
+        }
+        if let Some((conn, _)) = sent.first() {
+            let ids: Vec<_> = sent.iter().map(|(_, id)| *id).collect();
+            self.tag_description(key, tag, *conn, &ids);
+        }
+        Ok(())
     }
 
     /// The members a group file was offered to, read once: the row goes with the upload.

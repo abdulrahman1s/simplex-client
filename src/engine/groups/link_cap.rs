@@ -27,6 +27,7 @@ impl<A: AgentPort> Engine<A> {
             self.drop_member_conn(group, id, false)?;
             self.store.delete(NS, &keys::member(group, id))?;
             self.state.members.remove(&(group, id));
+            self.state.changed.groups.insert(group);
             self.log
                 .line(format_args!("an unconnected group link join was dropped"));
         }
