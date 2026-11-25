@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-25
+
 ### Added
 
 - `client.saveChanges()` (JS) and `Store::export_changes` save only the rows written since the
@@ -362,5 +364,6 @@ All notable changes to this project are documented here. The format follows
 - A group member's chat version range follows each JSON message they send, not only the
   handshake (`updateMemberChatVRange`).
 
-[Unreleased]: https://github.com/abdulrahman1s/simplex-client/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/abdulrahman1s/simplex-client/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/abdulrahman1s/simplex-client/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/abdulrahman1s/simplex-client/releases/tag/v0.1.0
