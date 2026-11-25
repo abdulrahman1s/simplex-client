@@ -21,6 +21,8 @@ pub struct NativeAgent {
     log: Log,
     /// The relays as configured, in order; `cfg.servers` is this with the disabled ones last.
     configured: Vec<SmpServer>,
+    /// Whether the engine checks the relays over the network (`relay_tester`).
+    relay_tests: bool,
 }
 
 impl NativeAgent {
@@ -58,7 +60,16 @@ impl NativeAgent {
             client: make(cfg),
             log,
             configured,
+            relay_tests: true,
         }
+    }
+
+    /// The engine does not check the relays: for relays that are not on the network, which
+    /// a check would only dial in vain.
+    #[must_use]
+    pub const fn without_relay_tests(mut self) -> Self {
+        self.relay_tests = false;
+        self
     }
 }
 
@@ -231,7 +242,9 @@ impl AgentPort for NativeAgent {
 
     fn relay_tester(&self) -> Option<Box<dyn RelayTester>> {
         #[cfg(feature = "native")]
-        return Some(Box::new(super::relays::SmpTester));
+        return self
+            .relay_tests
+            .then(|| Box::new(super::relays::SmpTester) as Box<dyn RelayTester>);
         #[cfg(not(feature = "native"))]
         None
     }

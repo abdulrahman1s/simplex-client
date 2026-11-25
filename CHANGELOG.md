@@ -70,9 +70,11 @@ All notable changes to this project are documented here. The format follows
   (`agent::testing`: `FakeSmp`, `FakeConnector`, `Node`, …, and the certificate builder
   they use, `smp::testing`) and adds `ClientBuilder::start_in_memory(&server)`, which
   starts a real `Client` (agent, engine and store) on an in-memory server the clients of a
-  test share. Downstream crates can run end-to-end tests with no network; there is no
-  in-memory XFTP server, so files do not go. CI builds and lints the feature and runs
-  `tests/in_memory.rs`, where two clients connect, talk and send application data.
+  test share. Downstream crates can run end-to-end tests with no network: such a client
+  does not check its relays (`NativeAgent::without_relay_tests`) and uses no XFTP relay, so
+  files do not go. CI builds and lints the feature and runs `tests/in_memory.rs`, where two
+  clients connect, talk and send application data, and a friend removed right after a
+  message gets both.
 
 - Removing a friend (and a group member, and leaving a group) deleted the connection with
   everything still waiting to be sent on it, so the peer never got `x.direct.del` and a

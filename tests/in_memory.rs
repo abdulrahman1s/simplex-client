@@ -66,3 +66,29 @@ fn two_clients_on_the_in_memory_server_connect_and_talk() {
     alice.close();
     bob.close();
 }
+
+#[test]
+fn a_message_sent_just_before_removing_a_friend_arrives_and_so_does_the_removal() {
+    let (dir, server) = (Dir::new(), FakeSmp::new());
+    let (alice, bob) = (client(&dir, "alice", &server), client(&dir, "bob", &server));
+    bob.connect(&alice.create_invite().unwrap()).unwrap();
+    let Event::FriendAdd(bob_at_alice) =
+        wait(&alice, "friend", |e| matches!(e, Event::FriendAdd(_)))
+    else {
+        unreachable!()
+    };
+    wait(&bob, "friend", |e| matches!(e, Event::FriendAdd(_)));
+    bob_at_alice.send("goodbye").unwrap();
+    bob_at_alice.remove().unwrap();
+    let Event::Message(m) = wait(
+        &bob,
+        "message",
+        |e| matches!(e, Event::Message(m) if !m.mine()),
+    ) else {
+        unreachable!()
+    };
+    assert_eq!(m.text(), "goodbye");
+    wait(&bob, "removal", |e| matches!(e, Event::FriendRemove(_)));
+    alice.close();
+    bob.close();
+}

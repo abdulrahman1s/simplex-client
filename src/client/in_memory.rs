@@ -14,8 +14,8 @@ use crate::engine::{NativeAgent, SystemClock};
 impl ClientBuilder {
     /// Starts on `server` alone, an in-memory SMP server the clients of a test share:
     /// connections, messages, groups and everything else but files (there is no XFTP
-    /// server), with the real agent, engine and store and no network. The relays given
-    /// before are replaced by `server`.
+    /// server), with the real agent, engine and store and no network: relays are not
+    /// checked, and no XFTP relay is used. The relays given before are replaced by `server`.
     pub fn start_in_memory(mut self, server: &Arc<FakeSmp>) -> Result<Client> {
         self.config.relays = vec![server.address().to_string()];
         let server = Arc::clone(server);
@@ -30,7 +30,8 @@ impl ClientBuilder {
                     Arc::new(SystemWallClock),
                 )
             });
-            (agent, rx)
+            // A check would dial the server's made-up host over the network.
+            (agent.without_relay_tests(), rx)
         })
     }
 }
