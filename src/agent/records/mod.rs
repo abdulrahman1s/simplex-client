@@ -10,8 +10,8 @@ mod status;
 
 pub use conn::{Chain, ConnRecord, NewLink};
 pub use keys::{
-    Batch, NS, RECEIPT_WINDOW, conn_ids, conn_key, conn_prefixes, invitation_key, load,
-    pending_ids, ratchet_key, send_key, sent_key, unacked_key,
+    Batch, NS, RECEIPT_WINDOW, conn_ids, conn_key, conn_prefixes, deleting_key, invitation_key,
+    load, pending_ids, ratchet_key, send_key, sent_key, unacked_key,
 };
 pub use pending::{PendingSend, SendKind};
 pub use queues::{RcvQueue, SndQueue};

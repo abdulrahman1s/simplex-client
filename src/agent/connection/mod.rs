@@ -17,6 +17,7 @@ mod steps;
 mod sub;
 
 pub(crate) use confirm::Confirmation;
+pub use delete::DELETE_DELIVERY_TIMEOUT_MS;
 #[cfg(test)]
 #[cfg(feature = "native")]
 pub(crate) use params::{from_wire, link_params};

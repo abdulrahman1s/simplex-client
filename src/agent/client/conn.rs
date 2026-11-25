@@ -37,6 +37,8 @@ pub(crate) struct Conn {
     pub send: SendState,
     pub step: StepState,
     pub sub: SubState,
+    /// When it was deleted while sends still waited: it goes once they are delivered.
+    pub deleting: Option<i64>,
 }
 
 impl Conn {
@@ -48,6 +50,7 @@ impl Conn {
             send: SendState::default(),
             step: StepState::default(),
             sub: SubState::default(),
+            deleting: None,
         }
     }
 }

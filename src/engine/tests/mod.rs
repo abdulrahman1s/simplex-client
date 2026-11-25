@@ -37,6 +37,7 @@ mod live_msg;
 mod live_offline;
 mod live_pq;
 mod live_prefs;
+mod live_remove;
 mod live_repair;
 mod live_timed;
 mod live_voice;

@@ -32,7 +32,7 @@ impl AgentClient {
             | SendKind::Switch
             | SendKind::Quiet => {}
         }
-        Ok(())
+        self.finish_deleting(store, id)
     }
 
     /// Gives up on `p`. The engine hears of its own messages and of a failed handshake; a receipt that cannot go is dropped silently.
@@ -58,7 +58,7 @@ impl AgentClient {
             }
             SendKind::Receipt | SendKind::Qcont | SendKind::Quiet => {}
         }
-        Ok(())
+        self.finish_deleting(store, id)
     }
 
     /// `messageTimeout` after temporary failures, `quotaExceededTimeout` while the peer's queue is full.

@@ -28,6 +28,17 @@ All notable changes to this project are documented here. The format follows
   7.1.4. **Breaking:** `Friend` has a new field and the `AgentPort` trait a new method,
   `pq_on`.
 
+### Fixed
+
+- Removing a friend (and a group member, and leaving a group) deleted the connection with
+  everything still waiting to be sent on it, so the peer never got `x.direct.del` and a
+  message sent just before was sometimes lost. The agent's `delete` now does what
+  `deleteConnectionsAsync` with `waitDelivery` does in simplexmq: the receive queue goes at
+  once, so nothing more arrives, and the connection stays until what waits on it is
+  delivered or given up, across a restart too, or 2 days at most
+  (`connDeleteDeliveryTimeout`). A live test removes a friend right after writing to them
+  and sees the official CLI 7.1.4 get both the message and the deletion.
+
 ## [0.2.0] - 2026-11-25
 
 ### Added
