@@ -49,7 +49,8 @@ const fn raw(e: &Event) -> bool {
         | Event::Messages(_)
         | Event::Updated(_)
         | Event::Offline(_)
-        | Event::Cleared(_) => false,
+        | Event::Cleared(_)
+        | Event::Data { .. } => false,
         Event::Features { .. }
         | Event::Profile(_)
         | Event::Chats { .. }

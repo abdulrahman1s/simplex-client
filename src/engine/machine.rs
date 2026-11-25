@@ -1,6 +1,6 @@
 //! The engine: state, store and agent owned by one thread, and the events waiting to go out.
 
-use std::collections::VecDeque;
+use std::collections::{BTreeSet, VecDeque};
 use std::time::Duration;
 
 use crate::types::Event;
@@ -33,6 +33,8 @@ pub struct Engine<A: AgentPort> {
     pub(crate) files: Files,
     pub(crate) jobs: Jobs,
     pub(crate) relays: Relays,
+    /// The content types that arrive as `Event::Data`; set once at the start.
+    pub(crate) data_tags: BTreeSet<String>,
     out: VecDeque<Event>,
 }
 
@@ -47,6 +49,7 @@ impl<A: AgentPort> Engine<A> {
             files: Files::default(),
             jobs: Jobs::default(),
             relays: Relays::default(),
+            data_tags: BTreeSet::new(),
             out: VecDeque::new(),
         }
     }

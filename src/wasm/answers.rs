@@ -74,6 +74,7 @@ pub(super) fn answer(e: &Event) -> Option<(Want, bool, Result<Payload, Value>)> 
         | Event::Verified { .. }
         | Event::Offline(_)
         | Event::Cleared(_)
+        | Event::Data { .. }
         | Event::Preview { .. }
         | Event::OpenFile { .. }
         | Event::Located { .. }

@@ -75,6 +75,12 @@ impl<A: AgentPort> Engine<A> {
                 reply_to,
                 mentions,
             } => self.send_text(chat, &text, reply_to, &mentions, Outgoing::default()),
+            Request::SendData {
+                chat,
+                tag,
+                json,
+                fallback_text,
+            } => self.send_data(chat, &tag, &json, &fallback_text),
             Request::SendLink {
                 chat,
                 text,

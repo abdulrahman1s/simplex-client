@@ -17,6 +17,7 @@ small, plain API.
 - Chat messages, contacts, groups, replies, edits, deletes and reactions, link previews,
   forwarding, live messages
 - Disappearing messages, for a friend or a group
+- Application data for bots and apps, which the official apps show as a fallback text
 - Chat preferences (full delete, reactions, voice, files, calls), your own and per friend
 - Group admin: roles, blocking for everyone, removing members, moderation, the group's name,
   description and preferences, and deleting a group
@@ -150,6 +151,7 @@ for anything else.
 | `GroupInvite(invite)` | you are invited into a group |
 | `MemberAdd(member)` | a member connects with you: someone new, or each one there when you join |
 | `Offline(bool)` | no relay is reachable, or one is again |
+| `Data { chat, member, tag, json }` | application data arrives under a tag you registered |
 | `Raw(event)` | anything else the engine reports, and every chat list |
 
 The engine's own events are `simplex_client::types::Event` (`cargo doc --open`).
@@ -389,6 +391,34 @@ client.once("message").then((m) => m.updateLive("Hello!", true)); // m.live unti
 
 A forwarded file goes again only when it is here (sent from here, or downloaded and still in
 memory in wasm); otherwise its caption goes as text, as the official apps do.
+
+### Application data
+
+Programs can talk to each other in the same chats people use. Data goes as a message
+content type the official apps do not know; they show its fallback text instead, as SimpleX
+Chat 7.1.4 does for any type it does not know (`MCUnknown`). Nothing is kept on either side
+for data under a tag the receiver registered:
+
+```rust
+let client = Client::builder("bot").key(key).data_tag("app.poll").start()?;
+let mut poll = serde_json::Map::new();
+poll.insert("q".into(), "lunch?".into());
+client.send_data(friend.chat(), "app.poll", poll, "A poll: lunch?")?;
+// Event::Data { chat, member, tag, json } for "app.poll" from others
+```
+
+```js
+const client = await Client.start({ ...options, dataTags: ["app.poll"] });
+await friend.sendData("app.poll", { q: "lunch?" }, "A poll: lunch?");
+client.on("data", ({ chat, member, tag, data }) => chat.sendData(tag, { a: 1 }, "Voted"));
+```
+
+A tag is not one of the types the apps know (`text`, `link`, `image`, …) and has no spaces;
+the data has no `type` or `text` key, since those hold the tag and the fallback. Data must fit
+in one message, as text does. It is not kept, so a message the relay delivers again after a
+restart, before it was acknowledged, comes again, and a group member's data that reaches you
+both from them and through the host comes twice. A blocked member's data is dropped. Data
+under a tag the client did not register arrives as a message with its fallback text.
 
 ### Your own housekeeping
 

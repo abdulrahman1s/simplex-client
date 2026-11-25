@@ -25,6 +25,12 @@ pub(crate) enum Note {
         name: String,
     },
     Offline(bool),
+    Data {
+        chat: ChatRef,
+        member: Option<i64>,
+        tag: String,
+        json: serde_json::Map<String, serde_json::Value>,
+    },
 }
 
 /// What `e` means to a high-level client; the chat list also updates `roster`.
@@ -40,6 +46,17 @@ pub(crate) fn lift(e: &Event, roster: &mut Roster) -> Vec<Note> {
             ..
         } => roster.update(friends, groups, requests),
         Event::Offline(offline) => vec![Note::Offline(*offline)],
+        Event::Data {
+            chat,
+            member,
+            tag,
+            json,
+        } => vec![Note::Data {
+            chat: *chat,
+            member: *member,
+            tag: tag.clone(),
+            json: json.clone(),
+        }],
         Event::Cleared(_)
         | Event::Features { .. }
         | Event::Profile(_)

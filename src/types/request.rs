@@ -100,6 +100,15 @@ pub enum Request {
         chat: ChatRef,
         text: String,
     },
+    /// Application data for programs, not people: `x.msg.new` with the content type `tag`,
+    /// which the official apps do not know and show as `fallback_text` (`MCUnknown`). No
+    /// message is kept or shown here. A client that registered `tag` gets it as `Event::Data`.
+    SendData {
+        chat: ChatRef,
+        tag: String,
+        json: serde_json::Map<String, serde_json::Value>,
+        fallback_text: String,
+    },
     /// The live message's text so far; `done` finishes it (`APIUpdateChatItem` live).
     UpdateLive {
         chat: ChatRef,

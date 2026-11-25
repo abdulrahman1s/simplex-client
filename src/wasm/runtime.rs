@@ -82,6 +82,7 @@ impl Core {
             relays: o.relays.clone(),
             proxy_mode: o.proxy_mode,
             proxy_fallback: o.proxy_fallback,
+            data_tags: o.data_tags.clone(),
         };
         let files = Files::attach(&mut engine, &o.transport, o.token.clone(), files_shared);
         engine.start(&config)?;

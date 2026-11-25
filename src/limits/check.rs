@@ -54,6 +54,17 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
             }
             text_fits(text)
         }
+        Request::SendData {
+            tag,
+            json,
+            fallback_text,
+            ..
+        } => {
+            if let Some(why) = crate::chat::app_data::refusal(tag, json) {
+                return refuse(ErrorCode::RequestFailed, why);
+            }
+            text_fits(fallback_text)
+        }
         Request::Edit { text, .. }
         | Request::SendFile { text, .. }
         | Request::SendLink { text, .. }

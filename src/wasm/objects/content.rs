@@ -1,4 +1,4 @@
-//! Message content from JS: `sendLink`, `sendLive` and `forward` on a friend or group; a message's `link`, `forwarded`, `live` and `updateLive`.
+//! Message content from JS: `sendLink`, `sendLive`, `sendData` and `forward` on a friend or group; a message's `link`, `forwarded`, `live` and `updateLive`.
 
 use wasm_bindgen::prelude::*;
 
@@ -52,6 +52,30 @@ macro_rules! send_link {
                 let (from, item) = (message.info().chat, message.info().id);
                 let to = self.chat();
                 self.shared().queue(Request::Forward { from, item, to })
+            }
+
+            /// Sends `data` for programs as the content type `tag`; the official apps show
+            /// `fallbackText`. Nothing is kept here, and a client started with `tag` in
+            /// `dataTags` hears it as `data`.
+            #[wasm_bindgen(js_name = sendData, unchecked_return_type = "Promise<void>")]
+            pub fn send_data(
+                &self,
+                tag: &str,
+                #[wasm_bindgen(unchecked_param_type = "Record<string, unknown>")] data: JsValue,
+                fallback_text: &str,
+            ) -> js_sys::Promise {
+                let serde_json::Value::Object(json) = from_js(&data) else {
+                    return settled(Err(error("bad_argument", "data is an object")));
+                };
+                if let Some(why) = crate::chat::app_data::refusal(tag, &json) {
+                    return settled(Err(error("bad_argument", why)));
+                }
+                self.shared().queue(Request::SendData {
+                    chat: self.chat(),
+                    tag: tag.to_owned(),
+                    json,
+                    fallback_text: fallback_text.to_owned(),
+                })
             }
 
             /// Starts a live message here, seen as it is written; `message.updateLive` sends the rest.

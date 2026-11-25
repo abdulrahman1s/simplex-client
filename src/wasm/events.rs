@@ -42,5 +42,19 @@ fn named(note: Note) -> (&'static str, Payload) {
         Note::MemberAdd { group, name } => ("memberAdd", Payload::Member { group, name }),
         Note::Offline(true) => ("offline", Payload::Nothing),
         Note::Offline(false) => ("online", Payload::Nothing),
+        Note::Data {
+            chat,
+            member,
+            tag,
+            json,
+        } => (
+            "data",
+            Payload::Data {
+                chat,
+                member,
+                tag,
+                json: Value::Object(json),
+            },
+        ),
     }
 }

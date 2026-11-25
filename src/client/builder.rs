@@ -39,6 +39,7 @@ impl ClientBuilder {
                 relays: Vec::new(),
                 proxy_mode: ProxyMode::default(),
                 proxy_fallback: ProxyFallback::default(),
+                data_tags: std::collections::BTreeSet::new(),
             },
             log: None,
             timeout: Duration::from_secs(60),
@@ -79,6 +80,13 @@ impl ClientBuilder {
         } else {
             ProxyFallback::AllowProtected
         };
+        self
+    }
+
+    /// Messages of content type `tag` arrive as [`Event::Data`](super::Event::Data) instead
+    /// of a message (`Request::SendData` sends them).
+    pub fn data_tag(mut self, tag: impl Into<String>) -> Self {
+        self.config.data_tags.insert(tag.into());
         self
     }
 

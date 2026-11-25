@@ -1,5 +1,6 @@
 //! What a client starts with: where its store lives, the key that seals it, its name and relays.
 
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use super::routing::{ProxyFallback, ProxyMode};
@@ -19,4 +20,6 @@ pub struct Config {
     pub proxy_mode: ProxyMode,
     /// When a message may go directly after all; `ProxyFallback::default()` is the chat's.
     pub proxy_fallback: ProxyFallback,
+    /// The content types that arrive as `Event::Data` instead of a message.
+    pub data_tags: BTreeSet<String>,
 }

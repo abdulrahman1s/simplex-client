@@ -13,6 +13,7 @@ impl<A: AgentPort> Engine<A> {
     pub fn start(&mut self, hello: &Config) -> Result<(), StoreError> {
         let (state, user) = load(&mut self.store)?;
         self.state = state;
+        self.data_tags.clone_from(&hello.data_tags);
         self.load_address()?;
         match user {
             Some(u) => self.state.user = u,

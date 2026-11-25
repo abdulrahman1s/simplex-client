@@ -76,6 +76,19 @@ impl<A: AgentPort> Engine<A> {
         if let Some(why) = prohibited(&g, &m, &c) {
             return Err(dropped(why));
         }
+        // A blocked member's data is not told, as their messages are not shown.
+        if let Some((tag, json)) = self.data_in(&c) {
+            if !m.hidden() {
+                let member = Some(m.id);
+                self.emit(Event::Data {
+                    chat,
+                    member,
+                    tag,
+                    json,
+                });
+            }
+            return Ok(());
+        }
         let size = c.file.as_ref().map_or(0, |i| i.file_size);
         let offer = c
             .file

@@ -1,4 +1,5 @@
 //! SimpleX chat protocol message layer: JSON chat messages, batches, compression (simplex-chat 7.1.4 Protocol.hs, AGPL-3.0-only).
+pub mod app_data;
 pub mod batch;
 mod bin;
 pub mod call;

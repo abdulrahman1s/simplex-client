@@ -6,6 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Application data. `Request::SendData { chat, tag, json, fallback_text }`
+  (`client.send_data`; JS `friend.sendData(tag, data, fallbackText)`, `group.sendData`)
+  sends `json` as `x.msg.new` with the content type `tag`. The official apps do not know the
+  type and show `fallback_text`, as simplex-chat 7.1.4 does for any `MCUnknown`; a live test
+  checks that the official CLI 7.1.4 keeps it as an item with that text. Content types
+  registered at start (`ClientBuilder::data_tag`, `Config::data_tags`; JS
+  `Client.start({ dataTags })`) arrive as `Event::Data { chat, member, tag, json }` (JS
+  `data`) instead of a message. Neither side keeps an item. A tag the apps know or with
+  spaces, and data with a `type` or `text` key, are refused. Data under a tag not
+  registered still arrives as a message with its fallback text. **Breaking:** `Request`,
+  `types::Event` and `client::Event` have new variants and `Config` a new field.
+
 ## [0.2.0] - 2026-11-25
 
 ### Added

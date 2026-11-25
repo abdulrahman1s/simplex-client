@@ -47,6 +47,16 @@ pub enum Event {
         group: i64,
         members: Vec<GroupMember>,
     },
+    /// Application data under a tag the client registered (`Config::data_tags`), sent with
+    /// `Request::SendData` or anything else that sends that content type. `member` is the group
+    /// member who sent it, `None` in a direct chat. It is not kept: a message the relay
+    /// delivers again after a restart, before it was acknowledged, comes again.
+    Data {
+        chat: ChatRef,
+        member: Option<i64>,
+        tag: String,
+        json: serde_json::Map<String, serde_json::Value>,
+    },
     /// Every message of the conversation was deleted here (`Request::ClearChat`).
     Cleared(ChatRef),
     Offline(bool),

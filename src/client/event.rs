@@ -4,7 +4,7 @@ use super::handle::Client;
 use super::objects::{Friend, FriendRequest, Group, GroupInvite, Member, Message};
 use crate::roster::Note;
 use crate::types;
-use crate::types::model::ChatProfile;
+use crate::types::model::{ChatProfile, ChatRef};
 
 /// One thing that happened. The objects it carries act through the client they came from.
 #[derive(Clone, Debug)]
@@ -32,6 +32,16 @@ pub enum Event {
     MemberAdd(Member),
     /// No relay is reachable (`true`), or one is again (`false`).
     Offline(bool),
+    /// Application data under a tag registered with
+    /// [`ClientBuilder::data_tag`](super::ClientBuilder::data_tag); `member` is the group
+    /// member who sent it, `None` in a direct chat. It is not kept, and a message the relay
+    /// delivers again before it was acknowledged comes again.
+    Data {
+        chat: ChatRef,
+        member: Option<i64>,
+        tag: String,
+        json: serde_json::Map<String, serde_json::Value>,
+    },
     /// An engine event without a variant of its own, and every chat list (`Chats`).
     Raw(types::Event),
 }
@@ -64,6 +74,17 @@ impl Event {
             Note::GroupInvite(g) => Self::GroupInvite(GroupInvite::new(Group::new(c(), g))),
             Note::MemberAdd { group, name } => Self::MemberAdd(Member::named(c(), group, name)),
             Note::Offline(offline) => Self::Offline(offline),
+            Note::Data {
+                chat,
+                member,
+                tag,
+                json,
+            } => Self::Data {
+                chat,
+                member,
+                tag,
+                json,
+            },
         }
     }
 }
