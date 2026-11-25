@@ -1,6 +1,6 @@
 //! The agent event table: each event to its handler; a failure is logged (nobody asked for it).
 
-use crate::types::model::Delivery;
+use crate::types::model::{Delivery, SendStatus};
 
 use crate::agent::client::RcptStatus;
 use crate::engine::agent_port::{AgentEvent, AgentPort};
@@ -15,6 +15,14 @@ impl<A: AgentPort> Engine<A> {
             | AgentEvent::Sent { conn, .. } => Some(*conn),
             _ => None,
         };
+        match &event {
+            AgentEvent::Sent { conn, msg_id } => self.tag_outcome(conn, *msg_id, SendStatus::Sent),
+            AgentEvent::Merr { conn, msg_id, err } => {
+                let detail = err.detail().to_owned();
+                self.tag_outcome(conn, *msg_id, SendStatus::Failed { detail });
+            }
+            _ => {}
+        }
         let r = match event {
             AgentEvent::Invitation { conn, full, short } => self.on_invitation(&conn, full, short),
             AgentEvent::Conf { conn, conn_info } => self.on_conf(&conn, &conn_info),

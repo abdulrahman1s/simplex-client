@@ -23,7 +23,7 @@ impl<A: AgentPort> Engine<A> {
         if f.reachable() {
             let msg = ChatMessage::new(ChatEvent::DirectDel)?;
             let body = encode_chat_message(&msg, true)?;
-            if let Err(e) = self.agent.send(&mut self.store, &f.conn, f.pq, body) {
+            if let Err(e) = self.agent_send(&f.conn, f.pq, body) {
                 self.log
                     .line(format_args!("x.direct.del not sent: {}", e.detail()));
             }

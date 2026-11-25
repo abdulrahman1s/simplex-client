@@ -70,3 +70,29 @@ fn a_second_client_on_the_same_store_fails_while_the_first_runs_and_starts_after
     let (again, _net) = start(builder(&dir), FakeAgent::default());
     again.close();
 }
+
+#[test]
+fn a_send_returns_the_handle_its_status_is_told_against() {
+    let dir = Dir::new();
+    let (client, _net) = start(builder(&dir), FakeAgent::default());
+    let handle = client
+        .send(crate::types::model::ChatRef::Direct(404), "hi")
+        .unwrap();
+    let e = wait_for(&client, |e| matches!(e, Event::SendStatus { .. }));
+    let Event::SendStatus {
+        handle: h, status, ..
+    } = e
+    else {
+        unreachable!()
+    };
+    assert_eq!(h, handle);
+    assert!(matches!(
+        status,
+        crate::types::model::SendStatus::Refused { .. }
+    ));
+    let other = client
+        .send(crate::types::model::ChatRef::Direct(404), "again")
+        .unwrap();
+    assert_ne!(other, handle);
+    client.close();
+}

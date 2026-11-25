@@ -60,10 +60,7 @@ impl<A: AgentPort> Engine<A> {
             if now - p.at >= PENDING_TTL_MS {
                 continue;
             }
-            match self
-                .agent
-                .send(&mut self.store, &conn, self.state.pq_of(&conn), p.body)
-            {
+            match self.agent_send(&conn, self.state.pq_of(&conn), p.body) {
                 Ok(sent) => {
                     if let Some((id, _)) = item {
                         self.put_index(&keys::sent(&conn, sent), id)?;

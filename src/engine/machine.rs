@@ -1,11 +1,12 @@
 //! The engine: state, store and agent owned by one thread, and the events waiting to go out.
 
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::time::Duration;
 
 use crate::types::Event;
+use crate::types::model::MessageAuthor;
 
-use super::agent_port::AgentPort;
+use super::agent_port::{AgentMsgId, AgentPort, ConnId};
 use super::clock::Clock;
 use super::files::Files;
 use super::jobs::Jobs;
@@ -35,6 +36,12 @@ pub struct Engine<A: AgentPort> {
     pub(crate) relays: Relays,
     /// The content types that arrive as `Event::Data`; set once at the start.
     pub(crate) data_tags: BTreeSet<String>,
+    /// The tag of the `Request::Tagged` being handled, while it is.
+    pub(crate) tagging: Option<u64>,
+    /// The tag of each message a tagged request sent, by connection and agent id. Eviction:
+    /// an entry leaves with its `Sent` or failure, which the agent reports for every message,
+    /// even on a deleted connection, except one forgotten undelivered after 2 days.
+    pub(crate) send_tags: BTreeMap<(ConnId, AgentMsgId), u64>,
     out: VecDeque<Event>,
 }
 
@@ -50,6 +57,8 @@ impl<A: AgentPort> Engine<A> {
             jobs: Jobs::default(),
             relays: Relays::default(),
             data_tags: BTreeSet::new(),
+            tagging: None,
+            send_tags: BTreeMap::new(),
             out: VecDeque::new(),
         }
     }
@@ -67,6 +76,15 @@ impl<A: AgentPort> Engine<A> {
     #[must_use]
     pub fn out_len(&self) -> usize {
         self.out.len()
+    }
+
+    /// The first of the user's own messages put out after the first `start` events.
+    pub(crate) fn own_item_after(&self, start: usize) -> Option<i64> {
+        let mut new = self.out.iter().skip(start).filter_map(|e| match e {
+            Event::Messages(list) => list.iter().find(|m| m.author == MessageAuthor::Me),
+            _ => None,
+        });
+        new.next().map(|m| m.id)
     }
 
     /// The next event for the writer. The chat list is built only when it is next, so changes

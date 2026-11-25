@@ -34,6 +34,7 @@ fn text_fits(text: &str) -> Result<(), Refusal> {
 /// the edit window, file sizes, a changed display name or bio) when it handles the request.
 pub fn check(request: &Request) -> Result<(), Refusal> {
     match request {
+        Request::Tagged { request, .. } => check(request),
         Request::React { emoji, .. } => {
             if wire_reaction(emoji).is_none() {
                 return refuse(

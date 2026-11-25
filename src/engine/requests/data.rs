@@ -38,7 +38,7 @@ impl<A: AgentPort> Engine<A> {
                     return Err(fail(Code::RequestFailed, "not connected"));
                 }
                 let body = encode_sized(&msg, PQ)?;
-                self.agent.send(&mut self.store, &f.conn, f.pq, body)?;
+                self.agent_send(&f.conn, f.pq, body)?;
             }
             ChatRef::Group(group) => {
                 Self::assert_my_role(&self.group(group)?, &ROLE_TO_SEND)?;

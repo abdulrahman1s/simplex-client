@@ -11,7 +11,9 @@ fn main() -> simplex_client::Result<()> {
     for event in client.events() {
         match event {
             Event::Request(request) => request.accept()?,
-            Event::FriendAdd(friend) => friend.send("Hi! I say back what you write.")?,
+            Event::FriendAdd(friend) => {
+                friend.send("Hi! I say back what you write.")?;
+            }
             Event::Message(msg) if !msg.mine() && !msg.text().is_empty() => {
                 msg.reply(msg.text())?;
             }

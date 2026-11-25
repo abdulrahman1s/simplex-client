@@ -2,9 +2,10 @@
 
 use super::handle::Client;
 use super::objects::{Friend, FriendRequest, Group, GroupInvite, Member, Message};
+use super::sending::SendHandle;
 use crate::roster::Note;
 use crate::types;
-use crate::types::model::{ChatProfile, ChatRef};
+use crate::types::model::{ChatProfile, ChatRef, SendStatus};
 
 /// One thing that happened. The objects it carries act through the client they came from.
 #[derive(Clone, Debug)]
@@ -32,6 +33,13 @@ pub enum Event {
     MemberAdd(Member),
     /// No relay is reachable (`true`), or one is again (`false`).
     Offline(bool),
+    /// What became of a send: queued (with the message it made) or refused, then sent or
+    /// failed, for the friend or for `member` of a group.
+    SendStatus {
+        handle: SendHandle,
+        member: Option<i64>,
+        status: SendStatus,
+    },
     /// Application data under a tag registered with
     /// [`ClientBuilder::data_tag`](super::ClientBuilder::data_tag); `member` is the group
     /// member who sent it, `None` in a direct chat. It is not kept, and a message the relay
@@ -74,6 +82,15 @@ impl Event {
             Note::GroupInvite(g) => Self::GroupInvite(GroupInvite::new(Group::new(c(), g))),
             Note::MemberAdd { group, name } => Self::MemberAdd(Member::named(c(), group, name)),
             Note::Offline(offline) => Self::Offline(offline),
+            Note::SendStatus {
+                tag,
+                member,
+                status,
+            } => Self::SendStatus {
+                handle: SendHandle(tag),
+                member,
+                status,
+            },
             Note::Data {
                 chat,
                 member,

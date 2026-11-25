@@ -41,6 +41,18 @@ All notable changes to this project are documented here. The format follows
   a `&str` the caller passed, the JS string in wasm, and the hashing state Argon2id
   (and HKDF, for a store from before Argon2id) keeps while it runs. **Breaking:**
   `Config::key` is a `Zeroizing<String>`.
+- Sends are tied to their outcome. `Client::send`, `reply`, `send_file`, `send_link`,
+  `send_live`, `send_data` and `forward` (and the same methods on `Friend`, `Group`, `Chat`
+  and `Message`) return a `SendHandle`, and what becomes of the send arrives as
+  `client::Event::SendStatus { handle, member, status }`: `Queued { item }` with the
+  message it made, or `Refused { code, detail }` at once instead of an unlinked
+  `Raw(Failed)`; then `Sent` or `Failed { detail }` for the friend, or for each `member` of
+  a group, as the agent reports `SENT` or `MERR`. Underneath, `Request::Tagged { tag,
+  request }` wraps any request, and `types::Event::SendStatus { tag, member, status }` (JS
+  `sendStatus`) tells its outcome. A file's message goes after its upload, so only its
+  `Queued` or `Refused` is told; the JS methods do not tag their sends yet. **Breaking:**
+  those methods return `Result<SendHandle>` instead of `Result<()>` (a `send(…)?` used as a
+  `match` arm's value needs a `;`), and `Request` and both `Event`s have new variants.
 
 ### Fixed
 

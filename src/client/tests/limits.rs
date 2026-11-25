@@ -6,10 +6,10 @@ use crate::engine::tests::{Dir, FakeAgent};
 use crate::types::model::ChatRef;
 use crate::types::{ErrorCode, Request, RequestKind};
 
-fn refused(r: Result<(), Error>) -> Option<(RequestKind, ErrorCode)> {
+fn refused<T>(r: Result<T, Error>) -> Option<(RequestKind, ErrorCode)> {
     match r {
         Err(Error::Failed { request, code, .. }) => Some((request, code)),
-        Ok(()) | Err(_) => None,
+        Ok(_) | Err(_) => None,
     }
 }
 

@@ -61,9 +61,7 @@ impl<A: AgentPort> Engine<A> {
             ChatRef::Direct(friend) => {
                 let conn = self.friend(friend)?.conn;
                 let body = encode_chat_message(msg, PQ)?;
-                let id = self
-                    .agent
-                    .send(&mut self.store, &conn, self.state.pq_of(&conn), body)?;
+                let id = self.agent_send(&conn, self.state.pq_of(&conn), body)?;
                 Ok(vec![(0, conn, id)])
             }
             ChatRef::Group(group) => self.send_to_group(group, msg, None),

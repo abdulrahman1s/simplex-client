@@ -4,6 +4,7 @@ use super::Roster;
 use crate::types::Event;
 use crate::types::model::{
     ChatGroup, ChatMessage, ChatNotice, ChatProfile, ChatRef, Friend, FriendRequest, MessageBody,
+    SendStatus,
 };
 
 /// One thing a high-level client reports, carrying only data: the clients attach themselves.
@@ -31,6 +32,11 @@ pub(crate) enum Note {
         tag: String,
         json: serde_json::Map<String, serde_json::Value>,
     },
+    SendStatus {
+        tag: u64,
+        member: Option<i64>,
+        status: SendStatus,
+    },
 }
 
 /// What `e` means to a high-level client; the chat list also updates `roster`.
@@ -46,6 +52,15 @@ pub(crate) fn lift(e: &Event, roster: &mut Roster) -> Vec<Note> {
             ..
         } => roster.update(friends, groups, requests),
         Event::Offline(offline) => vec![Note::Offline(*offline)],
+        Event::SendStatus {
+            tag,
+            member,
+            status,
+        } => vec![Note::SendStatus {
+            tag: *tag,
+            member: *member,
+            status: status.clone(),
+        }],
         Event::Data {
             chat,
             member,

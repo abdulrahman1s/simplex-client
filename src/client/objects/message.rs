@@ -1,7 +1,7 @@
 //! A message: answer it, react to it, change or delete it.
 
 use super::{Author, Chat, Member};
-use crate::client::{Client, Error, Result};
+use crate::client::{Client, Error, Result, SendHandle};
 use crate::types::model::{ChatMessage, ChatRef, MessageAuthor};
 use crate::types::{ErrorCode, Request, RequestKind};
 
@@ -77,7 +77,7 @@ impl Message {
     }
 
     /// Answers in the same conversation, quoting this message.
-    pub fn reply(&self, text: &str) -> Result<()> {
+    pub fn reply(&self, text: &str) -> Result<SendHandle> {
         self.client.reply(&self.info, text)
     }
 

@@ -2,21 +2,22 @@
 
 use super::error::Result;
 use super::handle::Client;
+use super::sending::SendHandle;
 use crate::types::Request;
 use crate::types::model::{ChatMessage, ChatRef, LinkInfo};
 
 impl Client {
     /// Sends `msg` to `to` as the user's own, marked forwarded.
-    pub fn forward(&self, msg: &ChatMessage, to: ChatRef) -> Result<()> {
-        self.request(Request::Forward {
+    pub fn forward(&self, msg: &ChatMessage, to: ChatRef) -> Result<SendHandle> {
+        self.tagged(Request::Forward {
             from: msg.chat,
             item: msg.id,
             to,
         })
     }
     /// Starts a live message, seen as it is written; `update_live` sends the rest.
-    pub fn send_live(&self, chat: ChatRef, text: &str) -> Result<()> {
-        self.request(Request::SendLive {
+    pub fn send_live(&self, chat: ChatRef, text: &str) -> Result<SendHandle> {
+        self.tagged(Request::SendLive {
             chat,
             text: text.to_owned(),
         })
@@ -40,8 +41,8 @@ impl Client {
         tag: &str,
         json: serde_json::Map<String, serde_json::Value>,
         fallback_text: &str,
-    ) -> Result<()> {
-        self.request(Request::SendData {
+    ) -> Result<SendHandle> {
+        self.tagged(Request::SendData {
             chat,
             tag: tag.to_owned(),
             json,
@@ -49,8 +50,8 @@ impl Client {
         })
     }
     /// `text` with the preview of the link it has.
-    pub fn send_link(&self, chat: ChatRef, text: &str, preview: LinkInfo) -> Result<()> {
-        self.request(Request::SendLink {
+    pub fn send_link(&self, chat: ChatRef, text: &str, preview: LinkInfo) -> Result<SendHandle> {
+        self.tagged(Request::SendLink {
             chat,
             text: text.to_owned(),
             preview,

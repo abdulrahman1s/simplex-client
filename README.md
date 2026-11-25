@@ -120,7 +120,9 @@ fn main() -> simplex_client::Result<()> {
     for event in client.events() {
         match event {
             Event::Request(request) => request.accept()?,
-            Event::FriendAdd(friend) => friend.send("Hi! I echo what you write.")?,
+            Event::FriendAdd(friend) => {
+                friend.send("Hi! I echo what you write.")?;
+            }
             Event::Message(msg) if !msg.mine() && !msg.text().is_empty() => {
                 msg.reply(msg.text())?;
             }
@@ -138,6 +140,12 @@ keeps the chat list: `client.friend(id)`, `client.friends()`, `client.groups()`,
 `client.create_group(name)` returns the new `Group`. `request(Request)` is the escape hatch
 for anything else.
 
+Each send (`send`, `reply`, `send_file`, `send_link`, `send_live`, `send_data`, `forward`)
+returns a `SendHandle`, and what becomes of it arrives as `Event::SendStatus { handle,
+member, status }`: `Queued { item }` with the message it made, or `Refused { code, detail }`
+at once; then `Sent` or `Failed { detail }` for the friend, or for each `member` of a group.
+A file's message goes after its upload, so only its `Queued` or `Refused` is told.
+
 ### Events
 
 | Event | Fires when |
@@ -152,6 +160,7 @@ for anything else.
 | `MemberAdd(member)` | a member connects with you: someone new, or each one there when you join |
 | `Offline(bool)` | no relay is reachable, or one is again |
 | `Data { chat, member, tag, json }` | application data arrives under a tag you registered |
+| `SendStatus { handle, member, status }` | a send was queued or refused, then sent or failed |
 | `Raw(event)` | anything else the engine reports, and every chat list |
 
 The engine's own events are `simplex_client::types::Event` (`cargo doc --open`).

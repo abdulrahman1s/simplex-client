@@ -58,10 +58,7 @@ impl<A: AgentPort> Engine<A> {
             member_key: None,
         })?;
         let body = encode_chat_message(&msg, false)?;
-        if let Err(e) = self
-            .agent
-            .send(&mut self.store, &conn, self.state.pq_of(&conn), body)
-        {
+        if let Err(e) = self.agent_send(&conn, self.state.pq_of(&conn), body) {
             self.log
                 .line(format_args!("x.grp.link.mem not sent: {}", e.detail()));
         }

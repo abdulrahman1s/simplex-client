@@ -42,6 +42,14 @@ fn named(note: Note) -> (&'static str, Payload) {
         Note::MemberAdd { group, name } => ("memberAdd", Payload::Member { group, name }),
         Note::Offline(true) => ("offline", Payload::Nothing),
         Note::Offline(false) => ("online", Payload::Nothing),
+        Note::SendStatus {
+            tag,
+            member,
+            status,
+        } => {
+            let v = serde_json::json!({"tag": tag, "member": member, "status": status});
+            ("sendStatus", Payload::Json(v))
+        }
         Note::Data {
             chat,
             member,

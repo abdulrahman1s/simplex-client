@@ -6,6 +6,7 @@ use crate::types::{Request, RequestKind};
 pub fn kind_of(r: &Request) -> RequestKind {
     use RequestKind as K;
     match r {
+        Request::Tagged { request, .. } => kind_of(request),
         Request::SetProfile(_) | Request::SetPicture(_) => K::SetProfile,
         Request::CreateInvite | Request::CreateIncognitoInvite => K::CreateInvite,
         Request::Connect(_) | Request::ConnectIncognito(_) => K::Connect,
