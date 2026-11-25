@@ -2,6 +2,7 @@
 use std::collections::BTreeSet;
 
 use wasm_bindgen::{JsCast, JsValue};
+use zeroize::Zeroizing;
 
 use super::convert::error;
 use crate::limits::is_valid_name;
@@ -50,7 +51,8 @@ fn transport(o: &JsValue) -> Result<Transport, JsValue> {
 
 pub(super) struct Options {
     pub(super) name: String,
-    pub(super) key: String,
+    /// Wiped when the options are dropped, once the store is open.
+    pub(super) key: Zeroizing<String>,
     pub(super) transport: Transport,
     pub(super) token: Option<String>,
     /// SMP relay addresses; empty means the presets.
@@ -150,9 +152,11 @@ impl Options {
         }
         Ok(Self {
             name,
-            key: text(o, "key")?
-                .filter(|k| !k.is_empty())
-                .ok_or_else(|| need("key"))?,
+            key: Zeroizing::new(
+                text(o, "key")?
+                    .filter(|k| !k.is_empty())
+                    .ok_or_else(|| need("key"))?,
+            ),
             transport: transport(o)?,
             token: text(o, "tunnelToken")?,
             relays,

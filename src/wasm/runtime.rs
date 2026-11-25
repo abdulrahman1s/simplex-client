@@ -77,7 +77,8 @@ impl Core {
         let mut engine = Engine::new(store, agent, Box::new(JsClock), log.clone());
         let config = Config {
             dir: PathBuf::new(),
-            key: o.key.clone(),
+            // The engine does not need it; the store is already open.
+            key: zeroize::Zeroizing::new(String::new()),
             name: o.name.clone(),
             relays: o.relays.clone(),
             proxy_mode: o.proxy_mode,

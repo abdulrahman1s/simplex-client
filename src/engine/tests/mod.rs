@@ -93,7 +93,7 @@ impl Dir {
     pub fn hello(&self, name: &str) -> Config {
         Config {
             dir: self.0.clone(),
-            key: KEY.into(),
+            key: zeroize::Zeroizing::new(KEY.into()),
             name: name.into(),
             relays: Vec::new(),
             proxy_mode: crate::types::ProxyMode::default(),

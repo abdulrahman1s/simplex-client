@@ -41,7 +41,7 @@ impl Native {
         let relays = vec![var("SIMPLEX_TEST_SMP"), var("SIMPLEX_TEST_XFTP")];
         let hello = Config {
             dir: dir.0.clone(),
-            key: KEY.into(),
+            key: zeroize::Zeroizing::new(KEY.into()),
             name: "alice".into(),
             relays,
             proxy_mode: crate::types::ProxyMode::default(),

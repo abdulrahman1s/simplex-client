@@ -5,6 +5,7 @@ use std::path::Path;
 use std::thread::{self, JoinHandle};
 
 use crossbeam_channel::{Receiver, Sender, bounded};
+use zeroize::Zeroizing;
 
 use super::error::{Error, Result};
 use crate::engine::agent_port::AgentPort;
@@ -35,7 +36,7 @@ pub(super) struct Started {
 
 /// Starts the engine on its own thread and waits until it is ready or failed.
 pub(super) fn spawn<A, F>(
-    config: Config,
+    mut config: Config,
     log: Log,
     clock: Box<dyn Clock>,
     agent: F,
@@ -52,8 +53,12 @@ where
     let thread = thread::Builder::new()
         .name("simplex-engine".into())
         .spawn(move || {
+            // Wiped as soon as the store is open: nothing after needs it.
+            let key = std::mem::replace(&mut config.key, Zeroizing::new(String::new()));
+            let opened = open(&config, &key, &log, clock, agent);
+            drop(key);
             // The lock goes when this thread ends, so `close()` has released it on return.
-            let (mut engine, smp, _lock) = match open(&config, &log, clock, agent) {
+            let (mut engine, smp, _lock) = match opened {
                 Ok(started) => started,
                 Err(e) => {
                     // The builder waits on this; if it is gone there is nobody to tell.
@@ -88,6 +93,7 @@ where
 
 fn open<A, F>(
     config: &Config,
+    key: &str,
     log: &Log,
     clock: Box<dyn Clock>,
     agent: F,
@@ -98,7 +104,7 @@ where
 {
     std::fs::create_dir_all(&config.dir)?;
     let lock = lock(&config.dir)?;
-    let store = Store::open(&config.dir.join(STORE_FILE), &config.key)?;
+    let store = Store::open(&config.dir.join(STORE_FILE), key)?;
     let (agent, smp) = agent(config, log);
     let mut engine = Engine::new(store, agent, clock, log.clone());
     engine.start(config)?;

@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use crossbeam_channel::Receiver;
+use zeroize::Zeroizing;
 
 use super::error::{Error, Result};
 use super::handle::Client;
@@ -34,7 +35,7 @@ impl ClientBuilder {
         Self {
             config: Config {
                 dir,
-                key: String::new(),
+                key: Zeroizing::new(String::new()),
                 name: "SimpleX bot".into(),
                 relays: Vec::new(),
                 proxy_mode: ProxyMode::default(),
@@ -53,9 +54,18 @@ impl ClientBuilder {
         self
     }
 
-    /// The passphrase that seals the store; required, and stretched with Argon2id.
+    /// The passphrase that seals the store; required, and stretched with Argon2id. An owned
+    /// `String` is taken as it is and wiped once the store is open; a `&str` stays the
+    /// caller's to wipe ([`key_zeroizing`](Self::key_zeroizing) keeps it in one buffer).
     pub fn key(mut self, key: impl Into<String>) -> Self {
-        self.config.key = key.into();
+        self.config.key = Zeroizing::new(key.into());
+        self
+    }
+
+    /// [`key`](Self::key) from a buffer that wipes itself: the client keeps no other copy,
+    /// and wipes this one once the store is open, or when the start fails.
+    pub fn key_zeroizing(mut self, key: Zeroizing<String>) -> Self {
+        self.config.key = key;
         self
     }
 

@@ -32,6 +32,15 @@ All notable changes to this project are documented here. The format follows
   A second client on the same folder, in this process or another, fails with the new
   `Error::Locked(folder)` instead of writing the same store. **Breaking:** `client::Error`
   has a new variant.
+- `ClientBuilder::key_zeroizing(Zeroizing<String>)` takes the store passphrase in a buffer
+  that wipes itself, and `Config::key` is now a `Zeroizing<String>`. The client keeps no
+  other copy: the engine thread takes the key out of its config and wipes it as soon as the
+  store is open (or the open failed), and the wasm client's options wipe theirs once the
+  store is open. `ClientBuilder::key(impl Into<String>)` still works; an owned `String` is
+  taken and wiped the same way. `Config`'s `Debug` shows the key as `<redacted>`. Not wiped:
+  a `&str` the caller passed, the JS string in wasm, and the hashing state Argon2id
+  (and HKDF, for a store from before Argon2id) keeps while it runs. **Breaking:**
+  `Config::key` is a `Zeroizing<String>`.
 
 ### Fixed
 

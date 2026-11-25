@@ -1,6 +1,7 @@
 //! `Client` over the engine's fake agent.
 
 mod calls;
+mod key;
 mod limits;
 mod objects;
 
