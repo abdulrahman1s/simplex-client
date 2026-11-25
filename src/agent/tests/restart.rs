@@ -88,8 +88,9 @@ fn delete_forgets_the_connection_and_deletes_its_queue() {
         .send(&mut a.store, ca, pq_of(&a.agent, ca), b"x".to_vec())
         .unwrap();
     a.agent.delete(&mut a.store, ca).unwrap();
-    pump(&mut [&mut a, &mut b], WAIT, |_| {
-        (r.smp.count("DEL") == 1).then_some(())
+    // The queue goes at once; the connection once "x" is delivered.
+    pump(&mut [&mut a, &mut b], WAIT, |n| {
+        (r.smp.count("DEL") == 1 && n[0].agent.conn(ca).is_err()).then_some(())
     });
     assert_eq!(a.store.get(NS, &conn_key(ca)).unwrap(), None);
     assert!(a.store.keys_with_prefix(NS, b"").unwrap().is_empty());
