@@ -28,6 +28,7 @@ mod live_autoreply;
 mod live_call;
 mod live_cli;
 mod live_data;
+mod live_file_status;
 mod live_forward;
 mod live_group;
 mod live_incognito;
