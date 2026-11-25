@@ -63,6 +63,7 @@ impl<A: AgentPort> Engine<A> {
         };
         self.put(&keys::request(id), &rec)?;
         self.state.address.requests.insert(id, rec);
+        self.state.changed.requests = true;
         self.state.chats_dirty = true;
         self.auto_answer(id)
     }
@@ -92,6 +93,7 @@ impl<A: AgentPort> Engine<A> {
         let Some(r) = self.state.address.requests.remove(&id) else {
             return Ok(());
         };
+        self.state.changed.requests = true;
         self.store.delete(NS, &keys::request(id))?;
         self.state.chats_dirty = true;
         if drop && r.member.is_none() {

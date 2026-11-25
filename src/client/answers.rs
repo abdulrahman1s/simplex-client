@@ -17,6 +17,7 @@ pub(super) fn answers(event: &Event) -> Option<(usize, Option<Want>)> {
         | Event::Ready(_)
         | Event::Profile(_)
         | Event::Chats { .. }
+        | Event::ChatsChanged { .. }
         | Event::Address(None)
         | Event::Messages(_)
         | Event::Updated(_)

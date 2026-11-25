@@ -7,6 +7,7 @@ use crate::types::model::{ChatMessage, ChatRef};
 use super::address::AddressState;
 use super::agent_port::ConnId;
 use super::calls::CallState;
+use super::changes::Changes;
 use super::records::{
     ConnKind, ConnRecord, FriendRecord, GroupRecord, MemberRecord, SettingsRecord, UserRecord,
 };
@@ -34,6 +35,8 @@ pub struct State {
     pub inviting_incognito: bool,
     /// The chat list changed and is due out; at most one is pending.
     pub chats_dirty: bool,
+    /// Which friends, groups and requests changed since the list last went out.
+    pub changed: Changes,
     pub address: AddressState,
     pub calls: CallState,
     /// Timed items with a delete time, earliest first: (delete at, chat, item), as the store's

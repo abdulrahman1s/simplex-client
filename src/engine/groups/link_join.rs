@@ -170,6 +170,7 @@ impl<A: AgentPort> Engine<A> {
     fn forget_friend_record(&mut self, friend: i64) -> Result<()> {
         self.store.delete(NS, &keys::friend(friend))?;
         self.state.friends.remove(&friend);
+        self.state.changed.friends.insert(friend);
         self.state.last.remove(&ChatRef::Direct(friend));
         Ok(())
     }

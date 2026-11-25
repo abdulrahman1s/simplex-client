@@ -28,7 +28,6 @@ pub struct ClientBuilder {
     pub(super) log: Option<Log>,
     pub(super) timeout: Duration,
     pub(super) events_cap: usize,
-    pub(super) roster_deltas: bool,
 }
 
 impl ClientBuilder {
@@ -42,11 +41,11 @@ impl ClientBuilder {
                 proxy_mode: ProxyMode::default(),
                 proxy_fallback: ProxyFallback::default(),
                 data_tags: std::collections::BTreeSet::new(),
+                roster_deltas: false,
             },
             log: None,
             timeout: Duration::from_secs(60),
             events_cap: EVENTS_CAP,
-            roster_deltas: false,
         }
     }
 
@@ -104,9 +103,11 @@ impl ClientBuilder {
 
     /// Hear what changed instead of whole chat lists: `FriendUpdate` and `GroupUpdate` join
     /// the adds and removes, and `Raw(Chats)` comes only after [`Client::refresh`] asks for
-    /// it. `friends()` and `groups()` stay current either way. Off by default.
+    /// it. The engine then sends only the friends and groups that changed
+    /// (`Event::ChatsChanged`), not the whole list, so a large roster costs no more to keep
+    /// than the changes. `friends()` and `groups()` stay current either way. Off by default.
     pub fn roster_deltas(mut self, on: bool) -> Self {
-        self.roster_deltas = on;
+        self.config.roster_deltas = on;
         self
     }
 

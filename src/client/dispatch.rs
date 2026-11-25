@@ -54,7 +54,8 @@ const fn raw(e: &Event) -> bool {
         | Event::Offline(_)
         | Event::Cleared(_)
         | Event::Data { .. }
-        | Event::SendStatus { .. } => false,
+        | Event::SendStatus { .. }
+        | Event::ChatsChanged { .. } => false,
         Event::Features { .. }
         | Event::Profile(_)
         | Event::Chats { .. }

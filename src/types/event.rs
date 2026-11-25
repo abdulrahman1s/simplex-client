@@ -26,6 +26,17 @@ pub enum Event {
         requests: Vec<FriendRequest>,
         chats: Vec<ChatPreview>,
     },
+    /// What changed in the chat list since it last went out, instead of a whole `Chats`, when
+    /// `Config::roster_deltas` is on: each friend and group changed or new as it is now, the
+    /// ids of those gone, and the requests when they changed. Previews (`Chats.chats`) come
+    /// only with a whole list.
+    ChatsChanged {
+        friends: Vec<Friend>,
+        groups: Vec<ChatGroup>,
+        removed_friends: Vec<i64>,
+        removed_groups: Vec<i64>,
+        requests: Option<Vec<FriendRequest>>,
+    },
     Invite(String),
     Address(Option<String>),
     Messages(Vec<ChatMessage>),

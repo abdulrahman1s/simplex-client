@@ -88,6 +88,7 @@ impl<A: AgentPort> Engine<A> {
         };
         self.put(&keys::request(id), &rec)?;
         self.state.address.requests.insert(id, rec);
+        self.state.changed.requests = true;
         self.state.chats_dirty = true;
         self.group_notice(ctx.group, Some(m.id), ChatNotice::DirectInvitation)
     }

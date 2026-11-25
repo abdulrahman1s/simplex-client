@@ -86,6 +86,7 @@ fn restarted(t: T) -> (T, Vec<Event>) {
         clock,
         dir,
         relays,
+        listed: super::marked::Listed::default(),
     };
     let out = t.out();
     (t, out)

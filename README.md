@@ -162,7 +162,13 @@ with no member when the upload fails or the file is cancelled or deleted first.
 | `Offline(bool)` | no relay is reachable, or one is again |
 | `Data { chat, member, tag, json }` | application data arrives under a tag you registered |
 | `SendStatus { handle, member, status }` | a send was queued or refused, then sent or failed |
+| `FriendUpdate(friend)` / `GroupUpdate(group)` | a friend or group changed (with `roster_deltas`) |
 | `Raw(event)` | anything else the engine reports, and every chat list |
+
+A client with many friends can start with `.roster_deltas(true)` (JS `rosterDeltas: true`):
+the engine then sends only the friends and groups that changed, which arrive as
+`FriendUpdate` and `GroupUpdate` beside the adds and removes, and a whole list only when
+`client.refresh()` asks for it.
 
 The engine's own events are `simplex_client::types::Event` (`cargo doc --open`).
 

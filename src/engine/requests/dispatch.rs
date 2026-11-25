@@ -106,6 +106,7 @@ impl<A: AgentPort> Engine<A> {
             } => self.history(chat, before, count, tag),
             Request::Refresh => {
                 self.state.chats_dirty = true;
+                self.state.changed.all = true;
                 Ok(())
             }
             Request::SetMuted { chat, on } => self.set_muted(chat, on),

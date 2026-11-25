@@ -161,3 +161,53 @@ fn a_roster_without_deltas_tells_no_updates() {
     };
     assert!(lift(&chats(&[renamed], &[], &[]), &mut r).is_empty());
 }
+
+#[test]
+fn changes_tell_what_a_whole_list_would_and_leave_the_rest_as_it_was() {
+    let mut r = Roster::default();
+    r.deltas = true;
+    let team = group(1, Membership::Member);
+    lift(
+        &chats(
+            &[friend(1, true), friend(2, true)],
+            std::slice::from_ref(&team),
+            &[],
+        ),
+        &mut r,
+    );
+    let renamed = Friend {
+        name: "bobby".into(),
+        ..friend(1, true)
+    };
+    let changed = Event::ChatsChanged {
+        friends: vec![renamed.clone(), friend(3, true)],
+        groups: Vec::new(),
+        removed_friends: vec![2],
+        removed_groups: vec![1],
+        requests: Some(vec![request(7)]),
+    };
+    let notes = lift(&changed, &mut r);
+    assert_eq!(
+        notes,
+        [
+            Note::Request(request(7)),
+            Note::FriendRemove(friend(2, true)),
+            Note::FriendAdd(friend(3, true)),
+            Note::FriendUpdate(renamed.clone()),
+            Note::GroupRemove(team),
+        ]
+    );
+    assert_eq!(r.friends.keys().copied().collect::<Vec<_>>(), [1, 3]);
+    assert!(r.groups.is_empty());
+    let unchanged = Event::ChatsChanged {
+        friends: vec![renamed],
+        groups: Vec::new(),
+        removed_friends: Vec::new(),
+        removed_groups: Vec::new(),
+        requests: None,
+    };
+    assert!(
+        lift(&unchanged, &mut r).is_empty(),
+        "a mark that changed nothing"
+    );
+}

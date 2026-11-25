@@ -47,6 +47,7 @@ impl Native {
             proxy_mode: crate::types::ProxyMode::default(),
             proxy_fallback: crate::types::ProxyFallback::default(),
             data_tags: tags.iter().map(|t| (*t).to_owned()).collect(),
+            roster_deltas: false,
         };
         let log = Log::new(std::io::stderr());
         let (agent, smp) = NativeAgent::new(&hello.relays, log.clone());

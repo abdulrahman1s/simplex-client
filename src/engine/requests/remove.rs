@@ -57,6 +57,7 @@ impl<A: AgentPort> Engine<A> {
         self.store.apply(ops)?;
         self.forget_timed(ChatRef::Direct(id))?;
         self.state.friends.remove(&id);
+        self.state.changed.friends.insert(id);
         self.state.last.remove(&ChatRef::Direct(id));
         self.state.chats_dirty = true;
         Ok(())

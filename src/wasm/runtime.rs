@@ -84,6 +84,7 @@ impl Core {
             proxy_mode: o.proxy_mode,
             proxy_fallback: o.proxy_fallback,
             data_tags: o.data_tags.clone(),
+            roster_deltas: o.roster_deltas,
         };
         let files = Files::attach(&mut engine, &o.transport, o.token.clone(), files_shared);
         engine.start(&config)?;
@@ -91,6 +92,8 @@ impl Core {
         // already answer then.
         let profile = Some(engine.state.user.to_wire());
         let jobs = engine.job_results();
+        let mut roster = Roster::default();
+        roster.deltas = o.roster_deltas;
         Ok(Core {
             engine,
             pool,
@@ -99,7 +102,7 @@ impl Core {
             smp_clock,
             waiters: Waiters::default(),
             files,
-            roster: Roster::default(),
+            roster,
             profile,
             log,
             timeout_ms: o.timeout_ms,

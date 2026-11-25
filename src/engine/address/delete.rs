@@ -32,6 +32,7 @@ impl<A: AgentPort> Engine<A> {
         }));
         self.store.apply(ops)?;
         requests.retain(|_, r| r.member.is_some());
+        self.state.changed.requests = true;
         self.state.chats_dirty = true;
         self.emit(Event::Address(None));
         // The profile no longer shows an address that is gone (`APIDeleteMyAddress`).

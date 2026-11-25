@@ -91,18 +91,21 @@ impl<A: AgentPort> Engine<A> {
 
     pub(crate) fn save_friend(&mut self, f: FriendRecord) -> Result<(), StoreError> {
         self.put(&keys::friend(f.id), &f)?;
+        self.state.changed.friends.insert(f.id);
         self.state.friends.insert(f.id, f);
         Ok(())
     }
 
     pub(crate) fn save_group(&mut self, g: GroupRecord) -> Result<(), StoreError> {
         self.put(&keys::group(g.id), &g)?;
+        self.state.changed.groups.insert(g.id);
         self.state.groups.insert(g.id, g);
         Ok(())
     }
 
     pub(crate) fn save_member(&mut self, m: MemberRecord) -> Result<(), StoreError> {
         self.put(&keys::member(m.group, m.id), &m)?;
+        self.state.changed.groups.insert(m.group);
         self.state.members.insert((m.group, m.id), m);
         Ok(())
     }
@@ -115,6 +118,8 @@ impl<A: AgentPort> Engine<A> {
 
     pub(crate) fn save_user(&mut self, u: UserRecord) -> Result<(), StoreError> {
         self.put(keys::USER, &u)?;
+        // Every friend shows the user's preferences (their timer and features).
+        self.state.changed.all = true;
         self.state.user = u;
         Ok(())
     }
