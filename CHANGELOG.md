@@ -23,8 +23,9 @@ All notable changes to this project are documented here. The format follows
   both ways, as negotiated, not as asked for. It is what the ratchet used for the last
   message sent and the last received (`rcSndKEM`, `rcRcvKEM`), checked after each one as
   simplex-chat 7.1.4 keeps `pqSndEnabled` and `pqRcvEnabled` (`connPQEnabled`), so it is
-  false until a message has gone each way and stays false with a peer without PQ. The chat
-  list goes out again when it changes. A live test checks it against the official CLI
+  false until a message has gone each way and stays false with a peer without PQ. It is read
+  from the ratchets at each start too, so friends from before this release are listed right.
+  The chat list goes out again when it changes. A live test checks it against the official CLI
   7.1.4. **Breaking:** `Friend` has a new field and the `AgentPort` trait a new method,
   `pq_on`.
 - `ClientBuilder::start` takes an exclusive OS file lock (`std::fs::File::try_lock` on

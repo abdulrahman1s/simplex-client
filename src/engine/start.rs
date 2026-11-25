@@ -32,6 +32,9 @@ impl<A: AgentPort> Engine<A> {
             self.log
                 .line(format_args!("subscribing failed: {}", e.detail()));
         }
+        // The ratchets are loaded now: a friend kept before PQ was told lists it right away.
+        let conns: Vec<_> = self.state.friends.values().map(|f| f.conn).collect();
+        conns.iter().for_each(|c| self.note_pq(c));
         self.pump();
         // Out now, not lazily: what a waiting request answers must come after the list.
         self.state.chats_dirty = false;

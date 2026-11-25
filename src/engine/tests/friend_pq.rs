@@ -93,6 +93,18 @@ fn a_friends_pq_is_what_the_ratchet_negotiated_and_false_with_a_classical_peer()
         Some(false),
         "the list goes out again"
     );
+}
+
+#[test]
+fn a_friends_pq_is_read_from_the_ratchet_at_the_start() {
+    let mut t = T::started();
+    let (bob, _) = t.friend("bob");
+    let mut f = t.e.friend(bob).unwrap();
+    f.pq_on = false;
+    t.e.save_friend(f).unwrap();
     let t = t.restarted();
-    assert!(!t.e.friend(carol).unwrap().pq_on, "kept");
+    assert!(
+        t.e.friend(bob).unwrap().pq_on,
+        "the ratchet says so before any message"
+    );
 }
