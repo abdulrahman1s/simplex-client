@@ -4,6 +4,8 @@
 
 #[path = "wasm_client/admin.rs"]
 mod admin;
+#[path = "wasm_client/data.rs"]
+mod data;
 #[path = "wasm_client/files.rs"]
 mod files;
 #[path = "wasm_client/limits.rs"]

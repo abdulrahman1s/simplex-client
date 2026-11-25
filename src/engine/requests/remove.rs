@@ -20,15 +20,20 @@ impl<A: AgentPort> Engine<A> {
             .get(&id)
             .cloned()
             .ok_or_else(|| fail(Code::RequestFailed, "no such friend"))?;
+        // Commands.hs `sendDelDeleteConns`: the connection waits for its sends only when
+        // `x.direct.del` went, so the peer hears it and what was sent before.
+        let mut told = false;
         if f.reachable() {
             let msg = ChatMessage::new(ChatEvent::DirectDel)?;
             let body = encode_chat_message(&msg, true)?;
-            if let Err(e) = self.agent.send(&mut self.store, &f.conn, f.pq, body) {
-                self.log
-                    .line(format_args!("x.direct.del not sent: {}", e.detail()));
+            match self.agent_send(&f.conn, f.pq, body) {
+                Ok(_) => told = true,
+                Err(e) => self
+                    .log
+                    .line(format_args!("x.direct.del not sent: {}", e.detail())),
             }
         }
-        self.forget_conn(&f.conn)?;
+        self.forget_conn_after(&f.conn, told)?;
         self.forget_files(id)?;
         self.forget_items(id)?;
         let mut ops = vec![Op::Delete {

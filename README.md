@@ -17,6 +17,7 @@ small, plain API.
 - Chat messages, contacts, groups, replies, edits, deletes and reactions, link previews,
   forwarding, live messages
 - Disappearing messages, for a friend or a group
+- Application data for bots and apps, which the official apps show as a fallback text
 - Chat preferences (full delete, reactions, voice, files, calls), your own and per friend
 - Group admin: roles, blocking for everyone, removing members, moderation, the group's name,
   description and preferences, and deleting a group
@@ -119,7 +120,9 @@ fn main() -> simplex_client::Result<()> {
     for event in client.events() {
         match event {
             Event::Request(request) => request.accept()?,
-            Event::FriendAdd(friend) => friend.send("Hi! I echo what you write.")?,
+            Event::FriendAdd(friend) => {
+                friend.send("Hi! I echo what you write.")?;
+            }
             Event::Message(msg) if !msg.mine() && !msg.text().is_empty() => {
                 msg.reply(msg.text())?;
             }
@@ -137,6 +140,12 @@ keeps the chat list: `client.friend(id)`, `client.friends()`, `client.groups()`,
 `client.create_group(name)` returns the new `Group`. `request(Request)` is the escape hatch
 for anything else.
 
+Each send (`send`, `reply`, `send_file`, `send_link`, `send_live`, `send_data`, `forward`)
+returns a `SendHandle`, and what becomes of it arrives as `Event::SendStatus { handle,
+member, status }`: `Queued { item }` with the message it made, or `Refused { code, detail }`
+at once; then `Sent` or `Failed { detail }` for the friend, or for each `member` of a group.
+A file's message goes after its upload, so only its `Queued` or `Refused` is told.
+
 ### Events
 
 | Event | Fires when |
@@ -150,9 +159,27 @@ for anything else.
 | `GroupInvite(invite)` | you are invited into a group |
 | `MemberAdd(member)` | a member connects with you: someone new, or each one there when you join |
 | `Offline(bool)` | no relay is reachable, or one is again |
+| `Data { chat, member, tag, json }` | application data arrives under a tag you registered |
+| `SendStatus { handle, member, status }` | a send was queued or refused, then sent or failed |
 | `Raw(event)` | anything else the engine reports, and every chat list |
 
 The engine's own events are `simplex_client::types::Event` (`cargo doc --open`).
+
+Friends and groups from before a restart are not announced again: `FriendAdd` and `GroupAdd`
+are for what is new. The client's list is complete as soon as `start` returns, so read it
+there, then follow the events:
+
+```rust
+let client = Client::builder("./bot-data").key(key).start()?;
+let mut known: HashMap<i64, Friend> = client.friends().into_iter().map(|f| (f.id(), f)).collect();
+for event in client.events() {
+    match event {
+        Event::FriendAdd(f) => { known.insert(f.id(), f); }
+        Event::FriendRemove(f) => { known.remove(&f.id()); }
+        _ => {}
+    }
+}
+```
 
 ## WebAssembly
 
@@ -390,6 +417,34 @@ client.once("message").then((m) => m.updateLive("Hello!", true)); // m.live unti
 A forwarded file goes again only when it is here (sent from here, or downloaded and still in
 memory in wasm); otherwise its caption goes as text, as the official apps do.
 
+### Application data
+
+Programs can talk to each other in the same chats people use. Data goes as a message
+content type the official apps do not know; they show its fallback text instead, as SimpleX
+Chat 7.1.4 does for any type it does not know (`MCUnknown`). Nothing is kept on either side
+for data under a tag the receiver registered:
+
+```rust
+let client = Client::builder("bot").key(key).data_tag("app.poll").start()?;
+let mut poll = serde_json::Map::new();
+poll.insert("q".into(), "lunch?".into());
+client.send_data(friend.chat(), "app.poll", poll, "A poll: lunch?")?;
+// Event::Data { chat, member, tag, json } for "app.poll" from others
+```
+
+```js
+const client = await Client.start({ ...options, dataTags: ["app.poll"] });
+await friend.sendData("app.poll", { q: "lunch?" }, "A poll: lunch?");
+client.on("data", ({ chat, member, tag, data }) => chat.sendData(tag, { a: 1 }, "Voted"));
+```
+
+A tag is not one of the types the apps know (`text`, `link`, `image`, …) and has no spaces;
+the data has no `type` or `text` key, since those hold the tag and the fallback. Data must fit
+in one message, as text does. It is not kept, so a message the relay delivers again after a
+restart, before it was acknowledged, comes again, and a group member's data that reaches you
+both from them and through the host comes twice. A blocked member's data is dropped. Data
+under a tag the client did not register arrives as a message with its fallback text.
+
 ### Your own housekeeping
 
 These stay on your device and nobody is told:
@@ -506,6 +561,10 @@ The protocol, limits and settings are in [worker/README.md](worker/README.md).
   `Client.start` refuses a missing or empty `key`. The passphrase goes through Argon2id
   (19 MiB, 2 passes, 1 lane) with a random salt per store, kept in clear in the store; opening
   takes about 13 ms natively and 25 ms in wasm. A long random passphrase is still best.
+- **One client per store.** `ClientBuilder::start` takes an exclusive OS lock on
+  `chat.db.lock` in the client's folder and holds it until `close()` returns, so a second
+  client on the same folder, in this process or another, fails with `Error::Locked` instead
+  of writing the same store. `Store::open` below `Client` takes no lock.
 - **Older stores** (sealed before Argon2id) still open with their old unsalted HKDF key, and
   their key is not upgraded in place. They get the counter checks and the snapshot MAC on
   their first open, but someone holding a copy from before that open can still roll rows back.
@@ -546,6 +605,15 @@ The protocol, limits and settings are in [worker/README.md](worker/README.md).
 |---|---|---|
 | `native` | yes | Threads, TCP and TLS, the SQLite store, the engine and `Client` |
 | `wasm` | no | The client in a browser, Node.js or Bun, through a WebSocket tunnel or TCP; use with `--no-default-features` |
+| `testing` | no | The in-memory SMP server and agent test doubles (`agent::testing`) and `ClientBuilder::start_in_memory`, for end-to-end tests without a network |
+
+```rust
+// [dev-dependencies] simplex-client = { git = "…", features = ["testing"] }
+let server = simplex_client::agent::testing::FakeSmp::new();
+let alice = Client::builder(dir_a).key("k").start_in_memory(&server)?;
+let bob = Client::builder(dir_b).key("k").start_in_memory(&server)?;
+bob.connect(&alice.create_invite()?)?;
+```
 
 ## Protocol versions tracked
 
@@ -559,6 +627,8 @@ nix develop                    # pinned toolchain (1.99.1, wasm32 target)
 cargo fmt --all --check
 cargo clippy --all-targets -- -D warnings
 cargo test
+cargo clippy --features testing --all-targets -- -D warnings
+cargo test --features testing --test in_memory
 cargo clippy --target wasm32-unknown-unknown --no-default-features --features wasm --all-targets -- -D warnings
 cargo test --target wasm32-unknown-unknown --no-default-features --features wasm
 cargo deny check

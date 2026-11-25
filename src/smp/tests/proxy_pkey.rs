@@ -1,10 +1,10 @@
 //! A proxy's PKEY is checked against the destination's address as a TLS handshake would be (Client.hs `connectSMPProxiedRelay`).
-use super::certs::{certificate, identity, signed_key};
 use super::support::keypair;
 use super::tls_server::address;
 use crate::crypto::Alg;
 use crate::encoding::{Version, VersionRange};
 use crate::smp::proxy::{BrokerError, Handshake, TransportError};
+use crate::smp::testing::{certificate, identity, signed_key};
 use crate::smp::{ErrorType, ProxiedRelay, ProxyError, Response, SmpError};
 
 fn transport(e: TransportError) -> SmpError {

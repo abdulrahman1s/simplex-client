@@ -140,12 +140,7 @@ impl<A: AgentPort> Engine<A> {
             group_size: i64::try_from(size).ok(),
         };
         let msg = ChatMessage::new(ChatEvent::GrpInv(inv))?;
-        let agent_id = self.agent.send(
-            &mut self.store,
-            &f.conn,
-            f.pq,
-            encode_chat_message(&msg, FRIEND_PQ)?,
-        )?;
+        let agent_id = self.agent_send(&f.conn, f.pq, encode_chat_message(&msg, FRIEND_PQ)?)?;
         let notice = ChatNotice::GroupInvitation {
             group: g.profile.display_name.clone(),
             sent: true,

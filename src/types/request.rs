@@ -100,6 +100,22 @@ pub enum Request {
         chat: ChatRef,
         text: String,
     },
+    /// `request`, with what becomes of the messages it sends told against `tag` as
+    /// `Event::SendStatus`: queued (with the item it made) or refused at once, then sent or
+    /// failed per connection. A refusal is told there instead of as `Event::Failed`.
+    Tagged {
+        tag: u64,
+        request: Box<Request>,
+    },
+    /// Application data for programs, not people: `x.msg.new` with the content type `tag`,
+    /// which the official apps do not know and show as `fallback_text` (`MCUnknown`). No
+    /// message is kept or shown here. A client that registered `tag` gets it as `Event::Data`.
+    SendData {
+        chat: ChatRef,
+        tag: String,
+        json: serde_json::Map<String, serde_json::Value>,
+        fallback_text: String,
+    },
     /// The live message's text so far; `done` finishes it (`APIUpdateChatItem` live).
     UpdateLive {
         chat: ChatRef,

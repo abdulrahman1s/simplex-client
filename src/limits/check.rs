@@ -34,6 +34,7 @@ fn text_fits(text: &str) -> Result<(), Refusal> {
 /// the edit window, file sizes, a changed display name or bio) when it handles the request.
 pub fn check(request: &Request) -> Result<(), Refusal> {
     match request {
+        Request::Tagged { request, .. } => check(request),
         Request::React { emoji, .. } => {
             if wire_reaction(emoji).is_none() {
                 return refuse(
@@ -53,6 +54,17 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
                 return refuse(ErrorCode::TooManyMentions, "more than 3 mentions");
             }
             text_fits(text)
+        }
+        Request::SendData {
+            tag,
+            json,
+            fallback_text,
+            ..
+        } => {
+            if let Some(why) = crate::chat::app_data::refusal(tag, json) {
+                return refuse(ErrorCode::RequestFailed, why);
+            }
+            text_fits(fallback_text)
         }
         Request::Edit { text, .. }
         | Request::SendFile { text, .. }

@@ -1,6 +1,7 @@
 //! `Client` over the engine's fake agent.
 
 mod calls;
+mod key;
 mod limits;
 mod objects;
 
@@ -51,4 +52,47 @@ fn wait_for(client: &Client, pick: impl Fn(&Event) -> bool) -> Event {
             return e;
         }
     }
+}
+
+#[test]
+fn a_second_client_on_the_same_store_fails_while_the_first_runs_and_starts_after_it_closes() {
+    let dir = Dir::new();
+    let (first, _net) = start(builder(&dir), FakeAgent::default());
+    let (smp, rx) = unbounded::<AgentEvent>();
+    let clock = Box::new(FakeClock::new(1_795_000_000_000));
+    let second = builder(&dir).start_with(clock, move |_, _| (FakeAgent::default(), rx));
+    let Err(super::Error::Locked(locked)) = second else {
+        panic!("the second client started")
+    };
+    assert_eq!(locked, dir.0);
+    drop(smp);
+    first.close();
+    let (again, _net) = start(builder(&dir), FakeAgent::default());
+    again.close();
+}
+
+#[test]
+fn a_send_returns_the_handle_its_status_is_told_against() {
+    let dir = Dir::new();
+    let (client, _net) = start(builder(&dir), FakeAgent::default());
+    let handle = client
+        .send(crate::types::model::ChatRef::Direct(404), "hi")
+        .unwrap();
+    let e = wait_for(&client, |e| matches!(e, Event::SendStatus { .. }));
+    let Event::SendStatus {
+        handle: h, status, ..
+    } = e
+    else {
+        unreachable!()
+    };
+    assert_eq!(h, handle);
+    assert!(matches!(
+        status,
+        crate::types::model::SendStatus::Refused { .. }
+    ));
+    let other = client
+        .send(crate::types::model::ChatRef::Direct(404), "again")
+        .unwrap();
+    assert_ne!(other, handle);
+    client.close();
 }

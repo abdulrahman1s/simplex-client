@@ -74,3 +74,24 @@ fn the_inviter_keeps_its_pq_support_when_the_joiners_reply_has_no_kem() {
         say(&mut n, 1, [ca, cb], PqEncryption::OFF);
     }
 }
+
+#[test]
+fn pq_on_is_what_both_ratchets_negotiated_not_what_was_asked_for() {
+    let r = rig();
+    let (mut a, mut b) = (r.node("a"), r.node("b"));
+    let (ca, cb) = connect(&mut a, &mut b, true, false);
+    let mut n = [&mut a, &mut b];
+    say(&mut n, 0, [ca, cb], PqEncryption::ON);
+    say(&mut n, 1, [ca, cb], PqEncryption::ON);
+    assert!(a.agent.pq_on(ca) && b.agent.pq_on(cb));
+
+    let (mut c, mut d) = (r.node("c"), r.node("d"));
+    let (cc, cd) = connect_pq(&mut c, &mut d, [true, false], false);
+    let mut n = [&mut c, &mut d];
+    for _ in 0..2 {
+        say(&mut n, 0, [cc, cd], PqEncryption::ON);
+        say(&mut n, 1, [cc, cd], PqEncryption::OFF);
+    }
+    assert!(c.agent.conn(cc).unwrap().rec.pq, "asked for");
+    assert!(!c.agent.pq_on(cc) && !d.agent.pq_on(cd), "never negotiated");
+}

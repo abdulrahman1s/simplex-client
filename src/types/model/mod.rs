@@ -15,6 +15,7 @@ pub mod picture;
 pub mod prefs;
 mod preview;
 pub mod profile;
+pub mod send_status;
 pub mod stream;
 
 pub use body::{CallKind, CallRecord, ChatNotice, FileState, Media, MessageBody, StreamRecord};
@@ -31,4 +32,5 @@ pub use picture::Picture;
 pub use prefs::{Allow, ChatFeature, ChatPrefs, PrefEnabled};
 pub use preview::ChatPreview;
 pub use profile::{ChatProfile, MyStatus, Playing, Presence};
+pub use send_status::SendStatus;
 pub use stream::{StreamRequest, StreamSignal};

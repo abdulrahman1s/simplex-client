@@ -27,6 +27,7 @@ fn friend(user: Option<&Preferences>, f: &FriendRecord) -> Friend {
         item_ttl: f.local.item_ttl,
         address: f.address.clone(),
         incognito: f.incognito.clone(),
+        pq: f.pq_on,
         prefs: to_wire(f.my_prefs.as_ref()),
         ..Friend::default()
     }

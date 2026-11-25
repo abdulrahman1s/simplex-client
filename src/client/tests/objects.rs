@@ -145,3 +145,69 @@ fn a_refused_group_fails_its_create_call() {
         "{r:?}"
     );
 }
+
+#[test]
+fn a_client_hearing_deltas_gets_no_chat_list_until_it_asks() {
+    let dir = Dir::new();
+    let mut agent = FakeAgent::default();
+    agent.on_invitation = vec![invitation()];
+    let (client, smp) = start(builder(&dir).roster_deltas(true), agent);
+    client.create_invite().unwrap();
+    smp.send(AgentEvent::Conf {
+        conn: ConnId(1),
+        conn_info: x_info("bob"),
+    })
+    .unwrap();
+    smp.send(AgentEvent::Con { conn: ConnId(1) }).unwrap();
+    let mut lists = 0;
+    let bob = loop {
+        match client
+            .next_event(std::time::Duration::from_secs(5))
+            .unwrap()
+        {
+            Event::FriendAdd(f) => break f,
+            Event::Raw(crate::types::Event::Chats { .. }) => lists += 1,
+            _ => {}
+        }
+    };
+    assert_eq!(lists, 0, "no whole list was heard");
+    assert_eq!(client.friends().len(), 1, "the cache is current");
+    client.refresh().unwrap();
+    let list = wait_for(&client, |e| {
+        matches!(e, Event::Raw(crate::types::Event::Chats { .. }))
+    });
+    let Event::Raw(crate::types::Event::Chats { friends, .. }) = list else {
+        unreachable!()
+    };
+    assert_eq!(friends[0].id, bob.id());
+    let team = client.create_group("team").unwrap();
+    assert_eq!(
+        client.group(team.id()).map(|g| g.name().to_owned()),
+        Some("team".into())
+    );
+}
+
+#[test]
+fn after_a_restart_friends_are_listed_when_start_returns_and_not_announced_again() {
+    let dir = Dir::new();
+    let mut agent = FakeAgent::default();
+    agent.on_invitation = vec![invitation()];
+    let (client, smp) = start(builder(&dir), agent);
+    client.create_invite().unwrap();
+    smp.send(AgentEvent::Conf {
+        conn: ConnId(1),
+        conn_info: x_info("bob"),
+    })
+    .unwrap();
+    smp.send(AgentEvent::Con { conn: ConnId(1) }).unwrap();
+    let bob = friend_added(&client);
+    client.close();
+    drop(smp);
+
+    let (client, _smp) = start(builder(&dir), FakeAgent::default());
+    let listed: Vec<_> = client.friends().iter().map(Friend::id).collect();
+    assert_eq!(listed, [bob.id()], "complete as soon as start returns");
+    while let Ok(e) = client.next_event(std::time::Duration::from_millis(200)) {
+        assert!(!matches!(e, Event::FriendAdd(_)), "not announced again");
+    }
+}

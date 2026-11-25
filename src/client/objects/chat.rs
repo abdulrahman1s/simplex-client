@@ -1,7 +1,7 @@
 //! Where a message is, and who wrote it.
 
 use super::{Friend, Group, Member};
-use crate::client::Result;
+use crate::client::{Result, SendHandle};
 use crate::types::model::ChatRef;
 
 /// A conversation: with a friend, or a group.
@@ -12,7 +12,7 @@ pub enum Chat {
 }
 
 impl Chat {
-    pub fn send(&self, text: &str) -> Result<()> {
+    pub fn send(&self, text: &str) -> Result<SendHandle> {
         match self {
             Self::Friend(f) => f.send(text),
             Self::Group(g) => g.send(text),

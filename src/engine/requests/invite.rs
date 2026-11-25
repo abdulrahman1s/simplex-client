@@ -80,7 +80,13 @@ impl<A: AgentPort> Engine<A> {
 
     /// Deletes the connection at the agent and its record here.
     pub(crate) fn forget_conn(&mut self, conn: &ConnId) -> Result<()> {
-        if let Err(e) = self.agent.delete(&mut self.store, conn) {
+        self.forget_conn_after(conn, false)
+    }
+
+    /// `wait`: the connection goes once what was sent on it is delivered, as after telling
+    /// the peer it goes (Internal.hs `deleteAgentConnectionAsync'` with `waitDelivery`).
+    pub(crate) fn forget_conn_after(&mut self, conn: &ConnId, wait: bool) -> Result<()> {
+        if let Err(e) = self.agent.delete(&mut self.store, conn, wait) {
             self.log
                 .line(format_args!("connection not deleted: {}", e.detail()));
         }

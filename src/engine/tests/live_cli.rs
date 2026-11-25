@@ -33,14 +33,20 @@ pub(super) struct Native {
 
 impl Native {
     pub(super) fn start(dir: &Dir) -> Native {
+        Self::start_with_tags(dir, &[])
+    }
+
+    /// Started with `tags` heard as `Event::Data`.
+    pub(super) fn start_with_tags(dir: &Dir, tags: &[&str]) -> Native {
         let relays = vec![var("SIMPLEX_TEST_SMP"), var("SIMPLEX_TEST_XFTP")];
         let hello = Config {
             dir: dir.0.clone(),
-            key: KEY.into(),
+            key: zeroize::Zeroizing::new(KEY.into()),
             name: "alice".into(),
             relays,
             proxy_mode: crate::types::ProxyMode::default(),
             proxy_fallback: crate::types::ProxyFallback::default(),
+            data_tags: tags.iter().map(|t| (*t).to_owned()).collect(),
         };
         let log = Log::new(std::io::stderr());
         let (agent, smp) = NativeAgent::new(&hello.relays, log.clone());

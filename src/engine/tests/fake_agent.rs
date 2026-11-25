@@ -67,6 +67,10 @@ pub struct FakeAgent {
     pub pq_seen: Vec<(&'static str, bool)>,
     /// The PQ flag of each `send`, in order.
     pub pq_sent: Vec<(ConnId, bool)>,
+    /// The connections deleted once their sends are delivered (`delete` with `wait`).
+    pub waited: Vec<ConnId>,
+    /// Connections whose ratchet negotiated no PQ KEM; the rest have it both ways.
+    pub classical: Vec<ConnId>,
     /// The last routing settings given.
     pub routing: Option<(ProxyMode, ProxyFallback)>,
     conns: i64,
@@ -214,8 +218,11 @@ impl AgentPort for FakeAgent {
         Ok(())
     }
 
-    fn delete(&mut self, _: &mut Store, conn: &ConnId) -> Result<(), AgentFailure> {
+    fn delete(&mut self, _: &mut Store, conn: &ConnId, wait: bool) -> Result<(), AgentFailure> {
         self.calls.push(Call::Delete { conn: *conn });
+        if wait {
+            self.waited.push(*conn);
+        }
         Ok(())
     }
 
@@ -237,6 +244,10 @@ impl AgentPort for FakeAgent {
     }
 
     fn close(&mut self) {}
+
+    fn pq_on(&self, conn: &ConnId) -> bool {
+        !self.classical.contains(conn)
+    }
 
     fn ratchet_ad(&mut self, _: &mut Store, _: &ConnId) -> Result<Vec<u8>, AgentFailure> {
         self.fail_next.take().map_or(Ok(()), Err)?;

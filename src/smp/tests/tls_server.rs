@@ -2,13 +2,13 @@
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 
-use super::certs::{identity, signed_key};
 use super::support::keypair;
 use crate::crypto::{
     Alg, KeyPair, PublicKey, SbKey, dh, pad, sb_decrypt, sb_encrypt, sbc_hkdf, sbc_init, unpad,
 };
 use crate::encoding::{Version, VersionRange, b64_encode};
 use crate::net::Socket;
+use crate::smp::testing::{identity, signed_key};
 use crate::smp::{
     BLOCK_SIZE, Incoming, Response, ServerHello, SmpServer, encode_transmission, pack,
     parse_payload,

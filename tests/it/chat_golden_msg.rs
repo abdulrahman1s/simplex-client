@@ -351,3 +351,16 @@ fn x_info_carries_the_profile() {
         }),
     );
 }
+
+#[test]
+fn app_data_goes_as_an_unknown_content_type_with_its_fallback_text() {
+    use simplex_client::chat::app_data;
+    let s = r#"{"v":"9","event":"x.msg.new","params":{"content":{"n":2,"q":"lunch?","text":"a poll","type":"app.poll"}}}"#;
+    let mut data = serde_json::Map::new();
+    data.insert("q".into(), "lunch?".into());
+    data.insert("n".into(), 2.into());
+    let c = app_data::content("app.poll", &data, "a poll");
+    both(s, &msg(new_msg(MsgContainer::simple(c.clone()))));
+    assert_eq!(c.text(), "a poll");
+    assert_eq!(app_data::data_of(&c), Some(("app.poll", data)));
+}

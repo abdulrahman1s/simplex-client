@@ -17,7 +17,8 @@ impl<A: AgentPort> Engine<A> {
             return Ok(());
         }
         self.send_to_group(group, &ChatMessage::new(ChatEvent::GrpLeave)?, None)?;
-        self.drop_group_conns(group)?;
+        // `leaveGroupSendMsg`: `deleteMembersConnections' … True`.
+        self.drop_group_conns(group, true)?;
         self.delete_group_link_if_exists(group)?;
         let mut g = self.group(group)?;
         g.status = MemberStatus::Left;
@@ -31,7 +32,7 @@ impl<A: AgentPort> Engine<A> {
         if m.status == MemberStatus::Left {
             return Ok(());
         }
-        self.drop_member_conn(ctx.group, m.id)?;
+        self.drop_member_conn(ctx.group, m.id, false)?;
         let mut m = self.member(ctx.group, m.id)?;
         m.status = MemberStatus::Left;
         let name = m.profile.display_name.clone();
@@ -42,13 +43,14 @@ impl<A: AgentPort> Engine<A> {
     /// The agent's connection with the member goes, and the record forgets it
     /// (`deleteMemberConnection`), and what waited for it; a member nobody is connected with is
     /// left alone.
-    pub(crate) fn drop_member_conn(&mut self, group: i64, member: i64) -> Result<()> {
+    /// `wait`: the connection goes once what was sent on it is delivered.
+    pub(crate) fn drop_member_conn(&mut self, group: i64, member: i64, wait: bool) -> Result<()> {
         self.drop_pending(group, member)?;
         let mut m = self.member(group, member)?;
         let Some(conn) = m.conn.take() else {
             return Ok(());
         };
-        self.forget_conn(&conn)?;
+        self.forget_conn_after(&conn, wait)?;
         let ops = self
             .store
             .keys_with_prefix(NS, &keys::sent_prefix(&conn))?
@@ -61,10 +63,10 @@ impl<A: AgentPort> Engine<A> {
     }
 
     /// `deleteGroupConnections`: every member's, and what waited for any of them.
-    pub(crate) fn drop_group_conns(&mut self, group: i64) -> Result<()> {
+    pub(crate) fn drop_group_conns(&mut self, group: i64, wait: bool) -> Result<()> {
         let members: Vec<i64> = self.state.members_of(group).map(|m| m.id).collect();
         for member in members {
-            self.drop_member_conn(group, member)?;
+            self.drop_member_conn(group, member, wait)?;
         }
         Ok(())
     }

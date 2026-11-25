@@ -23,6 +23,8 @@ pub(super) fn answers(event: &Event) -> Option<(usize, Option<Want>)> {
         | Event::Verified { .. }
         | Event::Offline(_)
         | Event::Cleared(_)
+        | Event::Data { .. }
+        | Event::SendStatus { .. }
         | Event::Preview { .. }
         | Event::OpenFile { .. }
         | Event::Located { .. }

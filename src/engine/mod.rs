@@ -8,6 +8,7 @@ pub mod agent_port;
 mod calls;
 mod chats;
 pub mod clock;
+mod data;
 pub mod error;
 pub(crate) mod files;
 mod groups;
@@ -28,6 +29,7 @@ pub mod relays;
 mod requests;
 #[cfg(feature = "native")]
 pub mod run;
+mod send_tags;
 mod start;
 pub mod state;
 mod time;

@@ -18,6 +18,9 @@ impl Client {
         f.map(|f| Friend::new(self.clone(), f))
     }
 
+    /// Every friend, connected or still connecting. Complete as soon as
+    /// [`ClientBuilder::start`](super::ClientBuilder::start) returns, so a program learns the
+    /// friends it had before a restart here, then follows `FriendAdd` and `FriendRemove`.
     #[must_use]
     pub fn friends(&self) -> Vec<Friend> {
         let list: Vec<_> = self.roster().friends.values().cloned().collect();
@@ -39,6 +42,12 @@ impl Client {
         list.into_iter()
             .map(|g| Group::new(self.clone(), g))
             .collect()
+    }
+
+    /// Asks the engine for the whole chat list; it arrives as `Raw(Chats)`, with
+    /// [`ClientBuilder::roster_deltas`](super::ClientBuilder::roster_deltas) too.
+    pub fn refresh(&self) -> Result<()> {
+        self.request(Request::Refresh)
     }
 
     /// Makes a group with the user as its owner and waits until the chat list shows it.

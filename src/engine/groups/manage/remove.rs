@@ -57,7 +57,8 @@ impl<A: AgentPort> Engine<A> {
             }
         }
         let invited = m.status == MemberStatus::Invited;
-        self.drop_member_conn(group, member)?;
+        // `APIRemoveMembers`: `deleteMembersConnections' … True`, so the removal reaches them.
+        self.drop_member_conn(group, member, true)?;
         let mut m = self.member(group, member)?;
         let who = m.profile.display_name.clone();
         m.status = MemberStatus::Removed;

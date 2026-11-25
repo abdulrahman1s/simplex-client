@@ -3,6 +3,7 @@
 mod admin;
 mod admin_member;
 mod bad_signature;
+mod data;
 mod direct_accept;
 mod direct_inv;
 mod files;
@@ -30,7 +31,7 @@ mod members_peers;
 mod members_pipe;
 mod members_range;
 mod members_support;
-mod messages;
+pub(crate) mod messages;
 mod messages_change;
 mod pending;
 mod picture;

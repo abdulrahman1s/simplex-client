@@ -127,7 +127,7 @@ fn what_waited_goes_with_the_members_connection() {
     let (g, bob, _) = bob_connecting(&mut t);
     t.req(send(g, "hello", vec![]));
     assert!(t.e.store.get(NS, &keys::pending(g, bob)).unwrap().is_some());
-    t.e.drop_member_conn(g, bob).unwrap();
+    t.e.drop_member_conn(g, bob, false).unwrap();
     assert!(t.e.store.get(NS, &keys::pending(g, bob)).unwrap().is_none());
 }
 
@@ -212,7 +212,7 @@ fn nothing_waits_for_a_member_who_is_gone() {
     let carol = members[0].0;
     let ((_, _, conn), _) = bob_connecting_in(&mut t, g);
     t.agent(AgentEvent::Con { conn });
-    t.e.drop_member_conn(g, carol).unwrap();
+    t.e.drop_member_conn(g, carol, false).unwrap();
     t.e.state.members.get_mut(&(g, carol)).unwrap().status = MemberStatus::Left;
     let intro = IntroInvitation {
         group_conn_req: link(2),

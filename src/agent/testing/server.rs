@@ -9,7 +9,7 @@ use super::connector::write;
 use super::queues::{Queues, deliver};
 use crate::crypto::{Alg, KeyPair, random_vec};
 use crate::smp::SmpServer;
-use crate::smp::tests::certs::{Identity, identity};
+use crate::smp::testing::{Identity, identity};
 
 pub struct Session {
     pub tx: Sender<Vec<u8>>,

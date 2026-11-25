@@ -24,6 +24,16 @@ impl<A: AgentPort> Engine<A> {
         if f.blocked {
             return Ok(());
         }
+        if let Some((tag, json)) = self.data_in(&c) {
+            let chat = ChatRef::Direct(friend);
+            self.emit(Event::Data {
+                chat,
+                member: None,
+                tag,
+                json,
+            });
+            return Ok(());
+        }
         // A message not acked before a restart comes again; it is kept once.
         if let Some(s) = &shared
             && self

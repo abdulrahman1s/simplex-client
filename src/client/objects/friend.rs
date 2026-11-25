@@ -1,7 +1,7 @@
 //! A friend: write to them, read your history, compare security codes, remove them.
 
 use super::Message;
-use crate::client::{Client, Result};
+use crate::client::{Client, Result, SendHandle};
 use std::collections::BTreeMap;
 
 use crate::types::Request;
@@ -46,7 +46,7 @@ impl Friend {
         self.info.chat()
     }
 
-    pub fn send(&self, text: &str) -> Result<()> {
+    pub fn send(&self, text: &str) -> Result<SendHandle> {
         self.client.send(self.chat(), text)
     }
 
@@ -116,12 +116,12 @@ impl Friend {
     }
 
     /// Sends `msg` here as the user's own, marked forwarded; its file only when it is here.
-    pub fn forward(&self, msg: &Message) -> Result<()> {
+    pub fn forward(&self, msg: &Message) -> Result<SendHandle> {
         self.client.forward(msg.info(), self.chat())
     }
 
     /// Starts a live message here, seen as it is written.
-    pub fn send_live(&self, text: &str) -> Result<()> {
+    pub fn send_live(&self, text: &str) -> Result<SendHandle> {
         self.client.send_live(self.chat(), text)
     }
 

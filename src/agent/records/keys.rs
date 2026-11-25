@@ -56,10 +56,16 @@ pub fn invitation_key(c: ConnId, n: i64) -> Vec<u8> {
     key(b'i', c, Some(n))
 }
 
+/// When `c` was deleted while its sends still waited (`deleted_at_wait_delivery`).
+pub fn deleting_key(c: ConnId) -> Vec<u8> {
+    key(b'd', c, None)
+}
+
 /// The prefixes of everything stored for one connection.
-pub fn conn_prefixes(c: ConnId) -> [Vec<u8>; 6] {
+pub fn conn_prefixes(c: ConnId) -> [Vec<u8>; 7] {
     [
         conn_key(c),
+        deleting_key(c),
         ratchet_key(c),
         unacked_key(c),
         [key(b's', c, None), b"/".to_vec()].concat(),
@@ -115,6 +121,10 @@ impl Batch {
 
     pub fn invitation(&mut self, c: ConnId, n: i64, i: &StoredInvitation) -> Result<&mut Self> {
         self.put(invitation_key(c, n), i)
+    }
+
+    pub fn deleting(&mut self, c: ConnId, at: i64) -> &mut Self {
+        self.put_bytes(deleting_key(c), &at.to_be_bytes())
     }
 
     pub fn apply(self, store: &mut Store) -> Result<()> {

@@ -21,6 +21,8 @@ pub struct NativeAgent {
     log: Log,
     /// The relays as configured, in order; `cfg.servers` is this with the disabled ones last.
     configured: Vec<SmpServer>,
+    /// Whether the engine checks the relays over the network (`relay_tester`).
+    relay_tests: bool,
 }
 
 impl NativeAgent {
@@ -58,7 +60,16 @@ impl NativeAgent {
             client: make(cfg),
             log,
             configured,
+            relay_tests: true,
         }
+    }
+
+    /// The engine does not check the relays: for relays that are not on the network, which
+    /// a check would only dial in vain.
+    #[must_use]
+    pub const fn without_relay_tests(mut self) -> Self {
+        self.relay_tests = false;
+        self
     }
 }
 
@@ -180,8 +191,10 @@ impl AgentPort for NativeAgent {
             .map_err(failed)
     }
 
-    fn delete(&mut self, store: &mut Store, conn: &ConnId) -> Result<(), AgentFailure> {
-        self.client.delete(store, native_conn(conn)).map_err(failed)
+    fn delete(&mut self, store: &mut Store, conn: &ConnId, wait: bool) -> Result<(), AgentFailure> {
+        self.client
+            .delete(store, native_conn(conn), wait)
+            .map_err(failed)
     }
 
     fn subscribe_all(&mut self, store: &mut Store) -> Result<(), AgentFailure> {
@@ -202,6 +215,10 @@ impl AgentPort for NativeAgent {
 
     fn close(&mut self) {
         self.client.close();
+    }
+
+    fn pq_on(&self, conn: &ConnId) -> bool {
+        self.client.pq_on(native_conn(conn))
     }
 
     fn ratchet_ad(&mut self, _: &mut Store, conn: &ConnId) -> Result<Vec<u8>, AgentFailure> {
@@ -225,7 +242,9 @@ impl AgentPort for NativeAgent {
 
     fn relay_tester(&self) -> Option<Box<dyn RelayTester>> {
         #[cfg(feature = "native")]
-        return Some(Box::new(super::relays::SmpTester));
+        return self
+            .relay_tests
+            .then(|| Box::new(super::relays::SmpTester) as Box<dyn RelayTester>);
         #[cfg(not(feature = "native"))]
         None
     }

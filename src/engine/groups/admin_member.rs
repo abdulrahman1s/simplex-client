@@ -98,7 +98,7 @@ impl<A: AgentPort> Engine<A> {
             return Ok(());
         }
         self.delete_group_link_if_exists(ctx.group)?;
-        self.drop_group_conns(ctx.group)?;
+        self.drop_group_conns(ctx.group, false)?;
         let mut g = self.group(ctx.group)?;
         g.status = MemberStatus::Removed;
         self.save_group(g)?;
@@ -116,7 +116,8 @@ impl<A: AgentPort> Engine<A> {
         by: String,
         messages: bool,
     ) -> Result<()> {
-        self.drop_member_conn(ctx.group, member)?;
+        // `deleteMemberConnection`: no wait, nothing was sent to them for this.
+        self.drop_member_conn(ctx.group, member, false)?;
         let mut m = self.member(ctx.group, member)?;
         let was_gone = matches!(m.status, MemberStatus::Removed | MemberStatus::Left);
         let who = m.profile.display_name.clone();

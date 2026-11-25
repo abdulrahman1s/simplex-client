@@ -163,7 +163,7 @@ fn a_request_for_a_deleted_address_fails_for_the_requester() {
     let r = rig();
     let (mut a, mut b) = (r.node("a"), r.node("b"));
     let (conn, _, short) = address(&mut a, true);
-    a.agent.delete(&mut a.store, conn).unwrap();
+    a.agent.delete(&mut a.store, conn, false).unwrap();
     a.step(std::time::Duration::from_millis(20));
     let link = ConnectionLink::parse(&short.unwrap()).unwrap();
     let cb = b
@@ -192,7 +192,7 @@ fn deleting_the_address_forgets_its_waiting_requests() {
     let (mut a, mut b) = (r.node("a"), r.node("b"));
     let (conn, _, short) = address(&mut a, true);
     let (_, inv, _) = request(&mut a, &mut b, &short.unwrap(), true);
-    a.agent.delete(&mut a.store, conn).unwrap();
+    a.agent.delete(&mut a.store, conn, false).unwrap();
     assert!(
         a.agent
             .accept_contact(&mut a.store, &inv, vec![], true)

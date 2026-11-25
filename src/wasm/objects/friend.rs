@@ -58,6 +58,12 @@ impl Friend {
         self.info.verified
     }
 
+    /// The connection uses the post-quantum KEM both ways, as negotiated with them.
+    #[wasm_bindgen(getter)]
+    pub fn pq(&self) -> bool {
+        self.info.pq
+    }
+
     /// Everything the chat list says about this friend, as JSON.
     #[wasm_bindgen(getter)]
     pub fn raw(&self) -> JsValue {

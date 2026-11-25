@@ -3,6 +3,7 @@ mod address;
 mod address_dr;
 mod chat_bytes;
 pub(crate) mod cli;
+mod delete_wait;
 mod delivery;
 mod envelope_checks;
 mod handshake;

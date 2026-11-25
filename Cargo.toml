@@ -21,6 +21,9 @@ default = ["native"]
 native = ["dep:rusqlite", "dep:zstd"]
 # The client in a browser, Node.js or Bun: randomness from `crypto.getRandomValues`, time from
 # `Date.now`, relays through a WebSocket tunnel, and the `wasm` module's JS bindings.
+# The in-memory SMP server and agent test doubles (`agent::testing`) and
+# `ClientBuilder::start_in_memory`, for end-to-end tests without a network.
+testing = ["native"]
 wasm = ["getrandom/wasm_js", "getrandom04/wasm_js", "dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 
 [dependencies]

@@ -121,3 +121,43 @@ fn a_joined_notice_in_a_group_also_reports_the_member() {
     };
     assert_eq!(notes, [Note::Message(m), member]);
 }
+
+#[test]
+fn a_roster_telling_deltas_tells_a_changed_friend_and_group_once() {
+    let mut r = Roster::default();
+    r.deltas = true;
+    let team = group(1, Membership::Member);
+    lift(
+        &chats(&[friend(1, true)], std::slice::from_ref(&team), &[]),
+        &mut r,
+    );
+    let renamed = Friend {
+        name: "bobby".into(),
+        ..friend(1, true)
+    };
+    let crew = ChatGroup {
+        name: "crew".into(),
+        ..team
+    };
+    let (f, g) = (std::slice::from_ref(&renamed), std::slice::from_ref(&crew));
+    let notes = lift(&chats(f, g, &[]), &mut r);
+    assert_eq!(
+        notes,
+        [
+            Note::FriendUpdate(renamed.clone()),
+            Note::GroupUpdate(crew.clone())
+        ]
+    );
+    assert!(lift(&chats(&[renamed], &[crew], &[]), &mut r).is_empty());
+}
+
+#[test]
+fn a_roster_without_deltas_tells_no_updates() {
+    let mut r = Roster::default();
+    lift(&chats(&[friend(1, true)], &[], &[]), &mut r);
+    let renamed = Friend {
+        name: "bobby".into(),
+        ..friend(1, true)
+    };
+    assert!(lift(&chats(&[renamed], &[], &[]), &mut r).is_empty());
+}

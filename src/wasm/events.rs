@@ -36,11 +36,35 @@ fn named(note: Note) -> (&'static str, Payload) {
         Note::Request(r) => ("request", Payload::Request(r)),
         Note::FriendAdd(f) => ("friendAdd", Payload::Friend(Box::new(f))),
         Note::FriendRemove(f) => ("friendRemove", Payload::Friend(Box::new(f))),
+        Note::FriendUpdate(f) => ("friendUpdate", Payload::Friend(Box::new(f))),
         Note::GroupAdd(g) => ("groupAdd", Payload::Group(Box::new(g))),
         Note::GroupRemove(g) => ("groupRemove", Payload::Group(Box::new(g))),
+        Note::GroupUpdate(g) => ("groupUpdate", Payload::Group(Box::new(g))),
         Note::GroupInvite(g) => ("groupInvite", Payload::Invite(Box::new(g))),
         Note::MemberAdd { group, name } => ("memberAdd", Payload::Member { group, name }),
         Note::Offline(true) => ("offline", Payload::Nothing),
         Note::Offline(false) => ("online", Payload::Nothing),
+        Note::SendStatus {
+            tag,
+            member,
+            status,
+        } => {
+            let v = serde_json::json!({"tag": tag, "member": member, "status": status});
+            ("sendStatus", Payload::Json(v))
+        }
+        Note::Data {
+            chat,
+            member,
+            tag,
+            json,
+        } => (
+            "data",
+            Payload::Data {
+                chat,
+                member,
+                tag,
+                json: Value::Object(json),
+            },
+        ),
     }
 }

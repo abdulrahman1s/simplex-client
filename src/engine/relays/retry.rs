@@ -96,7 +96,7 @@ impl<A: AgentPort> Engine<A> {
             Retry::Invite => self.forget_conn(conn),
             Retry::Address => self
                 .agent
-                .delete(&mut self.store, conn)
+                .delete(&mut self.store, conn, false)
                 .map_err(EngineError::from),
         };
         if let Err(e) = gone {

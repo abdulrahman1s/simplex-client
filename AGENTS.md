@@ -26,6 +26,8 @@ All of these must pass before a change is done:
 cargo fmt --all --check
 cargo clippy --all-targets -- -D warnings
 cargo test
+cargo clippy --features testing --all-targets -- -D warnings
+cargo test --features testing --test in_memory
 cargo clippy --target wasm32-unknown-unknown --no-default-features --features wasm --all-targets -- -D warnings
 cargo test --target wasm32-unknown-unknown --no-default-features --features wasm
 cargo deny check

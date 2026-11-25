@@ -42,6 +42,10 @@ pub struct FriendRecord {
     /// message (Internal.hs `updatePeerChatVRange`).
     #[serde(default = "pq_on")]
     pub pq: bool,
+    /// Whether the ratchet uses the PQ KEM both ways, as the agent last said after a message
+    /// (chat `connPQEnabled`); `pq` is only what is asked for.
+    #[serde(default)]
+    pub pq_on: bool,
     /// Their chat version range, from the last message that carried one (`peerChatVRange`).
     #[serde(default)]
     pub chat_v: Option<VersionRange>,
@@ -85,6 +89,7 @@ impl FriendRecord {
             prefs: None,
             verified: None,
             pq: true,
+            pq_on: false,
             chat_v: None,
             my_prefs: None,
             local: ChatLocal::default(),

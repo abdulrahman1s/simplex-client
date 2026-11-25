@@ -6,6 +6,7 @@ use crate::types::{Request, RequestKind};
 pub fn kind_of(r: &Request) -> RequestKind {
     use RequestKind as K;
     match r {
+        Request::Tagged { request, .. } => kind_of(request),
         Request::SetProfile(_) | Request::SetPicture(_) => K::SetProfile,
         Request::CreateInvite | Request::CreateIncognitoInvite => K::CreateInvite,
         Request::Connect(_) | Request::ConnectIncognito(_) => K::Connect,
@@ -23,7 +24,10 @@ pub fn kind_of(r: &Request) -> RequestKind {
         Request::React { .. } => K::React,
         Request::SetMuted { .. } => K::Mute,
         Request::SetTimer { .. } => K::Timer,
-        Request::SendLink { .. } | Request::Forward { .. } | Request::SendLive { .. } => K::Send,
+        Request::SendLink { .. }
+        | Request::Forward { .. }
+        | Request::SendLive { .. }
+        | Request::SendData { .. } => K::Send,
         Request::ContactMember { .. } | Request::SyncRatchet { .. } => K::Connect,
         Request::SetAddressSettings { .. } | Request::ShareAddress(_) => K::Address,
         Request::UpdateLive { .. } => K::Edit,

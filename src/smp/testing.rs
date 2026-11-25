@@ -1,8 +1,19 @@
-//! A tiny X.509 builder: Ed25519 certificates with just the fields the client reads, and the server's signed DH key.
+//! Test support for SMP servers: a tiny X.509 builder, Ed25519 certificates with just the fields the client reads, and a server's signed DH key.
 use crate::crypto::{Alg, KeyPair, PublicKey, key_hash};
 
-use super::support::keypair;
-use crate::tls::testing::{ALWAYS, validity};
+fn keypair(alg: Alg) -> KeyPair {
+    KeyPair::generate(alg).unwrap()
+}
+
+/// Valid from 1970 to 9999, so fake clocks anywhere in between accept it: the Validity
+/// SEQUENCE of two GeneralizedTimes (as `tls::testing::validity(ALWAYS)` makes it).
+fn validity_always() -> Vec<u8> {
+    let time = |t: &str| der(0x18, t.as_bytes());
+    der(
+        0x30,
+        &[time("19700101000000Z"), time("99991231235959Z")].concat(),
+    )
+}
 
 fn der(tag: u8, content: &[u8]) -> Vec<u8> {
     let mut out = vec![tag];
@@ -35,7 +46,7 @@ pub fn certificate(subject: &PublicKey, issuer: &KeyPair) -> Vec<u8> {
         der(0x02, &[1]),
         ED25519_ALG.to_vec(),
         der(0x30, &[]),
-        validity(ALWAYS),
+        validity_always(),
         der(0x30, &[]),
         subject.to_der(),
     ]

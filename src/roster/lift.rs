@@ -4,6 +4,7 @@ use super::Roster;
 use crate::types::Event;
 use crate::types::model::{
     ChatGroup, ChatMessage, ChatNotice, ChatProfile, ChatRef, Friend, FriendRequest, MessageBody,
+    SendStatus,
 };
 
 /// One thing a high-level client reports, carrying only data: the clients attach themselves.
@@ -15,8 +16,12 @@ pub(crate) enum Note {
     Request(FriendRequest),
     FriendAdd(Friend),
     FriendRemove(Friend),
+    /// A friend still connected changed; only for a roster that tells deltas.
+    FriendUpdate(Friend),
     GroupAdd(ChatGroup),
     GroupRemove(ChatGroup),
+    /// A group the user is still in changed; only for a roster that tells deltas.
+    GroupUpdate(ChatGroup),
     GroupInvite(ChatGroup),
     /// A member connected with the user (`MemberJoined`): someone new to the group, or each
     /// member already there when the user joins. The engine names them only.
@@ -25,6 +30,17 @@ pub(crate) enum Note {
         name: String,
     },
     Offline(bool),
+    Data {
+        chat: ChatRef,
+        member: Option<i64>,
+        tag: String,
+        json: serde_json::Map<String, serde_json::Value>,
+    },
+    SendStatus {
+        tag: u64,
+        member: Option<i64>,
+        status: SendStatus,
+    },
 }
 
 /// What `e` means to a high-level client; the chat list also updates `roster`.
@@ -40,6 +56,26 @@ pub(crate) fn lift(e: &Event, roster: &mut Roster) -> Vec<Note> {
             ..
         } => roster.update(friends, groups, requests),
         Event::Offline(offline) => vec![Note::Offline(*offline)],
+        Event::SendStatus {
+            tag,
+            member,
+            status,
+        } => vec![Note::SendStatus {
+            tag: *tag,
+            member: *member,
+            status: status.clone(),
+        }],
+        Event::Data {
+            chat,
+            member,
+            tag,
+            json,
+        } => vec![Note::Data {
+            chat: *chat,
+            member: *member,
+            tag: tag.clone(),
+            json: json.clone(),
+        }],
         Event::Cleared(_)
         | Event::Features { .. }
         | Event::Profile(_)

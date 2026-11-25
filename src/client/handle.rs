@@ -53,6 +53,9 @@ impl Client {
         let log = b.log.unwrap_or_else(|| Log::new(std::io::stderr()));
         let started = spawn::spawn(b.config, log.clone(), clock, agent)?;
         let shared = Arc::new(Shared::default());
+        if let Ok(mut r) = shared.roster.lock() {
+            r.deltas = b.roster_deltas;
+        }
         let (tx, events) = bounded(b.events_cap.max(1));
         let outbox = Outbox {
             tx,
@@ -86,6 +89,9 @@ impl Client {
             code: r.code,
             detail: r.detail,
         })?;
+        if request == Request::Refresh {
+            self.inner.shared.refresh.store(true, Ordering::Relaxed);
+        }
         let tx = self
             .inner
             .requests

@@ -4,7 +4,7 @@ use crate::types::{Event, Request};
 
 use super::kind::kind_of;
 use crate::engine::agent_port::AgentPort;
-use crate::engine::error::{EngineError, Result};
+use crate::engine::error::{Code, EngineError, Result, fail};
 use crate::engine::files::FileMeta;
 use crate::engine::link::Outgoing;
 use crate::engine::machine::Engine;
@@ -18,6 +18,9 @@ impl<A: AgentPort> Engine<A> {
 
     /// `on_request` that also hands back the failure it announced.
     pub fn handle(&mut self, request: Request) -> Result<()> {
+        if let Request::Tagged { tag, request } = request {
+            return self.handle_tagged(tag, *request);
+        }
         let kind = kind_of(&request);
         let done = check(&request)
             .map_err(EngineError::from)
@@ -33,8 +36,9 @@ impl<A: AgentPort> Engine<A> {
         done
     }
 
-    fn route(&mut self, request: Request) -> Result<()> {
+    pub(super) fn route(&mut self, request: Request) -> Result<()> {
         match request {
+            Request::Tagged { .. } => Err(fail(Code::RequestFailed, "a tagged request in another")),
             Request::SetProfile(p) => self.set_profile(&p),
             Request::SetPicture(p) => self.set_picture(p),
             Request::Accept(id) => self.accept_request(id, false),
@@ -75,6 +79,12 @@ impl<A: AgentPort> Engine<A> {
                 reply_to,
                 mentions,
             } => self.send_text(chat, &text, reply_to, &mentions, Outgoing::default()),
+            Request::SendData {
+                chat,
+                tag,
+                json,
+                fallback_text,
+            } => self.send_data(chat, &tag, &json, &fallback_text),
             Request::SendLink {
                 chat,
                 text,

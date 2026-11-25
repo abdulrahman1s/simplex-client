@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use crossbeam_channel::Receiver;
+use zeroize::Zeroizing;
 
 use super::error::{Error, Result};
 use super::handle::Client;
@@ -27,6 +28,7 @@ pub struct ClientBuilder {
     pub(super) log: Option<Log>,
     pub(super) timeout: Duration,
     pub(super) events_cap: usize,
+    pub(super) roster_deltas: bool,
 }
 
 impl ClientBuilder {
@@ -34,15 +36,17 @@ impl ClientBuilder {
         Self {
             config: Config {
                 dir,
-                key: String::new(),
+                key: Zeroizing::new(String::new()),
                 name: "SimpleX bot".into(),
                 relays: Vec::new(),
                 proxy_mode: ProxyMode::default(),
                 proxy_fallback: ProxyFallback::default(),
+                data_tags: std::collections::BTreeSet::new(),
             },
             log: None,
             timeout: Duration::from_secs(60),
             events_cap: EVENTS_CAP,
+            roster_deltas: false,
         }
     }
 
@@ -52,9 +56,18 @@ impl ClientBuilder {
         self
     }
 
-    /// The passphrase that seals the store; required, and stretched with Argon2id.
+    /// The passphrase that seals the store; required, and stretched with Argon2id. An owned
+    /// `String` is taken as it is and wiped once the store is open; a `&str` stays the
+    /// caller's to wipe ([`key_zeroizing`](Self::key_zeroizing) keeps it in one buffer).
     pub fn key(mut self, key: impl Into<String>) -> Self {
-        self.config.key = key.into();
+        self.config.key = Zeroizing::new(key.into());
+        self
+    }
+
+    /// [`key`](Self::key) from a buffer that wipes itself: the client keeps no other copy,
+    /// and wipes this one once the store is open, or when the start fails.
+    pub fn key_zeroizing(mut self, key: Zeroizing<String>) -> Self {
+        self.config.key = key;
         self
     }
 
@@ -79,6 +92,21 @@ impl ClientBuilder {
         } else {
             ProxyFallback::AllowProtected
         };
+        self
+    }
+
+    /// Messages of content type `tag` arrive as [`Event::Data`](super::Event::Data) instead
+    /// of a message (`Request::SendData` sends them).
+    pub fn data_tag(mut self, tag: impl Into<String>) -> Self {
+        self.config.data_tags.insert(tag.into());
+        self
+    }
+
+    /// Hear what changed instead of whole chat lists: `FriendUpdate` and `GroupUpdate` join
+    /// the adds and removes, and `Raw(Chats)` comes only after [`Client::refresh`] asks for
+    /// it. `friends()` and `groups()` stay current either way. Off by default.
+    pub fn roster_deltas(mut self, on: bool) -> Self {
+        self.roster_deltas = on;
         self
     }
 

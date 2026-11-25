@@ -1,13 +1,13 @@
 //! A proxy and the destination relays behind it in one place: PRXY opens a session, PFWD hands the sealed command over as RFWD would, the destination answers.
 use std::collections::HashMap;
 
-use super::certs::{Identity, identity, signed_key};
 use super::support::keypair;
 use super::tls_server::address;
 use crate::crypto::{Alg, CbNonce, KeyPair, PublicKey, Signature, cb_verify, random_vec};
 use crate::encoding::{Decode, Decoder, Encode, Tail, Version, VersionRange};
 use crate::smp::proxy::destination::open_forwarded;
 use crate::smp::proxy::{BrokerError, FwdTransmission};
+use crate::smp::testing::{Identity, identity, signed_key};
 use crate::smp::{CommandError, ErrorType, Incoming, ProxyError, Response, SmpServer, authorized};
 
 #[derive(Default)]

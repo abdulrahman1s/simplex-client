@@ -8,6 +8,9 @@ pub enum Error {
     /// The store did not open: a wrong key, a damaged file, a folder that cannot be written.
     #[error("the store did not open: {0}")]
     Store(#[from] StoreError),
+    /// Another client, in this process or another, has the store in this folder open.
+    #[error("another client has the store in {0} open")]
+    Locked(std::path::PathBuf),
     /// The client was closed, or its engine stopped.
     #[error("the client is closed")]
     Closed,

@@ -29,6 +29,10 @@ mod transport;
 mod tunnel;
 mod version;
 
+#[cfg(any(test, feature = "testing"))]
+#[cfg(feature = "native")]
+#[allow(clippy::unwrap_used, reason = "test support: a broken fixture panics")]
+pub mod testing;
 #[cfg(test)]
 #[cfg(feature = "native")]
 pub(crate) mod tests;

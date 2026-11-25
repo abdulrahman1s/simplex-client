@@ -6,9 +6,9 @@ use std::time::Duration;
 
 use crossbeam_channel::bounded;
 
-use super::certs::identity;
 use super::tls_server::address;
 use crate::encoding::b64_encode;
+use crate::smp::testing::identity;
 use crate::smp::{
     Closer, ConnConfig, Connector, SmpConnection, SmpError, SmpEventKind, SmpServer, SmpSession,
     TlsConnector,

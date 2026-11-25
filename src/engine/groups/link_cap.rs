@@ -24,7 +24,7 @@ impl<A: AgentPort> Engine<A> {
         waiting.sort_unstable();
         let over = (waiting.len() + 1).saturating_sub(MAX_LINK_JOINS);
         for id in waiting.into_iter().take(over) {
-            self.drop_member_conn(group, id)?;
+            self.drop_member_conn(group, id, false)?;
             self.store.delete(NS, &keys::member(group, id))?;
             self.state.members.remove(&(group, id));
             self.log

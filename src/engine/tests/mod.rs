@@ -8,12 +8,14 @@ mod change;
 mod codes;
 mod conn_events;
 mod contact;
+pub(crate) mod data;
 mod decrypt_error;
+mod delete_wait;
 mod fake_agent;
 mod files;
 mod forward;
 mod friend_pq;
-mod groups;
+pub(crate) mod groups;
 mod handshake;
 mod inbound;
 mod incognito;
@@ -24,6 +26,7 @@ mod live_address;
 mod live_autoreply;
 mod live_call;
 mod live_cli;
+mod live_data;
 mod live_forward;
 mod live_group;
 mod live_incognito;
@@ -33,7 +36,9 @@ mod live_manage;
 mod live_member_contact;
 mod live_msg;
 mod live_offline;
+mod live_pq;
 mod live_prefs;
+mod live_remove;
 mod live_repair;
 mod live_timed;
 mod live_voice;
@@ -52,6 +57,7 @@ mod relays_retry;
 mod restart;
 mod resync;
 mod send;
+mod send_status;
 mod start;
 mod streams;
 pub(crate) mod timed;
@@ -89,11 +95,12 @@ impl Dir {
     pub fn hello(&self, name: &str) -> Config {
         Config {
             dir: self.0.clone(),
-            key: KEY.into(),
+            key: zeroize::Zeroizing::new(KEY.into()),
             name: name.into(),
             relays: Vec::new(),
             proxy_mode: crate::types::ProxyMode::default(),
             proxy_fallback: crate::types::ProxyFallback::default(),
+            data_tags: std::collections::BTreeSet::new(),
         }
     }
 }

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::types::kind::{ErrorCode, FileKind, RequestKind};
 use crate::types::model::{
     CallSignal, ChatFeatures, ChatGroup, ChatMessage, ChatPreview, ChatProfile, ChatRef, Friend,
-    FriendRequest, GroupMember, StreamSignal,
+    FriendRequest, GroupMember, SendStatus, StreamSignal,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,6 +46,23 @@ pub enum Event {
     Members {
         group: i64,
         members: Vec<GroupMember>,
+    },
+    /// Application data under a tag the client registered (`Config::data_tags`), sent with
+    /// `Request::SendData` or anything else that sends that content type. `member` is the group
+    /// member who sent it, `None` in a direct chat. It is not kept: a message the relay
+    /// delivers again after a restart, before it was acknowledged, comes again.
+    Data {
+        chat: ChatRef,
+        member: Option<i64>,
+        tag: String,
+        json: serde_json::Map<String, serde_json::Value>,
+    },
+    /// What became of the messages a `Request::Tagged` sent; `member` names the group member
+    /// a `Sent` or `Failed` is for.
+    SendStatus {
+        tag: u64,
+        member: Option<i64>,
+        status: SendStatus,
     },
     /// Every message of the conversation was deleted here (`Request::ClearChat`).
     Cleared(ChatRef),

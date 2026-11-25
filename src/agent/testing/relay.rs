@@ -8,7 +8,7 @@ use crate::crypto::{PublicKey, random_vec};
 use crate::encoding::{Decode, Decoder, Encode, Version, VersionRange};
 use crate::smp::proxy::destination::open_forwarded;
 use crate::smp::proxy::{BrokerError, FwdTransmission, TransportError};
-use crate::smp::tests::certs::signed_key;
+use crate::smp::testing::signed_key;
 use crate::smp::{ErrorType, Incoming, ProxyError, Response, SmpServer};
 
 fn split(b: &[u8]) -> (&[u8], &[u8]) {

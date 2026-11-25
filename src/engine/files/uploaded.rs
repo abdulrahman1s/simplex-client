@@ -43,8 +43,7 @@ impl<A: AgentPort> Engine<A> {
                 let conn = self.friend(friend)?.conn;
                 for part in descr_parts(&shared, d, expires.as_ref()) {
                     let body = encode_chat_message(&ChatMessage::new(part)?, PQ)?;
-                    self.agent
-                        .send(&mut self.store, &conn, self.state.pq_of(&conn), body)?;
+                    self.agent_send(&conn, self.state.pq_of(&conn), body)?;
                 }
             }
             ChatRef::Group(group) => {
@@ -93,7 +92,7 @@ impl<A: AgentPort> Engine<A> {
                 let f = self.friend(friend)?;
                 if f.reachable() {
                     let body = encode_chat_message(&msg, PQ)?;
-                    self.agent.send(&mut self.store, &f.conn, f.pq, body)?;
+                    self.agent_send(&f.conn, f.pq, body)?;
                 }
             }
             ChatRef::Group(group) => {

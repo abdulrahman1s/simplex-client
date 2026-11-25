@@ -6,6 +6,89 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Application data. `Request::SendData { chat, tag, json, fallback_text }`
+  (`client.send_data`; JS `friend.sendData(tag, data, fallbackText)`, `group.sendData`)
+  sends `json` as `x.msg.new` with the content type `tag`. The official apps do not know the
+  type and show `fallback_text`, as simplex-chat 7.1.4 does for any `MCUnknown`; a live test
+  checks that the official CLI 7.1.4 keeps it as an item with that text. Content types
+  registered at start (`ClientBuilder::data_tag`, `Config::data_tags`; JS
+  `Client.start({ dataTags })`) arrive as `Event::Data { chat, member, tag, json }` (JS
+  `data`) instead of a message. Neither side keeps an item. A tag the apps know or with
+  spaces, and data with a `type` or `text` key, are refused. Data under a tag not
+  registered still arrives as a message with its fallback text. **Breaking:** `Request`,
+  `types::Event` and `client::Event` have new variants and `Config` a new field.
+- `Friend.pq` (JS `friend.pq`): whether the connection's ratchet uses the post-quantum KEM
+  both ways, as negotiated, not as asked for. It is what the ratchet used for the last
+  message sent and the last received (`rcSndKEM`, `rcRcvKEM`), checked after each one as
+  simplex-chat 7.1.4 keeps `pqSndEnabled` and `pqRcvEnabled` (`connPQEnabled`), so it is
+  false until a message has gone each way and stays false with a peer without PQ. It is read
+  from the ratchets at each start too, so friends from before this release are listed right.
+  The chat list goes out again when it changes. A live test checks it against the official CLI
+  7.1.4. **Breaking:** `Friend` has a new field and the `AgentPort` trait a new method,
+  `pq_on`.
+- `ClientBuilder::start` takes an exclusive OS file lock (`std::fs::File::try_lock` on
+  `chat.db.lock` in the client's folder), held by the engine thread until `close()` returns.
+  A second client on the same folder, in this process or another, fails with the new
+  `Error::Locked(folder)` instead of writing the same store. **Breaking:** `client::Error`
+  has a new variant.
+- `ClientBuilder::key_zeroizing(Zeroizing<String>)` takes the store passphrase in a buffer
+  that wipes itself, and `Config::key` is now a `Zeroizing<String>`. The client keeps no
+  other copy: the engine thread takes the key out of its config and wipes it as soon as the
+  store is open (or the open failed), and the wasm client's options wipe theirs once the
+  store is open. `ClientBuilder::key(impl Into<String>)` still works; an owned `String` is
+  taken and wiped the same way. `Config`'s `Debug` shows the key as `<redacted>`. Not wiped:
+  a `&str` the caller passed, the JS string in wasm, and the hashing state Argon2id
+  (and HKDF, for a store from before Argon2id) keeps while it runs. **Breaking:**
+  `Config::key` is a `Zeroizing<String>`.
+- Sends are tied to their outcome. `Client::send`, `reply`, `send_file`, `send_link`,
+  `send_live`, `send_data` and `forward` (and the same methods on `Friend`, `Group`, `Chat`
+  and `Message`) return a `SendHandle`, and what becomes of the send arrives as
+  `client::Event::SendStatus { handle, member, status }`: `Queued { item }` with the
+  message it made, or `Refused { code, detail }` at once instead of an unlinked
+  `Raw(Failed)`; then `Sent` or `Failed { detail }` for the friend, or for each `member` of
+  a group, as the agent reports `SENT` or `MERR`. Underneath, `Request::Tagged { tag,
+  request }` wraps any request, and `types::Event::SendStatus { tag, member, status }` (JS
+  `sendStatus`) tells its outcome. A file's message goes after its upload, so only its
+  `Queued` or `Refused` is told; the JS methods do not tag their sends yet. **Breaking:**
+  those methods return `Result<SendHandle>` instead of `Result<()>` (a `send(…)?` used as a
+  `match` arm's value needs a `;`), and `Request` and both `Event`s have new variants.
+- `ClientBuilder::roster_deltas(true)`: the client tells what changed instead of whole chat
+  lists. The new `Event::FriendUpdate` and `Event::GroupUpdate` join the adds and removes,
+  and `Raw(Chats)` comes only after the new `Client::refresh()` asks for it. `friends()` and
+  `groups()` stay current, and `create_group` still resolves. Off by default, so nothing
+  changes for a client that does not ask. The engine still builds each list (one per batch
+  of changes) for the client to compare. JS has no such option yet. **Breaking:**
+  `client::Event` has new variants.
+- Documented how a program learns the friends it had before a restart: `client.friends()`
+  (and `groups()`) is complete as soon as `ClientBuilder::start` returns, and `FriendAdd`
+  is only for friends new since. A test holds the client to it. A `FriendAdd` replay at
+  start was not added: it would announce as new what is not, and every program would have to
+  tell the two apart.
+- A `testing` cargo feature makes the in-memory SMP server and agent test doubles public
+  (`agent::testing`: `FakeSmp`, `FakeConnector`, `Node`, …, and the certificate builder
+  they use, `smp::testing`) and adds `ClientBuilder::start_in_memory(&server)`, which
+  starts a real `Client` (agent, engine and store) on an in-memory server the clients of a
+  test share. Downstream crates can run end-to-end tests with no network: such a client
+  does not check its relays (`NativeAgent::without_relay_tests`) and uses no XFTP relay, so
+  files do not go. CI builds and lints the feature and runs `tests/in_memory.rs`, where two
+  clients connect, talk and send application data, and a friend removed right after a
+  message gets both.
+
+- Removing a friend (and a group member, and leaving a group) deleted the connection with
+  everything still waiting to be sent on it, so the peer never got `x.direct.del` and a
+  message sent just before was sometimes lost. `AgentPort::delete` and the agent's `delete`
+  take a `wait` flag, which does what `deleteConnectionsAsync` with `waitDelivery` does in
+  simplexmq: the receive queue goes at once, so nothing more arrives, and the connection
+  stays until what waits on it is delivered or given up, across a restart too, or 2 days
+  at most (`connDeleteDeliveryTimeout`). As in simplex-chat 7.1.4, the engine waits only
+  after telling the peer: removing a friend once `x.direct.del` went, leaving a group,
+  removing a member, and deleting a group as its owner; every other deletion is at once. A
+  live test removes a friend right after writing to them and sees the official CLI 7.1.4
+  get both the message and the deletion. **Breaking:** `AgentPort::delete` and
+  `AgentClient::delete` take the `wait` flag.
+
 ## [0.2.0] - 2026-11-25
 
 ### Added

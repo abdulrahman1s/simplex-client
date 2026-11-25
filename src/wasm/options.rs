@@ -1,5 +1,8 @@
 //! `Client.start`'s options object: who, which key, which tunnel, and what to start from.
+use std::collections::BTreeSet;
+
 use wasm_bindgen::{JsCast, JsValue};
+use zeroize::Zeroizing;
 
 use super::convert::error;
 use crate::limits::is_valid_name;
@@ -48,7 +51,8 @@ fn transport(o: &JsValue) -> Result<Transport, JsValue> {
 
 pub(super) struct Options {
     pub(super) name: String,
-    pub(super) key: String,
+    /// Wiped when the options are dropped, once the store is open.
+    pub(super) key: Zeroizing<String>,
     pub(super) transport: Transport,
     pub(super) token: Option<String>,
     /// SMP relay addresses; empty means the presets.
@@ -62,6 +66,8 @@ pub(super) struct Options {
     pub(super) log: bool,
     pub(super) proxy_mode: ProxyMode,
     pub(super) proxy_fallback: ProxyFallback,
+    /// Content types heard as `data` instead of `message`.
+    pub(super) data_tags: BTreeSet<String>,
 }
 
 fn get(o: &JsValue, key: &str) -> Option<JsValue> {
@@ -76,6 +82,20 @@ fn text(o: &JsValue, key: &str) -> Result<Option<String>, JsValue> {
                 .ok_or_else(|| error("bad_option", format!("{key} is not a string")))
         })
         .transpose()
+}
+
+/// An array of strings under `key`, or nothing.
+fn strings(o: &JsValue, key: &str) -> Result<Vec<String>, JsValue> {
+    let Some(list) = get(o, key) else {
+        return Ok(Vec::new());
+    };
+    js_sys::Array::from(&list)
+        .iter()
+        .map(|r| {
+            r.as_string()
+                .ok_or_else(|| error("bad_option", format!("{key} are strings")))
+        })
+        .collect()
 }
 
 /// `changes`: an array of `Uint8Array`s, or nothing.
@@ -100,16 +120,7 @@ fn changes(o: &JsValue) -> Result<Vec<Vec<u8>>, JsValue> {
 impl Options {
     pub(super) fn parse(o: &JsValue) -> Result<Self, JsValue> {
         let need = |k: &str| error("bad_option", format!("{k} is required"));
-        let relays = match get(o, "relays") {
-            Some(list) => js_sys::Array::from(&list)
-                .iter()
-                .map(|r| {
-                    r.as_string()
-                        .ok_or_else(|| error("bad_option", "relays are strings"))
-                })
-                .collect::<Result<_, _>>()?,
-            None => Vec::new(),
-        };
+        let relays = strings(o, "relays")?;
         let snapshot = match get(o, "snapshot") {
             Some(v) => Some(
                 v.dyn_into::<js_sys::Uint8Array>()
@@ -141,9 +152,11 @@ impl Options {
         }
         Ok(Self {
             name,
-            key: text(o, "key")?
-                .filter(|k| !k.is_empty())
-                .ok_or_else(|| need("key"))?,
+            key: Zeroizing::new(
+                text(o, "key")?
+                    .filter(|k| !k.is_empty())
+                    .ok_or_else(|| need("key"))?,
+            ),
             transport: transport(o)?,
             token: text(o, "tunnelToken")?,
             relays,
@@ -154,6 +167,7 @@ impl Options {
             log: get(o, "log").and_then(|v| v.as_bool()).unwrap_or(false),
             proxy_mode,
             proxy_fallback,
+            data_tags: strings(o, "dataTags")?.into_iter().collect(),
         })
     }
 }

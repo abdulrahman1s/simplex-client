@@ -4,22 +4,35 @@ use std::rc::Rc;
 use serde_json::Value;
 use wasm_bindgen::JsValue;
 
-use super::convert::to_js;
+use super::convert::{num, to_js};
 use super::objects::{Friend, FriendRequest, Group, GroupInvite, Member, Message};
 use super::shared::Shared;
-use crate::types::model::{self as wire, ChatGroup, ChatMessage, GroupMember};
+use crate::types::model::{self as wire, ChatGroup, ChatMessage, ChatRef, GroupMember};
 
 pub(super) enum Payload {
     Nothing,
     Json(Value),
     Message(Box<ChatMessage>),
     Messages(Vec<ChatMessage>),
-    Members { group: i64, list: Vec<GroupMember> },
+    Members {
+        group: i64,
+        list: Vec<GroupMember>,
+    },
     Friend(Box<wire::Friend>),
     Group(Box<ChatGroup>),
     Invite(Box<ChatGroup>),
     Request(wire::FriendRequest),
-    Member { group: i64, name: String },
+    Member {
+        group: i64,
+        name: String,
+    },
+    /// `{ chat, member, tag, data }`, `chat` the friend or group it came in.
+    Data {
+        chat: ChatRef,
+        member: Option<i64>,
+        tag: String,
+        json: Value,
+    },
 }
 
 impl Payload {
@@ -44,6 +57,29 @@ impl Payload {
             Self::Invite(g) => GroupInvite::new(s(), *g).into(),
             Self::Request(r) => FriendRequest::new(s(), r).into(),
             Self::Member { group, name } => Member::named(s(), group, name).into(),
+            Self::Data {
+                chat,
+                member,
+                tag,
+                json,
+            } => {
+                let chat: JsValue = match chat {
+                    ChatRef::Direct(id) => Friend::new(s(), shared.friend(id)).into(),
+                    ChatRef::Group(id) => Group::new(s(), shared.group(id)).into(),
+                };
+                let o = js_sys::Object::new();
+                let member = member.map_or(JsValue::UNDEFINED, |m| num(m).into());
+                for (k, v) in [
+                    ("chat", chat),
+                    ("member", member),
+                    ("tag", tag.into()),
+                    ("data", to_js(&json)),
+                ] {
+                    // Setting a key on a new plain object does not fail.
+                    let _ = js_sys::Reflect::set(&o, &k.into(), &v);
+                }
+                o.into()
+            }
         }
     }
 }

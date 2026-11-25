@@ -4,14 +4,15 @@ use std::path::Path;
 
 use super::error::{Result, unexpected};
 use super::handle::Client;
+use super::sending::SendHandle;
 use super::waiters::{Answer, Want};
 use crate::types::model::{ChatMessage, ChatRef};
 use crate::types::{Event, FileKind, Request, RequestKind};
 
 impl Client {
-    /// Sends `text` to a friend or a group.
-    pub fn send(&self, chat: ChatRef, text: &str) -> Result<()> {
-        self.request(Request::Send {
+    /// Sends `text` to a friend or a group; what becomes of it is told against the handle.
+    pub fn send(&self, chat: ChatRef, text: &str) -> Result<SendHandle> {
+        self.tagged(Request::Send {
             chat,
             text: text.to_owned(),
             reply_to: None,
@@ -20,8 +21,8 @@ impl Client {
     }
 
     /// Answers `msg` in its conversation, quoting it.
-    pub fn reply(&self, msg: &ChatMessage, text: &str) -> Result<()> {
-        self.request(Request::Send {
+    pub fn reply(&self, msg: &ChatMessage, text: &str) -> Result<SendHandle> {
+        self.tagged(Request::Send {
             chat: msg.chat,
             text: text.to_owned(),
             reply_to: Some(msg.id),
@@ -63,9 +64,10 @@ impl Client {
         })
     }
 
-    /// Sends a file; its progress arrives as `Event::MessageUpdate`.
-    pub fn send_file(&self, chat: ChatRef, path: impl AsRef<Path>) -> Result<()> {
-        self.request(Request::SendFile {
+    /// Sends a file; its progress arrives as `Event::MessageUpdate`, and its handle tells
+    /// whether it was queued or refused.
+    pub fn send_file(&self, chat: ChatRef, path: impl AsRef<Path>) -> Result<SendHandle> {
+        self.tagged(Request::SendFile {
             chat,
             path: path.as_ref().to_owned(),
             kind: FileKind::File,

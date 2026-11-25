@@ -23,6 +23,9 @@ impl AgentClient {
             let ratchet = records::load(store, &records::ratchet_key(id))?;
             let mut c = Conn::new(rec, ratchet);
             c.sends = VecDeque::from(records::pending_ids(store, id)?);
+            c.deleting = store
+                .get(records::NS, &records::deleting_key(id))?
+                .and_then(|b| Some(i64::from_be_bytes(b.get(..8)?.try_into().ok()?)));
             if let Some(rcv) = c.rec.rcv.as_ref().filter(|r| !r.rcv_id.is_empty()) {
                 self.by_rcv.insert(rcv.rcv_id.clone(), id);
             }
@@ -30,7 +33,11 @@ impl AgentClient {
         }
         let ids: Vec<ConnId> = self.conns.keys().copied().collect();
         for id in ids {
-            self.drive(store, id);
+            // Deleted while sends waited, and those are gone now.
+            self.finish_deleting(store, id)?;
+            if self.conns.contains_key(&id) {
+                self.drive(store, id);
+            }
         }
         Ok(())
     }
@@ -96,6 +103,7 @@ impl AgentClient {
         for id in due {
             self.drive(store, id);
         }
+        self.finish_overdue(store);
         self.close_unused_servers();
     }
 

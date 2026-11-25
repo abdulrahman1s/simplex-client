@@ -1,6 +1,5 @@
 //! SMP client tests: golden encodings from the Haskell `ServerTests.hs` syntax tests, then the connection against an in-memory server.
 mod auth;
-pub(crate) mod certs;
 mod commands;
 mod connection;
 mod deadline;

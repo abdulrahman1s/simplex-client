@@ -10,6 +10,7 @@ mod integrity;
 mod message;
 mod net;
 mod peer_range;
+mod pq;
 mod sync;
 mod x_msg;
 mod x_react;

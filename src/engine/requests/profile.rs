@@ -91,7 +91,7 @@ impl<A: AgentPort> Engine<A> {
             member_key: None,
         })?;
         let body = encode_chat_message(&msg, true)?;
-        self.agent.send(&mut self.store, &f.conn, f.pq, body)?;
+        self.agent_send(&f.conn, f.pq, body)?;
         Ok(())
     }
 }
