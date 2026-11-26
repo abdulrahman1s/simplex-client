@@ -6,8 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-These additions are breaking (new variants in public enums, a new field on a public struct),
-so the next release should be **0.5.0**; it is proposed, not released.
+## [0.5.0] - 2026-11-26
+
+These additions are breaking: new variants in public enums and a new field on a public struct.
 
 ### Added
 
@@ -549,7 +550,8 @@ so the next release should be **0.5.0**; it is proposed, not released.
 - A group member's chat version range follows each JSON message they send, not only the
   handshake (`updateMemberChatVRange`).
 
-[Unreleased]: https://github.com/abdulrahman1s/simplex-client/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/abdulrahman1s/simplex-client/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/abdulrahman1s/simplex-client/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/abdulrahman1s/simplex-client/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/abdulrahman1s/simplex-client/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/abdulrahman1s/simplex-client/compare/v0.1.0...v0.2.0

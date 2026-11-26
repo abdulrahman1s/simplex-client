@@ -5,8 +5,8 @@
 
 ## Last run: 2026-11-26
 
-Tree: `5e70aef` plus the uncommitted changes that add relay tests, adding relays to a channel,
-and the replay checks (the Unreleased section of `CHANGELOG.md`).
+Tree: the content released as 0.5.0, run before it was committed (`5e70aef` plus the changes
+that add relay tests, adding relays to a channel, and the replay checks).
 
 ### Binaries
 
