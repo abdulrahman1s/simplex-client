@@ -1,6 +1,6 @@
 {
   "name": "simplex-client",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A SimpleX Chat protocol client compiled to WebAssembly, for browsers, Node.js and Bun",
   "license": "AGPL-3.0-only",
   "private": true,

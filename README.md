@@ -106,7 +106,7 @@ The crate is not published on crates.io. Depend on it through git:
 
 ```toml
 [dependencies]
-simplex-client = { git = "https://github.com/abdulrahman1s/simplex-client", tag = "v0.5.0" }
+simplex-client = { git = "https://github.com/abdulrahman1s/simplex-client", tag = "v0.6.0" }
 ```
 
 An echo bot:
@@ -256,8 +256,8 @@ relays over direct TCP (`node:net`), and TLS still runs inside wasm. Each
 package, so no Rust toolchain is needed:
 
 ```sh
-npm install https://github.com/abdulrahman1s/simplex-client/releases/download/v0.5.0/simplex-client-0.5.0.tgz
-bun add https://github.com/abdulrahman1s/simplex-client/releases/download/v0.5.0/simplex-client-0.5.0.tgz
+npm install https://github.com/abdulrahman1s/simplex-client/releases/download/v0.6.0/simplex-client-0.6.0.tgz
+bun add https://github.com/abdulrahman1s/simplex-client/releases/download/v0.6.0/simplex-client-0.6.0.tgz
 ```
 
 Installing from git (`npm install github:abdulrahman1s/simplex-client`) builds it instead,

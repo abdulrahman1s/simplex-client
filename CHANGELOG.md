@@ -6,7 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-This change is breaking: `store::StoreError` implements `From<rusqlite::Error>`, and that
+## [0.6.0] - 2026-11-26
+
+This release is breaking: `store::StoreError` implements `From<rusqlite::Error>`, and that
 `rusqlite` is now 0.43.
 
 ### Security
@@ -563,7 +565,8 @@ These additions are breaking: new variants in public enums and a new field on a 
 - A group member's chat version range follows each JSON message they send, not only the
   handshake (`updateMemberChatVRange`).
 
-[Unreleased]: https://github.com/abdulrahman1s/simplex-client/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/abdulrahman1s/simplex-client/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/abdulrahman1s/simplex-client/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/abdulrahman1s/simplex-client/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/abdulrahman1s/simplex-client/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/abdulrahman1s/simplex-client/compare/v0.2.0...v0.3.0
