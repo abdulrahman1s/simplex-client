@@ -59,6 +59,7 @@ impl<A: AgentPort> Engine<A> {
             via_link: false,
             relations: std::collections::BTreeMap::new(),
             invitation: None,
+            relay_link: None,
         };
         self.save_member(m.clone())?;
         Ok(m)

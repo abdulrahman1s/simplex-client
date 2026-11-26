@@ -28,14 +28,18 @@ impl AgentClient {
         let Some((kind, server, request)) = self.step_request(&c.rec)? else {
             return Ok(());
         };
-        // NEW is on our own relay; every other step acts on someone else's queue.
-        let sent = if kind == OpKind::NewQueue {
+        // NEW and LSET are on our own relay; every other step acts on someone else's queue.
+        let sent = if matches!(kind, OpKind::NewQueue | OpKind::Lset) {
             self.request(id, kind, &server, request)
         } else {
             self.request_to_peer(id, kind, &server, request)
         };
         let retry_at = self.step_retry_after();
+        let lset = (kind == OpKind::Lset)
+            .then(|| c_link_update(self, id))
+            .flatten();
         let c = self.conn_mut(id)?;
+        c.step.lset_sent = lset;
         c.step.in_flight = sent;
         c.step.retry_at = if sent { 0 } else { retry_at };
         Ok(())
@@ -93,8 +97,11 @@ impl AgentClient {
                     }
                 }
             }
+            ConnStatus::Address => match Self::lset_request(rec) {
+                Some((server, request)) => (OpKind::Lset, server, request),
+                None => return Ok(None),
+            },
             ConnStatus::Invited
-            | ConnStatus::Address
             | ConnStatus::Confirmed
             | ConnStatus::Accepting
             | ConnStatus::Joined
@@ -124,4 +131,9 @@ pub(crate) fn short_target(rec: &ConnRecord) -> Result<(SmpServer, Vec<u8>)> {
         }) => Ok((server, contact_short_link_kdf(&link_key)?.0)),
         ConnectionLink::Full(_) => Err(AgentError::Prohibited("not a short link")),
     }
+}
+
+/// The pending link data of `id`, as the LSET just sent carries it.
+fn c_link_update(a: &AgentClient, id: ConnId) -> Option<Vec<u8>> {
+    a.conn(id).ok()?.rec.link_update.clone()
 }

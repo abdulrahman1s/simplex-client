@@ -3,6 +3,7 @@
 pub mod body;
 pub mod bytes;
 pub mod call;
+pub mod channel;
 pub mod chat_features;
 pub mod chat_ref;
 pub mod conn_event;
@@ -20,6 +21,7 @@ pub mod stream;
 
 pub use body::{CallKind, CallRecord, ChatNotice, FileState, Media, MessageBody, StreamRecord};
 pub use call::{CallKey, CallRequest, CallSignal};
+pub use channel::{ChannelInfo, ChannelRelay, ChatRelay, RelayStatus};
 pub use chat_features::ChatFeatures;
 pub use chat_ref::ChatRef;
 pub use conn_event::{DecryptError, IntegrityError, SwitchPhase, SyncStatus};

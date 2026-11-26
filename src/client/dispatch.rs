@@ -69,6 +69,7 @@ const fn raw(e: &Event) -> bool {
         | Event::OpenFile { .. }
         | Event::Located { .. }
         | Event::GroupLink { .. }
+        | Event::ChannelRelay { .. }
         | Event::Call(_)
         | Event::Stream(_)
         | Event::Failed { .. }

@@ -82,19 +82,17 @@ fn a_group_link_is_joined_with_x_contact_and_pq_off() {
 }
 
 #[test]
-fn a_channels_link_is_still_refused() {
+fn a_relays_address_is_still_refused() {
     let mut t = T::started();
-    for link in [SHORT.replace("/g#", "/c#"), SHORT.replace("/g#", "/r#")] {
-        let out = t.req(Request::Connect(link));
-        assert!(matches!(
-            out.as_slice(),
-            [Event::Failed {
-                request: RequestKind::Connect,
-                code,
-                ..
-            }] if *code == ErrorCode::BadLink
-        ));
-    }
+    let out = t.req(Request::Connect(SHORT.replace("/g#", "/r#")));
+    assert!(matches!(
+        out.as_slice(),
+        [Event::Failed {
+            request: RequestKind::Connect,
+            code,
+            ..
+        }] if *code == ErrorCode::BadLink
+    ));
     assert!(t.e.agent.pq_seen.is_empty());
 }
 

@@ -49,7 +49,8 @@ pub enum Event {
     },
     /// Application data under a tag registered with
     /// [`ClientBuilder::data_tag`](super::ClientBuilder::data_tag); `member` is the group
-    /// member who sent it, `None` in a direct chat. It is not kept, and a message the relay
+    /// member who sent it, `None` in a direct chat and for a channel's post as the channel
+    /// (told once, however many relays bring it). It is not kept, and a message the relay
     /// delivers again before it was acknowledged comes again.
     Data {
         chat: ChatRef,

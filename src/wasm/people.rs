@@ -115,6 +115,28 @@ impl Client {
             .ask(Want::NewGroup, Request::NewGroup(name.to_owned()))
     }
 
+    /// Makes a channel owned by the user on the relays `setChatRelays` gave; resolves once the
+    /// chat list shows it. Relays read and keep every post, and the channel's connections have
+    /// no post-quantum KEM: nothing in it is end-to-end encrypted.
+    #[wasm_bindgen(js_name = createChannel, unchecked_return_type = "Promise<Group>")]
+    pub fn create_channel(&self, name: &str) -> js_sys::Promise {
+        self.shared
+            .ask(Want::NewGroup, Request::NewChannel(name.to_owned()))
+    }
+
+    /// The chat relays new channels are made on, `[{ address, name }]`; only these are used.
+    #[wasm_bindgen(js_name = setChatRelays, unchecked_return_type = "Promise<void>")]
+    pub fn set_chat_relays(
+        &self,
+        #[wasm_bindgen(unchecked_param_type = "{ address: string, name: string }[]")]
+        relays: JsValue,
+    ) -> js_sys::Promise {
+        let Ok(relays) = serde_json::from_value(super::convert::from_js(&relays)) else {
+            return settled(Err(error("bad_argument", "relays are [{ address, name }]")));
+        };
+        self.shared.queue(Request::SetChatRelays(relays))
+    }
+
     /// Friends from the last chat list, by id, connected or still connecting. A new `Map`
     /// on each read.
     #[wasm_bindgen(getter, unchecked_return_type = "Map<number, Friend>")]

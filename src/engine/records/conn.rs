@@ -36,4 +36,6 @@ pub enum ConnKind {
     GroupLink {
         group: i64,
     },
+    /// A link being read without joining it (`lookup_link`); gone with the answer.
+    Lookup(super::Lookup),
 }

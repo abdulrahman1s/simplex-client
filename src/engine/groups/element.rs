@@ -25,6 +25,15 @@ impl<A: AgentPort> Engine<A> {
         sender: i64,
         p: ParsedMsg,
     ) -> Result<Option<Vec<u8>>> {
+        if self
+            .state
+            .groups
+            .get(&group)
+            .is_some_and(|g| g.channel.is_some())
+        {
+            self.on_channel_element(group, sender, p)?;
+            return Ok(None);
+        }
         if let Some(fwd) = &p.forward {
             self.on_forwarded(group, sender, fwd, p.signed.as_ref(), p.message)?;
             return Ok(None);

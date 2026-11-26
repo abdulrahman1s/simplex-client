@@ -117,6 +117,14 @@ pub enum Request {
         fallback_text: String,
     },
     /// The live message's text so far; `done` finishes it (`APIUpdateChatItem` live).
+    /// `SendData` signed with the user's member key: in a channel, an owner's post as the
+    /// channel that subscribers can verify (`sign=on`). Relays still read it.
+    SendSignedData {
+        chat: ChatRef,
+        tag: String,
+        json: serde_json::Map<String, serde_json::Value>,
+        fallback_text: String,
+    },
     UpdateLive {
         chat: ChatRef,
         item: i64,
@@ -261,6 +269,10 @@ pub enum Request {
     },
     Refresh,
     NewGroup(String),
+    /// A channel with this name on the chat relays `SetChatRelays` gave (`APINewPublicGroup`).
+    NewChannel(String),
+    /// The chat relays new channels are made on; only these are ever used.
+    SetChatRelays(Vec<super::model::ChatRelay>),
     AddMember {
         group: i64,
         friend: i64,

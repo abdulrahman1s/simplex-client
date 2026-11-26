@@ -6,6 +6,51 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Channels (simplex-chat 7.1.4 `useRelays` groups), owner and subscriber, through official
+  chat relays (`simplex-chat --relay`):
+  - `Client::set_chat_relays` / `Request::SetChatRelays(Vec<ChatRelay>)` (JS
+    `setChatRelays`) names the relays new channels use; only these are ever used.
+    `ChatRelay::presets()` lists 7.1.4's preset chat relays, never used by default.
+  - `Client::create_channel(name)` / `Request::NewChannel` (JS `createChannel`) makes a
+    channel: a root key whose `sha256` is the channel's id, the owner's member key authorised
+    by it (`OwnerAuth`), the `/c#` link under it, then each relay invited with a signed
+    `x.grp.relay.inv`, its `x.grp.relay.acpt` link checked to name it, the empty roster sent
+    and acknowledged, and its link published with LSET. Each relay's status (`RelayStatus`)
+    is on `ChatGroup.channel` (`ChannelInfo`, `ChannelRelay`) and every change is told as
+    `types::Event::ChannelRelay`.
+  - Posts as the channel: text, edits, deletes and `send_data` in a channel go to its relays
+    with `asGroup`; `Client::send_signed_data` / `Request::SendSignedData` (JS
+    `sendSignedData`) signs them with the owner's member key. A signed body over 15 602 bytes
+    is refused before it is sent.
+  - `connect` takes a channel's link: the link is read (LGET), its id checked, its owners kept
+    with their keys, and each relay joined with a signed `x.member` as `observer`. Posts as
+    the channel arrive as `Message`s by `Author::Channel` / `MessageAuthor::Channel`, or as
+    `Event::Data { member: None }`, each once however many relays bring it; the relays'
+    history replay comes the same way. An observer's post is refused locally
+    (`groupUserRole: required role author`). Leaving sends a signed `x.grp.leave`.
+  - Signatures follow 7.1.4's channel rules (`groupBindingData`: `(publicGroupId,
+    memberId)`; `requiresSignature`).
+  - Codec: typed `x.grp.relay.{inv,acpt,test,new,reject,cap}` and `x.grp.roster{,.ack,.request}`,
+    `GroupProfile::public_group_profile()`, and the channel types in `chat::channel`.
+  - Agent: `lookup_link` (read an address's link data without joining it), `create_channel_link`
+    and `set_link_data` (LSET); the in-memory server handles LSET.
+- Every channel connection is PQ off (`PQSupportOff`), as 7.1.4 makes them; channels are not
+  end-to-end encrypted and relays keep every post. `ChannelRelay::pq` shows each relay
+  connection's negotiated state.
+
+### Changed
+
+- **Breaking:** new variants in `chat::ChatEvent` (the relay and roster events, which decoded
+  to `Unknown` before), `types::Event`, `types::Request`, `MessageAuthor`, `client::Author`,
+  `ChatNotice`, `agent::client::AgentEvent` and the engine's `AgentEvent`; new methods on the
+  `AgentPort` trait (`lookup_link`, `create_channel_link`, `set_link_data`); new fields on
+  `ChatGroup`, `MemberRecord`, `GroupRecord` and `SettingsRecord`. Stored records still open:
+  the agent's connection record has a new format (6) and reads formats 1 to 5.
+- A channel link (`/c#`) is joined instead of refused; a relay's own address (`/r#`) is
+  still refused.
+
 ## [0.3.0] - 2026-11-25
 
 ### Added

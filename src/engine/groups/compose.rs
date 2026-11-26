@@ -28,6 +28,11 @@ impl<A: AgentPort> Engine<A> {
                 "not an active member of the group",
             ));
         }
+        if !at_least(&g.my_role, min) && g.channel.is_some() {
+            // As 7.1.4 refuses it: `CEGroupUserRole` with the role needed.
+            let why = format!("groupUserRole: required role {}", min.as_str());
+            return Err(fail(Code::NotAllowed, why));
+        }
         if !at_least(&g.my_role, min) {
             return Err(fail(Code::NotAllowed, "the user's group role is too low"));
         }

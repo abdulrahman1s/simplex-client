@@ -85,6 +85,12 @@ impl<A: AgentPort> Engine<A> {
                 json,
                 fallback_text,
             } => self.send_data(chat, &tag, &json, &fallback_text),
+            Request::SendSignedData {
+                chat,
+                tag,
+                json,
+                fallback_text,
+            } => self.send_data_as(chat, &tag, &json, &fallback_text, true),
             Request::SendLink {
                 chat,
                 text,
@@ -190,6 +196,8 @@ impl<A: AgentPort> Engine<A> {
             Request::DeleteGroupLink(group) => self.delete_group_link(group),
             Request::Members(group) => self.members(group),
             Request::NewGroup(name) => self.new_group(&name),
+            Request::NewChannel(name) => self.new_channel(&name),
+            Request::SetChatRelays(relays) => self.set_chat_relays(relays),
             Request::AddMember { group, friend } => self.add_member(group, friend),
             Request::JoinGroup(group) => self.join_group(group),
             Request::LeaveGroup(group) => self.leave_group(group),

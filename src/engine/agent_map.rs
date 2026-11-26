@@ -177,6 +177,13 @@ pub(super) fn event(e: Native, log: &Log) -> Option<AgentEvent> {
             full,
             short,
         },
+        Native::LinkUpdated { conn } => AgentEvent::LinkUpdated {
+            conn: conn_id(conn),
+        },
+        Native::LinkData { conn, data } => AgentEvent::LinkData {
+            conn: conn_id(conn),
+            data,
+        },
         // Every request to an address of ours is the plain form, which assumes post-quantum support.
         Native::Req {
             conn,

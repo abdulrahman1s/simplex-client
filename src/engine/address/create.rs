@@ -55,7 +55,9 @@ impl<A: AgentPort> Engine<A> {
             | AgentEvent::Err { .. }
             | AgentEvent::DecryptError { .. }
             | AgentEvent::RatchetSync { .. }
-            | AgentEvent::Switch { .. } => Ok(()),
+            | AgentEvent::Switch { .. }
+            | AgentEvent::LinkData { .. }
+            | AgentEvent::LinkUpdated { .. } => Ok(()),
         }
     }
 

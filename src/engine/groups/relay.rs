@@ -17,7 +17,7 @@ use super::fwd_batch::{forward_batches, fwd_member_name};
 use super::policy::at_least;
 
 /// Protocol.hs `isForwardedGroupMsg`: what an admin passes on (a message with an inline file
-/// is not). The relay and roster events have no variant here.
+/// is not).
 #[must_use]
 pub(crate) fn forwardable(e: &ChatEvent) -> bool {
     match e {
@@ -35,7 +35,9 @@ pub(crate) fn forwardable(e: &ChatEvent) -> bool {
         | ChatEvent::GrpLeave
         | ChatEvent::GrpDel
         | ChatEvent::GrpInfo(_)
-        | ChatEvent::GrpPrefs(_) => true,
+        | ChatEvent::GrpPrefs(_)
+        | ChatEvent::GrpRelayNew { .. }
+        | ChatEvent::GrpRoster { .. } => true,
         ChatEvent::File(_)
         | ChatEvent::FileAcpt { .. }
         | ChatEvent::FileAcptInv { .. }
@@ -66,6 +68,13 @@ pub(crate) fn forwardable(e: &ChatEvent) -> bool {
         | ChatEvent::CallAnswer { .. }
         | ChatEvent::CallExtra { .. }
         | ChatEvent::CallEnd { .. }
+        | ChatEvent::GrpRelayInv(_)
+        | ChatEvent::GrpRelayAcpt { .. }
+        | ChatEvent::GrpRelayTest { .. }
+        | ChatEvent::GrpRelayReject { .. }
+        | ChatEvent::GrpRelayCap(_)
+        | ChatEvent::GrpRosterAck { .. }
+        | ChatEvent::GrpRosterRequest { .. }
         | ChatEvent::Ok
         | ChatEvent::Unknown { .. } => false,
     }

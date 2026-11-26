@@ -102,6 +102,14 @@ impl Inner {
                 }
                 self.queues.send(e, body, pushes)
             }
+            Cmd::Lset { link_id, data } => {
+                self.log.push("LSET");
+                let key = self.queues.by_rcv.get(e).map(|q| q.rcv_auth.clone());
+                if key.is_none_or(|k| !auth.by(&k)) {
+                    return Response::Err(ErrorType::Auth);
+                }
+                self.lset(e, &link_id, data)
+            }
             Cmd::Sub | Cmd::Ack(_) | Cmd::Del => {
                 let key = self.queues.by_rcv.get(e).map(|q| q.rcv_auth.clone());
                 if key.is_none_or(|k| !auth.by(&k)) {
@@ -171,6 +179,20 @@ impl Inner {
         }
     }
 
+    /// LSET replaces the user data of the queue's link; the fixed data may not change.
+    fn lset(&mut self, rcv_id: &[u8], link_id: &[u8], data: crate::smp::QueueLinkData) -> Response {
+        let Some(q) = self.queues.by_rcv.get_mut(rcv_id) else {
+            return Response::Err(ErrorType::Auth);
+        };
+        match &mut q.link {
+            Some((id, old)) if id.as_slice() == link_id && old.fixed == data.fixed => {
+                old.user = data.user;
+                Response::Ok
+            }
+            _ => Response::Err(ErrorType::Auth),
+        }
+    }
+
     /// LKEY secures the queue a one-time link names and returns its data.
     fn lkey(&mut self, link_id: &[u8], key: PublicKey) -> Response {
         let Some(q) = self
@@ -221,6 +243,7 @@ impl Inner {
             | Cmd::Skey(_)
             | Cmd::Lkey(_)
             | Cmd::Lget
+            | Cmd::Lset { .. }
             | Cmd::Send(_)
             | Cmd::Ping => Response::Err(ErrorType::Block),
         }

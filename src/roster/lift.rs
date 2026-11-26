@@ -103,6 +103,7 @@ pub(crate) fn lift(e: &Event, roster: &mut Roster) -> Vec<Note> {
         | Event::OpenFile { .. }
         | Event::Located { .. }
         | Event::GroupLink { .. }
+        | Event::ChannelRelay { .. }
         | Event::Call(_)
         | Event::Stream(_)
         | Event::Failed { .. }

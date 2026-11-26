@@ -127,6 +127,7 @@ impl<A: AgentPort> Engine<A> {
             link: None,
             link_conn: None,
             local: crate::engine::records::ChatLocal::default(),
+            channel: None,
         };
         let info = MemberInfo {
             member_id: from.member_id,

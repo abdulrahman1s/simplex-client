@@ -13,6 +13,8 @@ pub(crate) enum OpKind {
     Lget,
     /// SEND of our request to an address queue.
     Request,
+    /// LSET of new user data for our own address's link.
+    Lset,
     /// SKEY on the peer's queue, by either side.
     Skey,
     Sub,

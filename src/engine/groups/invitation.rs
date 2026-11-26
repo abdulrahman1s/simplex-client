@@ -124,6 +124,7 @@ impl<A: AgentPort> Engine<A> {
             link: None,
             link_conn: None,
             local: crate::engine::records::ChatLocal::default(),
+            channel: None,
         })?;
         Ok(())
     }

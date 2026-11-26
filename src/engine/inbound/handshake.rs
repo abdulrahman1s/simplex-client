@@ -136,6 +136,9 @@ impl<A: AgentPort> Engine<A> {
         if let Some(r) = self.on_address_error(conn, err) {
             return r;
         }
+        if let Some(r) = self.on_lookup_error(conn, err) {
+            return r;
+        }
         if let Some((group, member)) = self.state.member_of(conn) {
             return self.on_member_error(group, member, conn, err);
         }

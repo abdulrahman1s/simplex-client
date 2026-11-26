@@ -9,6 +9,10 @@ pub struct SettingsRecord {
     /// Seconds after which messages are deleted here (`APISetChatItemTTL`); 0 keeps them.
     #[serde(default)]
     pub item_ttl: i64,
+    /// The chat relays new channels are made on (`UserChatRelay`), only ever the caller's.
+    /// Eviction: replaced whole by `SetChatRelays`.
+    #[serde(default)]
+    pub chat_relays: Vec<crate::types::model::ChatRelay>,
 }
 
 impl Default for SettingsRecord {
@@ -16,6 +20,7 @@ impl Default for SettingsRecord {
         Self {
             send_receipts: true,
             item_ttl: 0,
+            chat_relays: Vec::new(),
         }
     }
 }

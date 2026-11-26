@@ -43,4 +43,6 @@ pub enum Author {
     Me,
     Friend(Friend),
     Member(Member),
+    /// Posted as the channel: no member is named (`CDChannelRcv`). The group is the channel.
+    Channel(i64),
 }

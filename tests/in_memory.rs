@@ -125,3 +125,31 @@ fn a_client_hearing_deltas_gets_a_friends_change_and_a_whole_list_only_when_it_a
     alice.close();
     bob.close();
 }
+
+/// The in-memory server hosts no chat relay (the relay role is not this crate's), so this
+/// covers what needs none; the relay paths are the engine's fake-agent tests and `channel_live`.
+#[test]
+fn a_channel_is_made_only_on_the_callers_relays_and_a_relays_own_address_is_not_joined() {
+    let (dir, server) = (Dir::new(), FakeSmp::new());
+    let alice = client(&dir, "alice", &server);
+    let err = alice.create_channel("news").unwrap_err();
+    assert!(err.to_string().contains("no chat relays"), "{err}");
+    let bad = simplex_client::ChatRelay {
+        address: "not a link".into(),
+        name: "x".into(),
+    };
+    let failed = |c: &Client| {
+        wait(c, "a refusal", |e| {
+            matches!(e, Event::Raw(simplex_client::types::Event::Failed { .. }))
+        })
+    };
+    alice.set_chat_relays(vec![bad]).unwrap();
+    failed(&alice);
+    let relay_address = "https://fake.test/r#AQIDBAUGBwgBAgMEBQYHCAECAwQFBgcIAQIDBAUGBwg";
+    alice.connect(relay_address).unwrap();
+    let Event::Raw(simplex_client::types::Event::Failed { code, .. }) = failed(&alice) else {
+        unreachable!()
+    };
+    assert_eq!(code, simplex_client::ErrorCode::BadLink);
+    alice.close();
+}

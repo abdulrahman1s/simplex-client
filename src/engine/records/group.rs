@@ -32,6 +32,9 @@ pub struct GroupRecord {
     pub link_conn: Option<ConnId>,
     #[serde(default)]
     pub local: ChatLocal,
+    /// A channel's identity, keys and relays; `None` in a classic group (`useRelays` off).
+    #[serde(default)]
+    pub channel: Option<super::ChannelRecord>,
 }
 
 /// `GroupMemberStatus` (Types.hs), for the user's membership and for every member.

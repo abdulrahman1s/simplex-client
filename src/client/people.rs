@@ -33,7 +33,13 @@ impl Client {
         self.request(Request::DeleteAddress)
     }
 
-    /// Connects through an invitation, an address or a group link.
+    /// Connects through an invitation, an address, a group link or a channel link (`/c#`).
+    ///
+    /// A channel is joined as `observer` through each relay its link names; the group shows
+    /// up once the first relay connects, with the relays' history replay after. A channel is
+    /// not end-to-end encrypted: its relay connections have no post-quantum KEM (see
+    /// `ChannelRelay::pq`) and the relays read and keep every post. A relay's own address
+    /// (`/r#`) is refused, as 7.1.4 refuses it.
     pub fn connect(&self, link: &str) -> Result<()> {
         self.request(Request::Connect(link.to_owned()))
     }

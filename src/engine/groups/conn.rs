@@ -81,6 +81,9 @@ impl<A: AgentPort> Engine<A> {
         conn: &ConnId,
         info: &[u8],
     ) -> Result<()> {
+        if let Some(owner) = self.relay_side(group, member) {
+            return self.on_relay_conf(group, member, conn, info, owner);
+        }
         let msg = parse_conn_info(info)?;
         match self.member(group, member)?.category {
             MemberCategory::Invitee => self.on_invitee_conf(group, member, conn, msg),
@@ -135,6 +138,10 @@ impl<A: AgentPort> Engine<A> {
         let m = self.member(group, member)?;
         if m.reachable().is_some() {
             return Ok(());
+        }
+        if let Some(owner) = self.relay_side(group, member) {
+            self.send_pending(group, member, *conn)?;
+            return self.on_relay_con(group, member, owner);
         }
         let rejected = m.status.gone() || self.group(group)?.status == MemberStatus::Rejected;
         let flushed = if rejected {

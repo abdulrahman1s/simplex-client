@@ -55,9 +55,10 @@ impl State {
     pub fn friend_of(&self, conn: &ConnId) -> Option<i64> {
         match self.conns.get(conn)?.kind {
             ConnKind::Friend { id } => Some(id),
-            ConnKind::Invitation { .. } | ConnKind::Member { .. } | ConnKind::GroupLink { .. } => {
-                None
-            }
+            ConnKind::Invitation { .. }
+            | ConnKind::Member { .. }
+            | ConnKind::GroupLink { .. }
+            | ConnKind::Lookup(_) => None,
         }
     }
 
@@ -73,9 +74,10 @@ impl State {
     pub fn member_of(&self, conn: &ConnId) -> Option<(i64, i64)> {
         match self.conns.get(conn)?.kind {
             ConnKind::Member { group, member } => Some((group, member)),
-            ConnKind::Invitation { .. } | ConnKind::Friend { .. } | ConnKind::GroupLink { .. } => {
-                None
-            }
+            ConnKind::Invitation { .. }
+            | ConnKind::Friend { .. }
+            | ConnKind::GroupLink { .. }
+            | ConnKind::Lookup(_) => None,
         }
     }
 

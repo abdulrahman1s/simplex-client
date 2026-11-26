@@ -8,6 +8,7 @@ use crate::chat::message::ChatMessage;
 mod group;
 mod misc;
 mod msg;
+mod relay;
 
 use group::{decode_group, decode_join, decode_member};
 use misc::{decode_call, decode_probe};
@@ -63,13 +64,15 @@ pub(crate) fn decode(name: &str, o: &Obj, depth: usize) -> Result<E> {
         K::CallInv | K::CallOffer | K::CallAnswer | K::CallExtra | K::CallEnd => {
             decode_call(kind, o)
         }
-        K::GrpRelayInv
-        | K::GrpRelayAcpt
-        | K::GrpRelayTest
-        | K::GrpRelayNew
-        | K::GrpRelayReject
-        | K::GrpRelayCap => Ok(unknown(name, o)),
-        K::GrpRoster | K::GrpRosterAck | K::GrpRosterRequest => Ok(unknown(name, o)),
+        K::GrpRelayInv => relay::inv(o),
+        K::GrpRelayAcpt => relay::acpt(o),
+        K::GrpRelayTest => relay::test(o),
+        K::GrpRelayNew => relay::new(o),
+        K::GrpRelayReject => relay::reject(o),
+        K::GrpRelayCap => relay::cap(o),
+        K::GrpRoster => relay::roster(o),
+        K::GrpRosterAck => relay::roster_ack(o),
+        K::GrpRosterRequest => relay::roster_request(o),
     }
 }
 

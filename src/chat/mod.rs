@@ -3,6 +3,7 @@ pub mod app_data;
 pub mod batch;
 mod bin;
 pub mod call;
+pub mod channel;
 pub mod codec;
 pub mod compress;
 pub mod container;

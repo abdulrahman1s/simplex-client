@@ -81,6 +81,7 @@ impl<A: AgentPort> Engine<A> {
             alias: g.local.alias.clone(),
             item_ttl: g.local.item_ttl,
             timer: group_ttl(g).flatten(),
+            channel: self.channel_wire(g),
             ..ChatGroup::default()
         }
     }

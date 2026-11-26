@@ -45,7 +45,9 @@ impl ItemRecord {
     pub fn new(author: MessageAuthor, body: MessageBody, at: i64) -> Self {
         let delivery = match author {
             MessageAuthor::Me => Delivery::Sending,
-            MessageAuthor::Friend | MessageAuthor::Member(_) => Delivery::Received,
+            MessageAuthor::Friend | MessageAuthor::Member(_) | MessageAuthor::Channel(_) => {
+                Delivery::Received
+            }
         };
         Self {
             author,

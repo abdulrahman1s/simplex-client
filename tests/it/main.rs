@@ -6,13 +6,18 @@ mod agent_links;
 mod agent_messages;
 mod agent_short_link;
 mod agent_support;
+#[cfg(feature = "native")]
+mod channel_live;
 mod chat_batch;
 mod chat_compress;
+mod chat_golden_channel;
 mod chat_golden_grp;
 mod chat_golden_msg;
 mod chat_roundtrip;
 mod chat_support;
 mod chat_ts_reference;
+#[cfg(feature = "native")]
+mod cli_ws;
 #[cfg(feature = "native")]
 mod client_live;
 mod crypto;

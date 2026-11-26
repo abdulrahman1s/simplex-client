@@ -32,6 +32,20 @@ pub struct NewLink {
     pub link_key: Vec<u8>,
 }
 
+/// `ShortLinkCreds` of an address whose data the user changes later (a channel's link): what
+/// LSET needs to sign and seal new user data.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LinkCreds {
+    pub link_id: Vec<u8>,
+    pub link_key: Vec<u8>,
+    /// `linkPrivSigKey`: the root key the link was made with.
+    pub sign_key: PrivateKey,
+    /// The encrypted fixed data, sent again with every LSET (`linkEncFixedData`).
+    pub fixed: Vec<u8>,
+    /// The short link's type (`ContactConnType` tag: `C` for a channel).
+    pub contact_type: u8,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConnRecord {
     pub id: ConnId,
@@ -65,6 +79,10 @@ pub struct ConnRecord {
     pub switch: Option<Switch>,
     /// The ratchet-sync state and what a re-sync keeps; `None` is `RSOk`.
     pub sync: Option<RatchetSync>,
+    /// Address owner: the link's credentials, kept for LSET.
+    pub link_creds: Option<LinkCreds>,
+    /// Address owner: new encrypted user data, until LSET has stored it.
+    pub link_update: Option<Vec<u8>>,
 }
 
 impl ConnRecord {
@@ -90,6 +108,8 @@ impl ConnRecord {
             client_data: None,
             switch: None,
             sync: None,
+            link_creds: None,
+            link_update: None,
         }
     }
 }

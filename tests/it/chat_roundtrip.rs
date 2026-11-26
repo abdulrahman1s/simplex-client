@@ -313,7 +313,7 @@ fn the_round_trip_list_covers_every_event_kind_except_channel_and_roster_ones() 
 }
 
 #[test]
-fn channel_and_roster_events_are_kept_as_unknown_with_their_params() {
+fn channel_and_roster_events_with_bad_params_are_refused_like_other_known_events() {
     for kind in EventKind::ALL.iter().filter(|k| {
         k.as_str().starts_with("x.grp.relay.") || k.as_str().starts_with("x.grp.roster")
     }) {
@@ -321,19 +321,17 @@ fn channel_and_roster_events_are_kept_as_unknown_with_their_params() {
             r#"{{"v":"9-22","event":"{}","params":{{"a":[1,2],"b":{{"c":null}}}}}}"#,
             kind.as_str()
         );
-        let parsed = parse_chat_messages(s.as_bytes()).unwrap().remove(0);
-        let E::Unknown { event, params } = &parsed.event else {
-            panic!("{} was decoded", kind.as_str())
-        };
-        assert_eq!(event, kind.as_str());
-        assert_eq!(parsed.event.kind(), Some(*kind));
-        assert_eq!(
-            serde_json::to_value(params).unwrap(),
-            json!({"a":[1,2],"b":{"c":null}})
-        );
-        assert_eq!(
-            serde_json::from_slice::<serde_json::Value>(&parsed.to_json().unwrap()).unwrap(),
-            serde_json::from_str::<serde_json::Value>(&s).unwrap()
+        let parsed = parse_chat_messages(s.as_bytes());
+        // `x.grp.roster.request` has only optional params, so `{}`-like params read.
+        if *kind == EventKind::GrpRosterRequest {
+            let m = parsed.unwrap().remove(0);
+            assert_eq!(m.event, E::GrpRosterRequest { version: None });
+            continue;
+        }
+        assert!(
+            parsed.is_err(),
+            "{} was read from bad params",
+            kind.as_str()
         );
     }
 }

@@ -16,6 +16,17 @@ pub enum Call {
         user_data: Vec<u8>,
         client_data: String,
     },
+    LookupLink {
+        link: String,
+    },
+    CreateChannelLink {
+        user_data: Vec<u8>,
+    },
+    SetLinkData {
+        conn: ConnId,
+        relays: Vec<String>,
+        user_data: Vec<u8>,
+    },
     AcceptRequest {
         invitation: Vec<u8>,
         conn_info: Vec<u8>,
@@ -135,6 +146,50 @@ impl AgentPort for FakeAgent {
         self.calls.push(Call::CreateGroupAddress {
             user_data,
             client_data,
+        });
+        self.conn()
+    }
+
+    fn create_channel_link(
+        &mut self,
+        _: &mut Store,
+        _: &crate::crypto::PrivateKey,
+        _: Vec<u8>,
+        _: Vec<crate::agent::short_link::OwnerAuth>,
+        user_data: crate::engine::agent_port::LinkUserData,
+        _: String,
+    ) -> Result<ConnId, AgentFailure> {
+        let user_data = user_data("https://fake.test/c#channel");
+        self.calls.push(Call::CreateChannelLink { user_data });
+        self.conn()
+    }
+
+    fn set_link_data(
+        &mut self,
+        _: &mut Store,
+        conn: &ConnId,
+        _: Vec<crate::agent::short_link::OwnerAuth>,
+        relays: Vec<crate::agent::links::ConnShortLink>,
+        user_data: Vec<u8>,
+    ) -> Result<(), AgentFailure> {
+        self.calls.push(Call::SetLinkData {
+            conn: *conn,
+            relays: relays
+                .iter()
+                .map(crate::agent::links::ConnShortLink::to_uri)
+                .collect(),
+            user_data,
+        });
+        Ok(())
+    }
+
+    fn lookup_link(
+        &mut self,
+        _: &mut Store,
+        link: &crate::agent::links::ConnShortLink,
+    ) -> Result<ConnId, AgentFailure> {
+        self.calls.push(Call::LookupLink {
+            link: link.to_uri(),
         });
         self.conn()
     }

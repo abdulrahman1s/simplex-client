@@ -22,6 +22,11 @@ pub enum Cmd {
     Skey(PublicKey),
     Lkey(PublicKey),
     Lget,
+    /// New link data for the recipient's own address.
+    Lset {
+        link_id: Vec<u8>,
+        data: QueueLinkData,
+    },
     Send(Vec<u8>),
     Ack(Vec<u8>),
     Del,
@@ -38,6 +43,10 @@ pub fn parse(v: u16, bytes: &[u8]) -> Result<Cmd, DecodeError> {
         b"SKEY" | b"KEY" => Cmd::Skey(PublicKey::decode(&mut d)?),
         b"LKEY" => Cmd::Lkey(PublicKey::decode(&mut d)?),
         b"LGET" => Cmd::Lget,
+        b"LSET" => {
+            let (link_id, data) = <(Vec<u8>, QueueLinkData)>::decode(&mut d)?;
+            Cmd::Lset { link_id, data }
+        }
         b"SEND" => {
             let _notification = bool::decode(&mut d)?;
             if d.byte()? != b' ' {

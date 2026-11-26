@@ -10,6 +10,8 @@ pub enum MessageAuthor {
     Me,
     Friend,
     Member(String),
+    /// Posted as the channel (`CDChannelRcv`): no member is named. The string is the channel's name.
+    Channel(String),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

@@ -2,6 +2,7 @@
 
 mod answers;
 mod builder;
+mod channels;
 mod content;
 mod dispatch;
 mod error;
