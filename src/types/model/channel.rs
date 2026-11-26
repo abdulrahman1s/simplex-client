@@ -75,8 +75,9 @@ const PRESET_CHAT_RELAYS: [(&str, &str); 3] = [
 ];
 
 impl ChatRelay {
-    /// The preset chat relays, for a caller whose use the preset-server policy allows; see
-    /// [`PRESET_CHAT_RELAYS`]'s note. Nothing uses them by default.
+    /// simplex-chat 7.1.4's preset chat relays, run by SimpleX Chat Ltd, for a caller whose use
+    /// SimpleX Chat's preset-server policy allows ("user-to-user messaging only or … chat bots
+    /// sending messages requested by users"). Nothing uses them by default.
     #[must_use]
     pub fn presets() -> Vec<Self> {
         PRESET_CHAT_RELAYS
