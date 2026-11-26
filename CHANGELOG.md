@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+This change is breaking: `store::StoreError` implements `From<rusqlite::Error>`, and that
+`rusqlite` is now 0.43.
+
+### Security
+
+- The bundled SQLite is 3.54.1, which fixes RUSTSEC-2026-0459 / CVE-2026-119375 (a database
+  opened with a crafted `-wal` file of another page size could return uninitialized memory).
+  `rusqlite` goes from 0.39 to 0.43 with the `bundled` feature still on, and so
+  `libsqlite3-sys` goes from 0.37.0 to 0.40.0. `libsqlite3-sys` declares `links = "sqlite3"`,
+  so a build can hold only one version of it: a dependent that uses `rusqlite` or
+  `libsqlite3-sys` itself must move to `rusqlite` 0.43 / `libsqlite3-sys` 0.40 too. The
+  `cargo deny` ignore for the advisory is gone.
+
 ## [0.5.0] - 2026-11-26
 
 These additions are breaking: new variants in public enums and a new field on a public struct.
