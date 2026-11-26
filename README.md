@@ -18,6 +18,9 @@ small, plain API.
   forwarding, live messages
 - Disappearing messages, for a friend or a group
 - Application data for bots and apps, which the official apps show as a fallback text
+- Channels, as owner and as subscriber, through official SimpleX chat relays: create one on
+  the relays you name, post as the channel (signed or not), join from a channel link, receive
+  the relays' history replay, leave. **Not end-to-end encrypted**; see Security notes
 - Chat preferences (full delete, reactions, voice, files, calls), your own and per friend
 - Group admin: roles, blocking for everyone, removing members, moderation, the group's name,
   description and preferences, and deleting a group
@@ -567,7 +570,57 @@ npx wrangler deploy
 
 The protocol, limits and settings are in [worker/README.md](worker/README.md).
 
+### Channels
+
+A channel is a broadcast group: its owners post as the channel, its subscribers join from the
+channel's link as `observer` and may not post. Posts go from the owner to each chat relay and
+from each relay to every subscriber; relays replay the last 100 posts (those with text or a
+file) to whoever joins. A chat relay is the official `simplex-chat` CLI run with `--relay`.
+
+```rust
+use simplex_client::ChatRelay;
+owner.set_chat_relays(vec![ChatRelay { address: relay_address, name: "my relay".into() }])?;
+let news = owner.create_channel("news")?;          // invites, then publishes, each relay
+// news.info().channel: the link, and each relay's status (Event::Raw(ChannelRelay) on change)
+owner.send_data(news.chat(), "app.post", post, "A post")?;        // as the channel
+owner.send_signed_data(news.chat(), "app.post", post2, "A post")?; // signed by the owner
+
+subscriber.connect(&channel_link)?;                // reads the link, joins every relay
+// Event::Data { member: None, .. } for registered tags, Message with Author::Channel otherwise
+```
+
+```js
+await owner.setChatRelays([{ address: relayAddress, name: "my relay" }]);
+const news = await owner.createChannel("news");
+await news.sendSignedData("app.post", { a: 1 }, "A post");
+```
+
+- **Your relays only.** `set_chat_relays` names the relays new channels are made on, and only
+  those are ever used. `ChatRelay::presets()` lists simplex-chat 7.1.4's preset chat relays,
+  run by SimpleX Chat Ltd, but nothing uses them unless you pass them yourself: unlike the
+  preset SMP relays they are no default. SimpleX Chat's preset-server policy limits
+  third-party apps to "user-to-user messaging only or … chat bots sending messages requested
+  by users"; a channel through their relays may fall outside it.
+- **Edits and deletes** are sent as the channel too. Relays keep the current form: a
+  subscriber who joins later gets an edited post as it now is, not marked edited, and does not
+  get a deleted one.
+- **Signed posts.** `send_signed_data` signs with the owner's member key over the channel's
+  id and the owner's member id, as 7.1.4 does with `sign=on`. Relays forward a signed post
+  naming the owner's member (unsigned ones name nobody); it still shows as the channel's. A
+  signed body over 15 602 bytes is refused before it is sent, where 7.1.4 reports it sent and
+  never sends it.
+- **Not ported:** the relay role, relay tests (`/relay test`), adding relays to an existing
+  channel, owners besides the creator, and member support chats.
+
 ## Security notes
+
+- **Channels are not end-to-end encrypted.** Every owner-to-relay and relay-to-subscriber
+  connection is made without the post-quantum KEM (`PQSupportOff`), exactly as simplex-chat
+  7.1.4 makes them, so the crate interoperates; turning PQ on would not. Relays read and keep
+  everything posted, and replay it to new subscribers. Subscribers see the notice the official
+  apps show (`e2eeInfo {"public": true, "pqEnabled": false}`). Each relay connection's
+  negotiated PQ state is `ChannelRelay::pq` on the group's `channel`, so a caller can see it and
+  refuse the channel.
 
 - **The store key is required.** `ClientBuilder::start` fails without `.key(…)`, and JS
   `Client.start` refuses a missing or empty `key`. The passphrase goes through Argon2id
