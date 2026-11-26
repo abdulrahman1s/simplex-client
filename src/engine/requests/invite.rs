@@ -65,7 +65,8 @@ impl<A: AgentPort> Engine<A> {
                 ConnKind::Friend { .. }
                 | ConnKind::Member { .. }
                 | ConnKind::GroupLink { .. }
-                | ConnKind::Lookup(_) => None,
+                | ConnKind::Lookup(_)
+                | ConnKind::RelayTest(_) => None,
             })
             .collect();
         if open.len() < MAX_INVITATIONS {

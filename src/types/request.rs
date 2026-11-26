@@ -271,6 +271,14 @@ pub enum Request {
     NewGroup(String),
     /// A channel with this name on the chat relays `SetChatRelays` gave (`APINewPublicGroup`).
     NewChannel(String),
+    /// Tests a chat relay's address (`APITestChatRelay`): its link is read and joined with a
+    /// challenge the relay must sign with the address's key; answered by `Event::RelayTest`.
+    TestChatRelay(String),
+    /// Invites more of the caller's chat relays to a channel the user owns (`APIAddGroupRelays`).
+    AddChannelRelays {
+        group: i64,
+        relays: Vec<super::model::ChatRelay>,
+    },
     /// The chat relays new channels are made on; only these are ever used.
     SetChatRelays(Vec<super::model::ChatRelay>),
     AddMember {

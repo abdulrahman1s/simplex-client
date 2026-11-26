@@ -110,4 +110,18 @@ pub enum Lookup {
     RelayAddress { group: i64, member: i64 },
     /// An owner's relay link from its acceptance, to check it names the relay.
     RelayAccept { group: i64, member: i64 },
+    /// A chat relay's address under test.
+    RelayTest { address: String },
+}
+
+/// A relay test waiting for the relay's signed answer (Controller.hs `RelayTest`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RelayTestRecord {
+    pub address: String,
+    pub name: String,
+    pub challenge: Vec<u8>,
+    /// The address link's root key, X.509 DER: what the challenge is signed under.
+    pub root_key: Vec<u8>,
+    /// Milliseconds since the epoch after which the test failed (`RTSWaitResponse`).
+    pub deadline: i64,
 }

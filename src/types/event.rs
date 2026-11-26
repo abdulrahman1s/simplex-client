@@ -94,6 +94,8 @@ pub enum Event {
         group: i64,
         link: Option<String>,
     },
+    /// The answer to `TestChatRelay` (`CRChatRelayTestResult`).
+    RelayTest(super::model::RelayTestResult),
     /// A channel relay's status changed (`CEvtGroupRelayUpdated`).
     ChannelRelay {
         group: i64,

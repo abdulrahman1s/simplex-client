@@ -12,6 +12,8 @@ mod post_out;
 mod publish;
 mod relay_conn;
 mod relay_events;
+mod relay_test;
+mod relay_test_end;
 mod relays_config;
 mod roster;
 mod status;

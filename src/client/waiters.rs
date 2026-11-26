@@ -28,9 +28,11 @@ pub(super) enum Want {
     Code(i64),
     /// The next group the user made.
     NewGroup,
+    /// The answer of a chat relay's test.
+    RelayTest,
 }
 
-const KINDS: usize = 6;
+const KINDS: usize = 7;
 
 impl Want {
     pub(super) const fn slot(self) -> usize {
@@ -41,6 +43,7 @@ impl Want {
             Self::Members(_) => 3,
             Self::Code(_) => 4,
             Self::NewGroup => 5,
+            Self::RelayTest => 6,
         }
     }
 }

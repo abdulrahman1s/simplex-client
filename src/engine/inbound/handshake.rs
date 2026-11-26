@@ -55,6 +55,9 @@ impl<A: AgentPort> Engine<A> {
 
     /// Someone joined our invitation: they become a friend, and we answer with our profile.
     pub(crate) fn on_conf(&mut self, conn: &ConnId, info: &[u8]) -> Result<()> {
+        if let Some(r) = self.on_relay_test_conf(conn, info) {
+            return r;
+        }
         if let Some((group, member)) = self.state.member_of(conn) {
             return self.on_member_conf(group, member, conn, info);
         }
@@ -137,6 +140,9 @@ impl<A: AgentPort> Engine<A> {
             return r;
         }
         if let Some(r) = self.on_lookup_error(conn, err) {
+            return r;
+        }
+        if let Some(r) = self.on_relay_test_error(conn, err.detail()) {
             return r;
         }
         if let Some((group, member)) = self.state.member_of(conn) {

@@ -132,6 +132,7 @@ impl<A: AgentPort> Engine<A> {
             self.agent.next_wake(),
             self.next_call_wake(),
             self.next_relay_wake(),
+            self.next_relay_test_wake(),
             self.next_timed_wake(),
             self.next_expire_wake(),
         ];
@@ -147,6 +148,7 @@ impl<A: AgentPort> Engine<A> {
         self.agent.on_tick(&mut self.store, now);
         self.expire_calls(now);
         self.relay_tick(now);
+        self.expire_relay_tests(now);
         self.expire_timed(now);
         self.expire_old(now);
         self.pump();

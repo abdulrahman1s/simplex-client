@@ -3,6 +3,7 @@
 use crate::agent::links::ConnShortLink;
 use crate::agent::short_link::{OwnerAuth, encode_short_link_data};
 use crate::chat::channel::PublicGroupData;
+use crate::chat::group::GroupMemberRole;
 use crate::engine::agent_port::{AgentPort, ConnId};
 use crate::engine::error::{Code, Result, fail};
 use crate::engine::machine::Engine;
@@ -41,6 +42,7 @@ impl<A: AgentPort> Engine<A> {
     pub(super) fn publish_channel(&mut self, group: i64) -> Result<()> {
         let mut g = self.group(group)?;
         let owners = vec![owner_auth(&g)?];
+        let public_count = self.public_member_count(group);
         let old: Vec<i64> = (self.state.members_of(group))
             .filter(|m| {
                 m.chat_v
@@ -67,7 +69,8 @@ impl<A: AgentPort> Engine<A> {
             .iter()
             .map(|l| ConnShortLink::parse(l).map_err(|_| failed("bad relay link")))
             .collect::<Result<Vec<_>>>()?;
-        let count = c.member_count.unwrap_or(1);
+        let count = public_count;
+        c.member_count = Some(count);
         c.publishing.clone_from(&links);
         let data = ChannelLinkData {
             group_profile: &g.profile,
@@ -115,10 +118,48 @@ impl<A: AgentPort> Engine<A> {
             })
             .map(|r| r.member)
             .collect();
-        for member in up {
-            self.set_relay_status(group, member, RelayStatus::Active)?;
+        for member in &up {
+            self.set_relay_status(group, *member, RelayStatus::Active)?;
+        }
+        // The owner counts in `publicMemberCount`: over 1, someone subscribed, and the relays
+        // already serving announce the new ones.
+        if self.public_member_count(group) > 1 {
+            self.announce_relays(group, &up)?;
         }
         self.state.chats_dirty = true;
+        Ok(())
+    }
+
+    /// `updatePublicMemberCount`: current members, the user among them, less the relays.
+    fn public_member_count(&self, group: i64) -> i64 {
+        let others = (self.state.members_of(group))
+            .filter(|m| m.role != GroupMemberRole::Relay && m.status.current())
+            .count();
+        i64::try_from(others).map_or(i64::MAX, |n| n + 1)
+    }
+
+    /// `x.grp.relay.new` for each newly active relay, signed, to every other connected relay,
+    /// which forwards it to the subscribers.
+    fn announce_relays(&mut self, group: i64, new: &[i64]) -> Result<()> {
+        let g = self.group(group)?;
+        let Some(c) = g.channel.as_ref() else {
+            return Ok(());
+        };
+        let links: Vec<String> = (c.relays.iter())
+            .filter(|r| new.contains(&r.member))
+            .filter_map(|r| r.link.clone())
+            .collect();
+        let to: Vec<i64> = (self.state.members_of(group))
+            .filter(|m| {
+                m.role == GroupMemberRole::Relay && !new.contains(&m.id) && m.reachable().is_some()
+            })
+            .map(|m| m.id)
+            .collect();
+        for relay_link in links {
+            let msg =
+                crate::chat::ChatMessage::new(crate::chat::ChatEvent::GrpRelayNew { relay_link })?;
+            self.send_to_relays(group, &msg, false, &to)?;
+        }
         Ok(())
     }
 }

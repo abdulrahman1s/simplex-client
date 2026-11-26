@@ -70,6 +70,7 @@ const fn raw(e: &Event) -> bool {
         | Event::Located { .. }
         | Event::GroupLink { .. }
         | Event::ChannelRelay { .. }
+        | Event::RelayTest(_)
         | Event::Call(_)
         | Event::Stream(_)
         | Event::Failed { .. }

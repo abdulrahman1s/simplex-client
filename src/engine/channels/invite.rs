@@ -12,6 +12,7 @@ use crate::engine::machine::Engine;
 use crate::engine::records::{
     ConnKind, ConnRecord, Lookup, MemberCategory, RelayRecord, RelayStatus,
 };
+use crate::types::model::ChatRelay;
 
 use super::keys::public_b64;
 
@@ -22,7 +23,14 @@ fn dropped(why: &str) -> crate::engine::error::EngineError {
 impl<A: AgentPort> Engine<A> {
     /// Every configured relay, once the channel's link exists.
     pub(crate) fn invite_channel_relays(&mut self, group: i64) -> Result<()> {
-        for r in self.state.settings.chat_relays.clone() {
+        let relays = self.state.settings.chat_relays.clone();
+        self.invite_relays(group, &relays)
+    }
+
+    /// `addRelays`: each relay a member, then its address read; what follows is the same for a
+    /// new channel and for relays added later.
+    pub(super) fn invite_relays(&mut self, group: i64, relays: &[ChatRelay]) -> Result<()> {
+        for r in relays {
             let member = self.new_relay_member(group, MemberCategory::Invitee, None)?;
             let mut m = self.member(group, member)?;
             m.profile.display_name.clone_from(&r.name);

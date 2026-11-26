@@ -34,6 +34,8 @@ pub enum RequestKind {
     File,
     GroupLink,
     Call,
+    /// `TestChatRelay`.
+    RelayTest,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

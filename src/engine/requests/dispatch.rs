@@ -198,6 +198,8 @@ impl<A: AgentPort> Engine<A> {
             Request::NewGroup(name) => self.new_group(&name),
             Request::NewChannel(name) => self.new_channel(&name),
             Request::SetChatRelays(relays) => self.set_chat_relays(relays),
+            Request::TestChatRelay(address) => self.test_chat_relay(&address),
+            Request::AddChannelRelays { group, relays } => self.add_channel_relays(group, &relays),
             Request::AddMember { group, friend } => self.add_member(group, friend),
             Request::JoinGroup(group) => self.join_group(group),
             Request::LeaveGroup(group) => self.leave_group(group),

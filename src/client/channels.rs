@@ -6,7 +6,7 @@
 //! [`ChannelRelay::pq`](crate::types::model::ChannelRelay::pq) shows each connection's state.
 
 use crate::client::{Client, Result, SendHandle};
-use crate::types::model::{ChatRef, ChatRelay};
+use crate::types::model::{ChatRef, ChatRelay, RelayTestResult};
 use crate::types::{Request, RequestKind};
 
 use super::objects::Group;
@@ -17,6 +17,28 @@ impl Client {
     /// used: no preset relay is ever chosen for the caller.
     pub fn set_chat_relays(&self, relays: Vec<ChatRelay>) -> Result<()> {
         self.request(Request::SetChatRelays(relays))
+    }
+
+    /// Tests a chat relay's address as 7.1.4's `/relay test` does: its link is read, joined
+    /// with a random challenge, and the relay must answer with the challenge signed by the
+    /// address's key within 40 seconds. The test connection is deleted either way. The
+    /// client's timeout must be longer than 40 seconds to hear a timed-out test.
+    pub fn test_chat_relay(&self, address: &str) -> Result<RelayTestResult> {
+        let answer = self.ask(Want::RelayTest, Request::TestChatRelay(address.to_owned()))?;
+        let Answer::Event(crate::types::Event::RelayTest(r)) = answer else {
+            return Err(super::error::unexpected(RequestKind::RelayTest));
+        };
+        Ok(r)
+    }
+
+    /// Invites more chat relays to a channel the user owns (`APIAddGroupRelays`). Each goes
+    /// through invitation, acceptance and the roster as at creation, and the channel's link
+    /// is published again naming it; its status changes come as `Event::Raw(ChannelRelay)`.
+    /// Subscribers who join later join it too; while the channel has subscribers, the relays
+    /// already serving it announce it with a signed `x.grp.relay.new`. Its connections, like
+    /// every channel connection, have no post-quantum KEM.
+    pub fn add_channel_relays(&self, group: i64, relays: Vec<ChatRelay>) -> Result<()> {
+        self.request(Request::AddChannelRelays { group, relays })
     }
 
     /// Makes a channel owned by the user on the relays [`Client::set_chat_relays`] gave and
@@ -36,7 +58,9 @@ impl Client {
     /// [`Client::send_data`] signed with the user's member key: in a channel, a post as the
     /// channel that subscribers verify against the owner's key. A signed body over 15 602
     /// bytes is refused (`TextTooLong`) before it is sent. Relays still read it, and they
-    /// forward a signed post naming the owner's member, not as the channel alone.
+    /// forward a signed post naming the owner's member, not as the channel alone. As with
+    /// [`Client::send_data`], an empty `fallback_text` makes the post one relays never replay
+    /// to later subscribers.
     pub fn send_signed_data(
         &self,
         chat: ChatRef,

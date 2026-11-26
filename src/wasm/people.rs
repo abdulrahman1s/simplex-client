@@ -137,6 +137,33 @@ impl Client {
         self.shared.queue(Request::SetChatRelays(relays))
     }
 
+    /// Tests a chat relay's address as `/relay test` does; resolves with `{ address, name,
+    /// failure: { step, error } | null }` once the relay signed the challenge, failed, or 40
+    /// seconds passed.
+    #[wasm_bindgen(js_name = testChatRelay, unchecked_return_type = "Promise<{ address: string, name: string | null, failure: { step: string, error: string } | null }>")]
+    pub fn test_chat_relay(&self, address: &str) -> js_sys::Promise {
+        self.shared
+            .ask(Want::RelayTest, Request::TestChatRelay(address.to_owned()))
+    }
+
+    /// Invites more chat relays, `[{ address, name }]`, to channel `group`, which the user owns.
+    #[wasm_bindgen(js_name = addChannelRelays, unchecked_return_type = "Promise<void>")]
+    pub fn add_channel_relays(
+        &self,
+        group: f64,
+        #[wasm_bindgen(unchecked_param_type = "{ address: string, name: string }[]")]
+        relays: JsValue,
+    ) -> js_sys::Promise {
+        let Ok(relays) = serde_json::from_value(super::convert::from_js(&relays)) else {
+            return settled(Err(error("bad_argument", "relays are [{ address, name }]")));
+        };
+        let Some(group) = super::convert::whole(group) else {
+            return settled(Err(error("bad_argument", "group is an id")));
+        };
+        self.shared
+            .queue(Request::AddChannelRelays { group, relays })
+    }
+
     /// Friends from the last chat list, by id, connected or still connecting. A new `Map`
     /// on each read.
     #[wasm_bindgen(getter, unchecked_return_type = "Map<number, Friend>")]

@@ -142,6 +142,8 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::History { .. }
         | Request::Refresh
         | Request::SetChatRelays(_)
+        | Request::TestChatRelay(_)
+        | Request::AddChannelRelays { .. }
         | Request::AddMember { .. }
         | Request::JoinGroup(_)
         | Request::LeaveGroup(_)

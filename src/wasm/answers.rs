@@ -26,6 +26,7 @@ pub(super) fn answer(e: &Event) -> Option<(Want, bool, Result<Payload, Value>)> 
             ok(Want::Members(*group), true, members)
         }
         Event::Code { friend, code } => ok(Want::Code(*friend), true, text(code)),
+        Event::RelayTest(r) => ok(Want::RelayTest, true, Payload::Json(json!(r))),
         Event::Failed {
             request,
             code,
@@ -39,6 +40,7 @@ pub(super) fn answer(e: &Event) -> Option<(Want, bool, Result<Payload, Value>)> 
                 RequestKind::Code => Want::Code(0),
                 // Only `createGroup` waits on a group request; the others are told.
                 RequestKind::Group => Want::NewGroup,
+                RequestKind::RelayTest => Want::RelayTest,
                 RequestKind::Start
                 | RequestKind::SetProfile
                 | RequestKind::Connect

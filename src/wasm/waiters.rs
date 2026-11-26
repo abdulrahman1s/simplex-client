@@ -19,6 +19,8 @@ pub(super) enum Want {
     Code(i64),
     /// The next group the user made.
     NewGroup,
+    /// A chat relay's test result.
+    RelayTest,
 }
 
 impl Want {
@@ -31,6 +33,7 @@ impl Want {
             Want::Members(_) => 3,
             Want::Code(_) => 4,
             Want::NewGroup => 5,
+            Want::RelayTest => 6,
         }
     }
 }
