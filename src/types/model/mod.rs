@@ -21,7 +21,10 @@ pub mod stream;
 
 pub use body::{CallKind, CallRecord, ChatNotice, FileState, Media, MessageBody, StreamRecord};
 pub use call::{CallKey, CallRequest, CallSignal};
-pub use channel::{ChannelInfo, ChannelRelay, ChatRelay, RelayStatus};
+pub use channel::{
+    ChannelInfo, ChannelRelay, ChatRelay, RelayStatus, RelayTestFailure, RelayTestResult,
+    RelayTestStep,
+};
 pub use chat_features::ChatFeatures;
 pub use chat_ref::ChatRef;
 pub use conn_event::{DecryptError, IntegrityError, SwitchPhase, SyncStatus};

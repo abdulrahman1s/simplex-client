@@ -1,6 +1,7 @@
 //! Joining a channel: its link read and checked, the owners it names kept with their keys, and each relay's link read next (Commands.hs `APIPrepareGroup`, `APIConnectPreparedGroup`, `updatePreparedRelayedGroup`, `createLinkOwnerMember`).
 
 use crate::agent::connection::LinkLookup;
+use crate::agent::links::ConnShortLink;
 use crate::agent::short_link::{UserLinkData, decode_short_link_data};
 use crate::chat::channel::{GroupType, PublicGroupData};
 use crate::chat::group::{GroupMemberRole, MemberInfo};
@@ -160,5 +161,39 @@ impl<A: AgentPort> Engine<A> {
         let id = m.id;
         self.save_member(m)?;
         Ok(id)
+    }
+
+    /// `xGrpRelayNew`: an owner's announced relay (its signature checked already) is joined
+    /// as the link's relays are, once (`connectToRelayAsync`, `getCreateRelayForMember`).
+    pub(super) fn on_relay_new(
+        &mut self,
+        ctx: crate::engine::groups::GroupCtx,
+        link: &str,
+    ) -> Result<()> {
+        if self.member(ctx.group, ctx.author)?.role != GroupMemberRole::Owner {
+            return Err(bad("x.grp.relay.new with insufficient member permissions"));
+        }
+        let known = (self.state.members_of(ctx.group)).any(|m| {
+            m.relay_link
+                .as_deref()
+                .and_then(|l| ConnShortLink::parse(l).ok())
+                .map(|l| l.link_key().to_vec())
+                == ConnShortLink::parse(link)
+                    .ok()
+                    .map(|l| l.link_key().to_vec())
+        });
+        if known {
+            return Ok(());
+        }
+        let m = self.new_relay_member(ctx.group, MemberCategory::Host, Some(link))?;
+        self.look_up(
+            link,
+            Lookup::RelayJoin {
+                group: ctx.group,
+                member: m,
+            },
+        )?;
+        self.state.chats_dirty = true;
+        Ok(())
     }
 }

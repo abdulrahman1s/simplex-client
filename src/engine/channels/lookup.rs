@@ -48,6 +48,7 @@ impl<A: AgentPort> Engine<A> {
                 self.on_relay_link_to_join(*group, *member, data)
             }
             Lookup::RelayAddress { group, member } => self.on_relay_address(*group, *member, data),
+            Lookup::RelayTest { address } => self.on_relay_test_link(address, data),
             Lookup::RelayAccept { group, member } => {
                 self.on_relay_link_accepted(*group, *member, data)
             }
@@ -77,6 +78,7 @@ impl<A: AgentPort> Engine<A> {
     fn lookup_failed(&mut self, why: &Lookup, e: EngineError) -> Result<()> {
         match why {
             Lookup::Channel { .. } => self.fail_event(RequestKind::Connect, e),
+            Lookup::RelayTest { address } => self.relay_test_link_failed(address, &e.detail),
             Lookup::RelayJoin { group, member }
             | Lookup::RelayAddress { group, member }
             | Lookup::RelayAccept { group, member } => {

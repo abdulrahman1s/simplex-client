@@ -18,6 +18,30 @@ impl<A: AgentPort> Engine<A> {
         msg: &ChatMessage,
         signed: bool,
     ) -> Result<Vec<(i64, ConnId, AgentMsgId)>> {
+        self.send_to_relays_of(group, msg, signed, None)
+    }
+
+    /// As `send_to_channel`, to the relays in `to` only.
+    pub(super) fn send_to_relays(
+        &mut self,
+        group: i64,
+        msg: &ChatMessage,
+        signed: bool,
+        to: &[i64],
+    ) -> Result<Vec<(i64, ConnId, AgentMsgId)>> {
+        if to.is_empty() {
+            return Ok(Vec::new());
+        }
+        self.send_to_relays_of(group, msg, signed, Some(to))
+    }
+
+    fn send_to_relays_of(
+        &mut self,
+        group: i64,
+        msg: &ChatMessage,
+        signed: bool,
+        only: Option<&[i64]>,
+    ) -> Result<Vec<(i64, ConnId, AgentMsgId)>> {
         let g = self.group(group)?;
         let c = g
             .channel
@@ -49,6 +73,7 @@ impl<A: AgentPort> Engine<A> {
         };
         let relays: Vec<(i64, ConnId)> = (self.state.members_of(group))
             .filter(|m| m.role == crate::chat::group::GroupMemberRole::Relay)
+            .filter(|m| only.is_none_or(|o| o.contains(&m.id)))
             .filter_map(|m| m.reachable().map(|conn| (m.id, conn)))
             .collect();
         if relays.is_empty() {

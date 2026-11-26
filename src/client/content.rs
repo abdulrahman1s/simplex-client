@@ -35,6 +35,11 @@ impl Client {
     /// as `fallback_text`. Nothing is kept or shown here; a client that registered `tag`
     /// ([`ClientBuilder::data_tag`](super::ClientBuilder::data_tag)) gets it as
     /// [`Event::Data`](super::Event::Data). `json` may not hold `type` or `text`.
+    ///
+    /// In a channel it goes as the channel. Its relays replay only posts with text or a file
+    /// to later subscribers (7.1.4 Internal.hs `processContentItem`): with an empty
+    /// `fallback_text` the post reaches who is subscribed now and is never replayed. 7.1.4
+    /// sends such posts too, so it is not refused.
     pub fn send_data(
         &self,
         chat: ChatRef,

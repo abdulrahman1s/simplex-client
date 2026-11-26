@@ -12,6 +12,7 @@ pub(super) fn answers(event: &Event) -> Option<(usize, Option<Want>)> {
         Event::History { tag, .. } => exact(Want::History(*tag)),
         Event::Members { group, .. } => exact(Want::Members(*group)),
         Event::Code { friend, .. } => exact(Want::Code(*friend)),
+        Event::RelayTest(_) => exact(Want::RelayTest),
         Event::Failed { request, .. } => failed_slot(*request).map(|s| (s, None)),
         Event::Features { .. }
         | Event::Ready(_)
@@ -47,6 +48,7 @@ fn failed_slot(kind: RequestKind) -> Option<usize> {
         K::Code => Want::Code(0),
         // Only `create_group` waits on a group request; the others are told, not asked.
         K::Group => Want::NewGroup,
+        K::RelayTest => Want::RelayTest,
         K::Start
         | K::SetProfile
         | K::Connect

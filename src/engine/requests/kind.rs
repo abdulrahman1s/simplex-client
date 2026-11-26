@@ -52,10 +52,12 @@ pub fn kind_of(r: &Request) -> RequestKind {
         Request::MarkRead(_) => K::MarkRead,
         Request::History { .. } => K::History,
         Request::Refresh => K::Refresh,
+        Request::TestChatRelay(_) => K::RelayTest,
         Request::SetGroupPicture { .. }
         | Request::NewGroup(_)
         | Request::NewChannel(_)
         | Request::SetChatRelays(_)
+        | Request::AddChannelRelays { .. }
         | Request::AddMember { .. }
         | Request::JoinGroup(_)
         | Request::LeaveGroup(_) => K::Group,

@@ -6,6 +6,43 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+These additions are breaking (new variants in public enums, a new field on a public struct),
+so the next release should be **0.5.0**; it is proposed, not released.
+
+### Added
+
+- Relay tests, as simplex-chat 7.1.4's `/relay test` (Commands.hs `APITestChatRelay`):
+  `Client::test_chat_relay(address) -> RelayTestResult` / `Request::TestChatRelay` (JS
+  `testChatRelay`). The address's link is read, joined with a random 32-byte challenge in
+  `x.grp.relay.test`, PQ off, and the relay must answer with the challenge signed by the
+  address's root key within 40 seconds; the test connection is deleted either way. The
+  answer is `types::Event::RelayTest` with `RelayTestResult { address, name, failure }`,
+  where `RelayTestFailure { step: RelayTestStep, error }` carries 7.1.4's `relayTestError`
+  messages.
+- Adding relays to a channel the user owns (Commands.hs `APIAddGroupRelays`):
+  `Client::add_channel_relays(group, relays)` / `Request::AddChannelRelays` (JS
+  `addChannelRelays`). The new relays go through creation's own invitation, acceptance and
+  roster steps, and the link data is published again with every relay that may serve. Once
+  the channel has subscribers (`publicMemberCount` over 1, counted as `updatePublicMemberCount`
+  does), the relays already serving get a signed `x.grp.relay.new` for each newly active one.
+  A subscriber joins a relay an owner's verified `x.grp.relay.new` names (Subscriber.hs
+  `xGrpRelayNew`).
+- `ChannelRelay::web_domain`: the relay's `RelayCapabilities.webDomain`.
+- The owner publishes `publicMemberCount` as `updatePublicMemberCount` counts it (current
+  members, the owner among them, less the relays) instead of always 1.
+- Docs: why every channel leg is PQ off, traced through 7.1.4 and `fdbcb24d`
+  (`ChannelRelay::pq`, README security notes). Relays never replay a post with no text and no
+  file, so a channel `send_data` with an empty `fallback_text` reaches only current
+  subscribers (`send_data`, `send_signed_data`, README). A record of the live interop run is in
+  `docs/channels-live.md`.
+
+### Changed
+
+- **Breaking:** new variants `types::Request::{TestChatRelay, AddChannelRelays}`,
+  `types::Event::RelayTest`, `RequestKind::RelayTest` and
+  `engine::records::{ConnKind::RelayTest, Lookup::RelayTest}`, and a new field on
+  `ChannelRelay`.
+
 ## [0.4.0] - 2026-11-26
 
 ### Added

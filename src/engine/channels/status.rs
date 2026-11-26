@@ -33,6 +33,7 @@ impl<A: AgentPort> Engine<A> {
                 .and_then(|r| r.link.clone())
                 .or_else(|| m.relay_link.clone()),
             connected: matches!(m.status, MemberStatus::Connected | MemberStatus::Complete),
+            web_domain: own.and_then(|r| r.web_domain.clone()),
             pq: m.conn.is_some_and(|c| self.agent.pq_on(&c)),
         }
     }

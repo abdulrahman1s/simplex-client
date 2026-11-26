@@ -35,8 +35,27 @@ pub struct ChannelRelay {
     /// The relay's link for this channel.
     pub link: Option<String>,
     pub connected: bool,
+    /// `RelayCapabilities.webDomain`: where the relay serves web previews, as it said in
+    /// `x.grp.relay.acpt` or `x.grp.relay.cap` (owner only).
+    #[serde(default)]
+    pub web_domain: Option<String>,
     /// Whether this connection's ratchet uses the post-quantum KEM. Channels are made without
     /// it, as 7.1.4 makes them, so this is `false`; a caller may refuse a channel for it.
+    ///
+    /// Why 7.1.4 reports `pqSupport: false` even where `joinPreparedConn'` (Commands.hs) passes
+    /// `PQSupportOn`: the connection it joins was made earlier by `prepareContact … PQSupportOff`
+    /// (Commands.hs `connect'`, `inGroup`; Subscriber.hs `CFGetRelayDataJoin`). simplexmq
+    /// `newConnToJoin` (Agent.hs) stored the connection's `pqSupport` off and its X3DH keys with
+    /// no KEM; `joinConnSrv'` for an address without ratchet keys reuses those stored keys
+    /// (`newRcvConnSrv`, `getRatchetX3dhKeys`) and only takes the new `pqSupport` when the address
+    /// has ratchet keys, which relay links do not. The relay accepts with `PQSupportOff` too
+    /// (Internal.hs `acceptGroupJoinRequestAsync`, `acceptRelayJoinRequestAsync`). A ratchet only
+    /// gains the KEM when both sides send with `PQEncOn` (Agent.hs `sendMessagesB_` turns a
+    /// connection's support on for such a send; Ratchet.hs `pqRatchetStep` does not answer a
+    /// proposal while its own KEM is off), and 7.1.4 sends
+    /// `PQEncOff` on every channel leg (Internal.hs `sendHistory`, `sendFwdMemberMessage`;
+    /// Subscriber.hs delivery jobs; member connections' stored `pqEncryption`). So no leg
+    /// against a 7.1.4 peer, nor between two of these clients, reaches PQ.
     pub pq: bool,
 }
 
@@ -88,4 +107,36 @@ impl ChatRelay {
             })
             .collect()
     }
+}
+
+/// `RelayTestStep`: where a chat relay's test stopped.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RelayTestStep {
+    /// Reading the relay address's link.
+    GetLink,
+    /// The link holds no relay's profile.
+    DecodeLink,
+    /// Joining the address.
+    Connect,
+    /// No answer, or not the expected one, within 40 seconds.
+    WaitResponse,
+    /// The answer's signature of the challenge does not verify under the address's root key.
+    Verify,
+}
+
+/// `RelayTestFailure`: the step and the error (`relayTestError` messages as 7.1.4 words them).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RelayTestFailure {
+    pub step: RelayTestStep,
+    pub error: String,
+}
+
+/// `CRChatRelayTestResult`: the relay's name when its link was read, and why the test failed,
+/// `None` when the relay signed the challenge.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RelayTestResult {
+    pub address: String,
+    pub name: Option<String>,
+    pub failure: Option<RelayTestFailure>,
 }

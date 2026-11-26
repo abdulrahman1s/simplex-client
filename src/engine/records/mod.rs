@@ -16,7 +16,7 @@ pub mod settings;
 pub mod user;
 
 pub use address::{AddressRecord, MemberInvite, RequestRecord};
-pub use channel::{ChannelRecord, Lookup, RelayRecord, RelayStatus};
+pub use channel::{ChannelRecord, Lookup, RelayRecord, RelayStatus, RelayTestRecord};
 pub use conn::{ConnKind, ConnRecord};
 pub use format::{NS, VERSION, decode, encode};
 pub use friend::FriendRecord;

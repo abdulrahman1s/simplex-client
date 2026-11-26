@@ -35,13 +35,32 @@ pub(super) fn request() -> ConnectionRequestUri {
 pub(super) struct Channel {
     pub root: KeyPair,
     pub id: Vec<u8>,
+    /// The owner the link names, and its member key.
+    pub owner_id: MemberId,
+    pub owner: KeyPair,
 }
 
 impl Channel {
     pub(super) fn new() -> Self {
         let root = KeyPair::generate(Alg::Ed25519).unwrap();
         let id = sha256(root.public.as_bytes()).to_vec();
-        Self { root, id }
+        let owner = KeyPair::generate(Alg::Ed25519).unwrap();
+        let owner_id = MemberId(b"owner-member-id!".to_vec());
+        Self {
+            root,
+            id,
+            owner_id,
+            owner,
+        }
+    }
+
+    fn owner_auth(&self) -> OwnerAuth {
+        let signed = [self.owner_id.0.as_slice(), &self.owner.public.to_der()].concat();
+        OwnerAuth {
+            owner_id: self.owner_id.0.clone(),
+            owner_key: self.owner.public.clone(),
+            auth_owner_sig: self.root.private.sign(&signed).unwrap(),
+        }
     }
 
     pub(super) fn profile(&self) -> serde_json::Value {
@@ -56,7 +75,7 @@ impl Channel {
         LinkLookup {
             root_key: self.root.public.clone(),
             entity_id: Some(entity.to_vec()),
-            owners: Vec::<OwnerAuth>::new(),
+            owners: vec![self.owner_auth()],
             relays: RELAYS
                 .iter()
                 .map(|r| ConnShortLink::parse(r).unwrap())
@@ -177,8 +196,8 @@ pub(super) fn data_post(id: &[u8]) -> Vec<u8> {
     post(id, c)
 }
 
-/// An owner with one relay that took the roster.
-pub(super) fn owner_with_relay(t: &mut T) -> (i64, i64, ConnId) {
+/// An owner's new channel, its link made: the group and the link's connection.
+pub(super) fn owner_channel(t: &mut T) -> (i64, ConnId) {
     let relay = ChatRelay {
         address: RELAYS[0].replace("/g#", "/r#"),
         name: "relay".into(),
@@ -198,19 +217,29 @@ pub(super) fn owner_with_relay(t: &mut T) -> (i64, i64, ConnId) {
         full: ADDRESS.into(),
         short: Some(CHANNEL.into()),
     });
+    (group, link_conn)
+}
+
+/// The relay invited at `address` reads, accepts with `relay_link`, connects and acks the
+/// roster: its member and connection.
+pub(super) fn bring_relay(t: &mut T, group: i64, address: &str, relay_link: &str) -> (i64, ConnId) {
     let conn = last_lookup(t);
-    let member = t.e.state.groups[&group].channel.as_ref().unwrap().relays[0].member;
+    let c = t.e.state.groups[&group].channel.clone().unwrap();
+    let member = c
+        .relays
+        .iter()
+        .find(|r| r.address == address)
+        .unwrap()
+        .member;
     let member_id = t.e.state.members[&(group, member)].member_id.0.clone();
+    let relay = KeyPair::generate(Alg::Ed25519).unwrap();
     t.agent(AgentEvent::LinkData {
         conn,
-        data: Box::new(relay_data(
-            &KeyPair::generate(Alg::Ed25519).unwrap(),
-            &member_id,
-        )),
+        data: Box::new(relay_data(&relay, &member_id)),
     });
     let joined = t.e.state.members[&(group, member)].conn.unwrap();
     let acpt = ChatMessage::without_id(ChatEvent::GrpRelayAcpt {
-        relay_link: RELAYS[1].into(),
+        relay_link: relay_link.into(),
         relay_cap: Default::default(),
     });
     t.agent(AgentEvent::Conf {
@@ -218,7 +247,6 @@ pub(super) fn owner_with_relay(t: &mut T) -> (i64, i64, ConnId) {
         conn_info: acpt.to_json().unwrap(),
     });
     let conn = last_lookup(t);
-    let relay = KeyPair::generate(Alg::Ed25519).unwrap();
     t.agent(AgentEvent::LinkData {
         conn,
         data: Box::new(relay_data(&relay, &member_id)),
@@ -236,5 +264,12 @@ pub(super) fn owner_with_relay(t: &mut T) -> (i64, i64, ConnId) {
         integrity: crate::agent::MsgIntegrity::Ok,
         broker_ts: 0,
     });
+    (member, joined)
+}
+
+/// An owner with one relay that took the roster.
+pub(super) fn owner_with_relay(t: &mut T) -> (i64, i64, ConnId) {
+    let (group, link_conn) = owner_channel(t);
+    let (member, _) = bring_relay(t, group, &RELAYS[0].replace("/g#", "/r#"), RELAYS[1]);
     (group, member, link_conn)
 }

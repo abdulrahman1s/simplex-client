@@ -58,7 +58,8 @@ impl State {
             ConnKind::Invitation { .. }
             | ConnKind::Member { .. }
             | ConnKind::GroupLink { .. }
-            | ConnKind::Lookup(_) => None,
+            | ConnKind::Lookup(_)
+            | ConnKind::RelayTest(_) => None,
         }
     }
 
@@ -77,7 +78,8 @@ impl State {
             ConnKind::Invitation { .. }
             | ConnKind::Friend { .. }
             | ConnKind::GroupLink { .. }
-            | ConnKind::Lookup(_) => None,
+            | ConnKind::Lookup(_)
+            | ConnKind::RelayTest(_) => None,
         }
     }
 

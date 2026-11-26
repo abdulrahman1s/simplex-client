@@ -102,12 +102,7 @@ impl<A: AgentPort> Engine<A> {
             }
             // Verified above; the blob carries only the roles this engine does not keep.
             ChatEvent::GrpRoster { .. } => Ok(()),
-            ChatEvent::GrpRelayNew { relay_link } => {
-                self.log.line(format_args!(
-                    "a channel announced a new relay, not joined here: {relay_link}"
-                ));
-                Ok(())
-            }
+            ChatEvent::GrpRelayNew { relay_link } => self.on_relay_new(ctx, &relay_link),
             e @ (ChatEvent::Info { .. }
             | ChatEvent::GrpMemRole { .. }
             | ChatEvent::GrpMemRestrict { .. }

@@ -38,4 +38,21 @@ pub enum ConnKind {
     },
     /// A link being read without joining it (`lookup_link`); gone with the answer.
     Lookup(super::Lookup),
+    /// A chat relay's test connection; gone with its answer or its deadline.
+    RelayTest(super::RelayTestRecord),
+}
+
+impl ConnKind {
+    /// The relay test this connection is for, if it is one's.
+    #[must_use]
+    pub fn relay_test(&self) -> Option<&super::RelayTestRecord> {
+        match self {
+            Self::RelayTest(t) => Some(t),
+            Self::Invitation { .. }
+            | Self::Friend { .. }
+            | Self::Member { .. }
+            | Self::GroupLink { .. }
+            | Self::Lookup(_) => None,
+        }
+    }
 }

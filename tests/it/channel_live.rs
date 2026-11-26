@@ -8,6 +8,8 @@
 //! `SIMPLEX_TEST_LOG=<dir>` each client's engine log goes to `<dir>/<name>.log`. Run it all
 //! where only local servers are reachable (a network namespace with only `lo`): a relay makes
 //! its address on a preset server unless told `--relay-address-server`.
+//! The last recorded run, with binary hashes, commands and the PQ state of every leg, is in
+//! `docs/channels-live.md`.
 #![allow(clippy::disallowed_methods, reason = "the test waits on real time")]
 
 use std::path::PathBuf;
@@ -237,6 +239,17 @@ fn a_crate_owner_s_channel_reaches_an_official_subscriber_who_may_not_post() {
             name: "relay".into(),
         }])
         .unwrap();
+    // `/relay test` against the official relay, and against an address that is no relay's.
+    let tested = owner.test_chat_relay(&env("SIMPLEX_TEST_RELAY")).unwrap();
+    assert_eq!(tested.failure, None, "{tested:?}");
+    assert!(tested.name.is_some());
+    let not_a_relay = owner.create_address().unwrap();
+    let f = owner
+        .test_chat_relay(&not_a_relay)
+        .unwrap()
+        .failure
+        .unwrap();
+    assert_eq!(f.step, types::model::RelayTestStep::DecodeLink, "{f:?}");
     let g = owner
         .create_channel(&format!("c{}", std::process::id()))
         .unwrap();
@@ -294,11 +307,23 @@ fn two_crate_clients_share_a_channel_through_an_official_relay() {
         .create_channel(&format!("d{}", std::process::id()))
         .unwrap();
     let ch = active_channel(&owner, &g);
+    // No fallback text: no text in the post, so the relay never replays it.
+    owner.send_data(g.chat(), TAG, data(5), "").unwrap();
     owner.send_data(g.chat(), TAG, data(1), "post").unwrap();
     let sub = start(&sd, "sub2");
     sub.connect(&ch.link).unwrap();
     let sg = joined(&sub);
-    assert_eq!(data_in(&sub, 1), data(1), "history");
+    assert_eq!(data_in(&sub, 1), data(1), "history, with its fallback text");
+    let end = Instant::now() + Duration::from_secs(5);
+    while Instant::now() < end {
+        if let Ok(Event::Data { json, .. }) = sub.next_event(Duration::from_millis(200)) {
+            assert_ne!(
+                json.get("zeta"),
+                Some(&json!(5)),
+                "a post with no text is not replayed"
+            );
+        }
+    }
     owner
         .send_signed_data(g.chat(), TAG, data(2), "post")
         .unwrap();
@@ -435,4 +460,69 @@ fn a_channel_on_two_relays_replays_the_last_100_posts_once_each_as_they_now_are(
     }
     owner.close();
     sub.close();
+}
+
+/// The subscriber's channel once `n` relays are connected.
+fn connected_relays(c: &Client, group: i64, n: usize) -> types::model::ChannelInfo {
+    let end = Instant::now() + WAIT;
+    loop {
+        let ch = c.group(group).unwrap().info().channel.clone().unwrap();
+        if ch.relays.iter().filter(|r| r.connected).count() == n {
+            return ch;
+        }
+        assert!(Instant::now() < end, "{n} relays connected: {ch:?}");
+        let _ = c.next_event(Duration::from_millis(200));
+    }
+}
+
+#[test]
+#[ignore = "needs local servers, two official relays (SIMPLEX_TEST_RELAY2) and CLIs; see the module docs"]
+fn a_relay_added_to_a_live_channel_is_announced_to_subscribers_and_joined_by_later_ones() {
+    let (od, ad, bd) = (Dir::new("o4"), Dir::new("a4"), Dir::new("b4"));
+    let owner = start(&od, "owner4");
+    let relay = |v: &str, name: &str| ChatRelay {
+        address: env(v),
+        name: name.into(),
+    };
+    owner
+        .set_chat_relays(vec![relay("SIMPLEX_TEST_RELAY", "relay1")])
+        .unwrap();
+    let g = owner
+        .create_channel(&format!("f{}", std::process::id()))
+        .unwrap();
+    let ch = active_channel(&owner, &g);
+    let early = start(&ad, "early4");
+    early.connect(&ch.link).unwrap();
+    let eg = joined(&early);
+    connected_relays(&early, eg.id(), 1);
+    // The relay tells the owner of the subscriber (`x.grp.mem.new`), so the channel has one.
+    std::thread::sleep(Duration::from_secs(2));
+
+    owner
+        .add_channel_relays(g.id(), vec![relay("SIMPLEX_TEST_RELAY2", "relay2")])
+        .unwrap();
+    let end = Instant::now() + WAIT;
+    let ch = loop {
+        let ch = active_channel(&owner, &g);
+        if ch.relays.len() == 2 {
+            break ch;
+        }
+        assert!(Instant::now() < end, "the second relay active: {ch:?}");
+    };
+    assert!(ch.relays.iter().all(|r| !r.pq));
+    // Announced through the first relay: the early subscriber joins the second.
+    let e = connected_relays(&early, eg.id(), 2);
+    assert!(e.relays.iter().all(|r| !r.pq));
+
+    let later = start(&bd, "later4");
+    later.connect(&ch.link).unwrap();
+    let lg = joined(&later);
+    let l = connected_relays(&later, lg.id(), 2);
+    assert!(l.relays.iter().all(|r| !r.pq));
+    owner.send_data(g.chat(), TAG, data(7), "post").unwrap();
+    assert_eq!(data_in(&later, 7), data(7));
+    assert_eq!(data_in(&early, 7), data(7));
+    owner.close();
+    early.close();
+    later.close();
 }

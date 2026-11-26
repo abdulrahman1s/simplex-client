@@ -148,7 +148,8 @@ impl<A: AgentPort> Engine<A> {
             ConnKind::Friend { .. }
             | ConnKind::Member { .. }
             | ConnKind::GroupLink { .. }
-            | ConnKind::Lookup(_) => false,
+            | ConnKind::Lookup(_)
+            | ConnKind::RelayTest(_) => false,
         });
         let group_link = self
             .state

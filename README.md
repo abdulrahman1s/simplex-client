@@ -585,6 +585,9 @@ let news = owner.create_channel("news")?;          // invites, then publishes, e
 owner.send_data(news.chat(), "app.post", post, "A post")?;        // as the channel
 owner.send_signed_data(news.chat(), "app.post", post2, "A post")?; // signed by the owner
 
+owner.test_chat_relay(&relay_address)?;            // `/relay test`: RelayTestResult
+owner.add_channel_relays(news.id(), vec![another])?; // `APIAddGroupRelays`
+
 subscriber.connect(&channel_link)?;                // reads the link, joins every relay
 // Event::Data { member: None, .. } for registered tags, Message with Author::Channel otherwise
 ```
@@ -593,6 +596,8 @@ subscriber.connect(&channel_link)?;                // reads the link, joins ever
 await owner.setChatRelays([{ address: relayAddress, name: "my relay" }]);
 const news = await owner.createChannel("news");
 await news.sendSignedData("app.post", { a: 1 }, "A post");
+const tested = await owner.testChatRelay(relayAddress); // { address, name, failure }
+await owner.addChannelRelays(news.id, [{ address: other, name: "other" }]);
 ```
 
 - **Your relays only.** `set_chat_relays` names the relays new channels are made on, and only
@@ -601,6 +606,21 @@ await news.sendSignedData("app.post", { a: 1 }, "A post");
   preset SMP relays they are no default. SimpleX Chat's preset-server policy limits
   third-party apps to "user-to-user messaging only or … chat bots sending messages requested
   by users"; a channel through their relays may fall outside it.
+- **Data-only posts are not replayed.** A relay replays a post to later subscribers only if it
+  has text or a file (7.1.4 Internal.hs `processContentItem`). `send_data` puts its
+  `fallback_text` in the post's text, so a channel post with an empty `fallback_text` reaches
+  who is subscribed when it is sent and nobody who joins later. 7.1.4 sends such posts too, so
+  the crate does not refuse them.
+- **Relay tests.** `test_chat_relay` does what 7.1.4's `/relay test` does: it reads the
+  address's link, joins it with a random challenge (PQ off), and passes only if the relay
+  answers with the challenge signed by the address's own key within 40 seconds. The test
+  connection is deleted either way; a failure names its step (`RelayTestStep`).
+- **More relays.** `add_channel_relays` invites more relays to a channel the user owns, through
+  the same invitation, acceptance and roster steps as creation, then publishes the link again
+  naming every relay that may serve. Subscribers who join later join all of them; while the
+  channel has subscribers, the relays already serving announce the new one with a signed
+  `x.grp.relay.new`, and a subscriber joins an announced relay when the owner's signature
+  verifies.
 - **Edits and deletes** are sent as the channel too. Relays keep the current form: a
   subscriber who joins later gets an edited post as it now is, not marked edited, and does not
   get a deleted one.
@@ -609,8 +629,10 @@ await news.sendSignedData("app.post", { a: 1 }, "A post");
   naming the owner's member (unsigned ones name nobody); it still shows as the channel's. A
   signed body over 15 602 bytes is refused before it is sent, where 7.1.4 reports it sent and
   never sends it.
-- **Not ported:** the relay role, relay tests (`/relay test`), adding relays to an existing
-  channel, owners besides the creator, and member support chats.
+- **Not ported:** the relay role, owners besides the creator (so the roster the owner sends is
+  always empty), member support chats, a subscriber's relay sync against the channel's link
+  data on open (upstream `syncSubscriberRelays`), removing relays from a channel, and files in
+  channel posts.
 
 ## Security notes
 
@@ -620,7 +642,11 @@ await news.sendSignedData("app.post", { a: 1 }, "A post");
   everything posted, and replay it to new subscribers. Subscribers see the notice the official
   apps show (`e2eeInfo {"public": true, "pqEnabled": false}`). Each relay connection's
   negotiated PQ state is `ChannelRelay::pq` on the group's `channel`, so a caller can see it and
-  refuse the channel.
+  refuse the channel. No leg can reach PQ against 7.1.4: it sends `PQEncOff` on every channel
+  connection, and a ratchet gains the KEM only when both sides send with `PQEncOn`. 7.1.4's
+  `joinPreparedConn'` passes `PQSupportOn` for a relay join, yet the connection it joins was
+  prepared with `PQSupportOff`, whose stored keys and `pqSupport` the agent's `joinConnSrv'`
+  keeps; the full trace, with module and function names, is in `ChannelRelay::pq`'s docs.
 
 - **The store key is required.** `ClientBuilder::start` fails without `.key(…)`, and JS
   `Client.start` refuses a missing or empty `key`. The passphrase goes through Argon2id
@@ -710,6 +736,11 @@ export SIMPLEX_TEST_SMP='smp://<fingerprint>@127.0.0.1:<port>'
 export SIMPLEX_TEST_XFTP='xftp://<fingerprint>@127.0.0.1:<port>'
 cargo test -- --ignored
 ```
+
+The channel tests (`tests/it/channel_live.rs`) also need official `simplex-chat` 7.1.4 CLIs as
+two relays, an owner and a subscriber, all on local servers; the setup, the last recorded
+run and the PQ state measured on each leg are in
+[docs/channels-live.md](docs/channels-live.md).
 
 ## License
 
