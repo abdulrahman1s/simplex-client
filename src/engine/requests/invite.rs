@@ -62,9 +62,10 @@ impl<A: AgentPort> Engine<A> {
             .values()
             .filter_map(|c| match c.kind {
                 ConnKind::Invitation { created, .. } => Some((created, c.conn)),
-                ConnKind::Friend { .. } | ConnKind::Member { .. } | ConnKind::GroupLink { .. } => {
-                    None
-                }
+                ConnKind::Friend { .. }
+                | ConnKind::Member { .. }
+                | ConnKind::GroupLink { .. }
+                | ConnKind::Lookup(_) => None,
             })
             .collect();
         if open.len() < MAX_INVITATIONS {

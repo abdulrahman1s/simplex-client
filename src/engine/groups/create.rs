@@ -54,6 +54,7 @@ impl<A: AgentPort> Engine<A> {
             link: None,
             link_conn: None,
             local: crate::engine::records::ChatLocal::default(),
+            channel: None,
         };
         self.save_group(g)?;
         // `CISndGroupE2EEInfo`; the banner and feature items are not shown (codec `notice`).

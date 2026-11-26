@@ -94,6 +94,11 @@ pub enum Event {
         group: i64,
         link: Option<String>,
     },
+    /// A channel relay's status changed (`CEvtGroupRelayUpdated`).
+    ChannelRelay {
+        group: i64,
+        relay: super::model::ChannelRelay,
+    },
     Call(CallSignal),
     Stream(StreamSignal),
     Failed {

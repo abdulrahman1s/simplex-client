@@ -1,5 +1,8 @@
 //! `ChatEvent`: one variant per event with its params (Protocol.hs `ChatMsgEvent`).
 use crate::chat::call::{CallAnswer, CallExtraInfo, CallInvitation, CallOffer};
+use crate::chat::channel::{
+    GroupRelayInvitation, InlineFileInvitation, RelayCapabilities, RelayRejectionReason,
+};
 use crate::chat::container::{MsgContainer, MsgMentions, MsgScope};
 use crate::chat::content::MsgContent;
 use crate::chat::file::{FileDescr, FileInvitation};
@@ -103,6 +106,25 @@ pub enum ChatEvent {
         role: GroupMemberRole,
         member_id: MemberId,
     },
+    /// An owner asks a relay to serve its channel (signed conn info).
+    GrpRelayInv(GroupRelayInvitation),
+    /// The relay's answer: its link for the channel.
+    GrpRelayAcpt {
+        relay_link: String,
+        relay_cap: RelayCapabilities,
+    },
+    /// A relay test: the challenge, and the relay's signature of it in the answer.
+    GrpRelayTest {
+        challenge: Vec<u8>,
+        signature: Option<Vec<u8>>,
+    },
+    GrpRelayNew {
+        relay_link: String,
+    },
+    GrpRelayReject {
+        reason: RelayRejectionReason,
+    },
+    GrpRelayCap(RelayCapabilities),
     GrpMemNew {
         member_info: MemberInfo,
         scope: Option<MsgScope>,
@@ -153,6 +175,18 @@ pub enum ChatEvent {
         content: Option<MsgContent>,
         scope: Option<MsgScope>,
     },
+    /// The owner-signed roster header; the blob follows as `F` chunks under this message's id.
+    GrpRoster {
+        version: i64,
+        file_inv: InlineFileInvitation,
+    },
+    GrpRosterAck {
+        version: i64,
+        error: Option<String>,
+    },
+    GrpRosterRequest {
+        version: Option<i64>,
+    },
     GrpMsgForward {
         fwd: GrpMsgForward,
         msg: Box<ChatMessage>,
@@ -185,7 +219,7 @@ pub enum ChatEvent {
         msg_id: SharedMsgId,
         chunk: FileChunk,
     },
-    /// Unknown names, and the channel and roster events (`x.grp.relay.*`, `x.grp.roster*`) that the engine does not act on.
+    /// Names 7.1.4 does not know.
     Unknown {
         event: String,
         params: Map<String, Value>,

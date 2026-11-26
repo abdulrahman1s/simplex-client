@@ -78,6 +78,30 @@ macro_rules! send_link {
                 })
             }
 
+            /// `sendData` signed with the user's member key: in a channel, an owner's post as the
+            /// channel subscribers verify. A signed body over 15 602 bytes is refused. Relays
+            /// still read it. Resolves with the send's tag.
+            #[wasm_bindgen(js_name = sendSignedData, unchecked_return_type = "Promise<number>")]
+            pub fn send_signed_data(
+                &self,
+                tag: &str,
+                #[wasm_bindgen(unchecked_param_type = "Record<string, unknown>")] data: JsValue,
+                fallback_text: &str,
+            ) -> js_sys::Promise {
+                let serde_json::Value::Object(json) = from_js(&data) else {
+                    return settled(Err(error("bad_argument", "data is an object")));
+                };
+                if let Some(why) = crate::chat::app_data::refusal(tag, &json) {
+                    return settled(Err(error("bad_argument", why)));
+                }
+                self.shared().queue_send(Request::SendSignedData {
+                    chat: self.chat(),
+                    tag: tag.to_owned(),
+                    json,
+                    fallback_text: fallback_text.to_owned(),
+                })
+            }
+
             /// Starts a live message here, seen as it is written; `message.updateLive` sends the
             /// rest. Resolves with the send's tag.
             #[wasm_bindgen(js_name = sendLive, unchecked_return_type = "Promise<number>")]

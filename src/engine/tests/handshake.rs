@@ -128,10 +128,30 @@ fn the_users_own_link_and_a_known_one_connect_nothing() {
 }
 
 #[test]
-fn channel_links_are_refused_as_links() {
+fn a_chat_relay_s_own_address_is_refused_as_a_link() {
+    let mut t = T::started();
+    let out = t.req(Request::Connect(ADDRESS.replace("/a#", "/r#")));
+    assert_eq!(failed(&out), (RequestKind::Connect, ErrorCode::BadLink));
+}
+
+#[test]
+fn a_channel_link_is_read_before_anything_is_joined() {
     let mut t = T::started();
     let out = t.req(Request::Connect(ADDRESS.replace("/a#", "/c#")));
-    assert_eq!(failed(&out), (RequestKind::Connect, ErrorCode::BadLink));
+    assert!(
+        out.iter().all(|e| !matches!(e, Event::Failed { .. })),
+        "{out:?}"
+    );
+    assert!(matches!(
+        t.e.agent.calls.as_slice(),
+        [.., Call::LookupLink { .. }]
+    ));
+    assert!(
+        !t.e.agent
+            .calls
+            .iter()
+            .any(|c| matches!(c, Call::Join { .. }))
+    );
 }
 
 #[test]

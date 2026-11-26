@@ -171,6 +171,44 @@ impl AgentPort for NativeAgent {
         Ok(conn_id(id))
     }
 
+    fn create_channel_link(
+        &mut self,
+        store: &mut Store,
+        root: &crate::crypto::PrivateKey,
+        entity_id: Vec<u8>,
+        owners: Vec<crate::agent::short_link::OwnerAuth>,
+        user_data: crate::engine::agent_port::LinkUserData,
+        client_data: String,
+    ) -> Result<ConnId, AgentFailure> {
+        let id = self
+            .client
+            .create_channel_link(store, root, entity_id, owners, user_data, client_data)
+            .map_err(failed)?;
+        Ok(conn_id(id))
+    }
+
+    fn set_link_data(
+        &mut self,
+        store: &mut Store,
+        conn: &ConnId,
+        owners: Vec<crate::agent::short_link::OwnerAuth>,
+        relays: Vec<crate::agent::links::ConnShortLink>,
+        user_data: Vec<u8>,
+    ) -> Result<(), AgentFailure> {
+        self.client
+            .set_link_data(store, native_conn(conn), owners, relays, user_data)
+            .map_err(failed)
+    }
+
+    fn lookup_link(
+        &mut self,
+        store: &mut Store,
+        link: &crate::agent::links::ConnShortLink,
+    ) -> Result<ConnId, AgentFailure> {
+        let id = self.client.lookup_link(store, link).map_err(failed)?;
+        Ok(conn_id(id))
+    }
+
     fn accept_request(
         &mut self,
         store: &mut Store,

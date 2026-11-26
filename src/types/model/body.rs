@@ -27,6 +27,9 @@ pub enum MessageBody {
 #[serde(tag = "t", content = "c", rename_all = "snake_case")]
 pub enum ChatNotice {
     Connected,
+    /// A channel the user joined: its relays read and store what is posted, and its
+    /// connections have no post-quantum KEM (`e2eeInfo {"public":true,"pqEnabled":false}`).
+    NotEncrypted,
     GroupCreated,
     YouJoined,
     MemberJoined(String),

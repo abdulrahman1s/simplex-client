@@ -6,6 +6,9 @@ use serde::{Deserialize, Serialize};
 use crate::agent::links::ConnectionLink;
 use crate::store::Store;
 
+/// A channel's link data made from its own short link (`create_channel_link`).
+pub type LinkUserData = Box<dyn FnOnce(&str) -> Vec<u8>>;
+
 /// The agent's connection number (`agent::client::ConnId`), never reused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct ConnId(pub i64);
@@ -113,6 +116,15 @@ pub enum AgentEvent {
         conn: ConnId,
         phase: crate::agent::client::SwitchPhase,
     },
+    /// `LINK`: the user data `set_link_data` gave is stored.
+    LinkUpdated {
+        conn: ConnId,
+    },
+    /// `lookup_link` read and checked the link's data; `conn` is forgotten.
+    LinkData {
+        conn: ConnId,
+        data: Box<crate::agent::connection::LinkLookup>,
+    },
     /// `REQ`: someone used the address `conn`; `invitation` names the request to
     /// `accept_request`/`reject_request`, `conn_info` is their `x.contact`.
     Req {
@@ -197,6 +209,36 @@ pub trait AgentPort {
         user_data: Vec<u8>,
         client_data: String,
     ) -> Result<ConnId, AgentFailure>;
+
+    /// `getConnShortLink`: an address's link data, read without joining it; answered by
+    /// `AgentEvent::LinkData`, or `AgentEvent::Err` on the returned connection.
+    fn lookup_link(
+        &mut self,
+        store: &mut Store,
+        link: &crate::agent::links::ConnShortLink,
+    ) -> Result<ConnId, AgentFailure>;
+
+    /// A channel's link (`prepareConnectionLink` + `createConnectionForLink`) under the
+    /// channel's root key and id; `user_data` gets the short link. Answered by `Address`.
+    fn create_channel_link(
+        &mut self,
+        store: &mut Store,
+        root: &crate::crypto::PrivateKey,
+        entity_id: Vec<u8>,
+        owners: Vec<crate::agent::short_link::OwnerAuth>,
+        user_data: LinkUserData,
+        client_data: String,
+    ) -> Result<ConnId, AgentFailure>;
+
+    /// `setConnShortLink`: a channel link's owners, relays and user data; answered by `LinkUpdated`.
+    fn set_link_data(
+        &mut self,
+        store: &mut Store,
+        conn: &ConnId,
+        owners: Vec<crate::agent::short_link::OwnerAuth>,
+        relays: Vec<crate::agent::links::ConnShortLink>,
+        user_data: Vec<u8>,
+    ) -> Result<(), AgentFailure>;
 
     /// `acceptContact`: a new connection that answers the request, our `x.info` in `conn_info`.
     fn accept_request(

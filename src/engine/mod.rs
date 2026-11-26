@@ -7,6 +7,7 @@ mod agent_map;
 pub mod agent_port;
 mod calls;
 pub mod changes;
+mod channels;
 mod chats;
 pub mod clock;
 mod data;

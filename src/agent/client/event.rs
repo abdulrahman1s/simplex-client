@@ -119,6 +119,15 @@ pub enum AgentEvent {
         conn: ConnId,
         phase: SwitchPhase,
     },
+    /// `LINK`: the server stored the user data `set_link_data` gave.
+    LinkUpdated {
+        conn: ConnId,
+    },
+    /// `lookup_link` read and checked the link's data; `conn` is forgotten.
+    LinkData {
+        conn: ConnId,
+        data: Box<crate::agent::connection::LinkLookup>,
+    },
     /// Someone used the address `conn`: answer with `accept_contact` or `reject_contact` on `inv_id`.
     Req {
         conn: ConnId,

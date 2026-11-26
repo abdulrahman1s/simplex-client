@@ -27,7 +27,8 @@ pub fn kind_of(r: &Request) -> RequestKind {
         Request::SendLink { .. }
         | Request::Forward { .. }
         | Request::SendLive { .. }
-        | Request::SendData { .. } => K::Send,
+        | Request::SendData { .. }
+        | Request::SendSignedData { .. } => K::Send,
         Request::ContactMember { .. } | Request::SyncRatchet { .. } => K::Connect,
         Request::SetAddressSettings { .. } | Request::ShareAddress(_) => K::Address,
         Request::UpdateLive { .. } => K::Edit,
@@ -53,6 +54,8 @@ pub fn kind_of(r: &Request) -> RequestKind {
         Request::Refresh => K::Refresh,
         Request::SetGroupPicture { .. }
         | Request::NewGroup(_)
+        | Request::NewChannel(_)
+        | Request::SetChatRelays(_)
         | Request::AddMember { .. }
         | Request::JoinGroup(_)
         | Request::LeaveGroup(_) => K::Group,

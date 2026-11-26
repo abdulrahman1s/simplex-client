@@ -29,6 +29,14 @@ impl<A: AgentPort> Engine<A> {
         msg: &ChatMessage,
         except: Option<i64>,
     ) -> Result<Vec<(i64, ConnId, AgentMsgId)>> {
+        if self
+            .state
+            .groups
+            .get(&group)
+            .is_some_and(|g| g.channel.is_some())
+        {
+            return self.send_to_channel(group, msg, false);
+        }
         let to: Vec<i64> = self
             .state
             .members_of(group)

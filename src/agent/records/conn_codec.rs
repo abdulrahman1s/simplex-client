@@ -2,11 +2,12 @@
 use crate::crypto::PrivateKey;
 use crate::encoding::{Decode, DecodeError, Decoder, Encode, EncodeError, Large};
 
-use super::conn::{Chain, ConnRecord, NewLink};
+use super::conn::{Chain, ConnRecord, LinkCreds, NewLink};
 
 /// A new record's first byte; a new layout gets a new one. Format 1 had no `request`, format 2 no
-/// `client_data`, format 3 no `switch` and `sync`, format 4 no `Tested` switch step.
-const FORMAT: u8 = 5;
+/// `client_data`, format 3 no `switch` and `sync`, format 4 no `Tested` switch step, format 5 no
+/// `link_creds` and `link_update`.
+const FORMAT: u8 = 6;
 
 fn big(b: &[u8]) -> Large {
     Large(b.to_vec())
@@ -33,6 +34,27 @@ impl Decode for NewLink {
             fixed,
             user,
             link_key,
+        })
+    }
+}
+
+impl Encode for LinkCreds {
+    fn encode(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
+        (&self.link_id, &self.link_key, &self.sign_key).encode(out)?;
+        (big(&self.fixed), self.contact_type).encode(out)
+    }
+}
+
+impl Decode for LinkCreds {
+    fn decode(d: &mut Decoder<'_>) -> Result<Self, DecodeError> {
+        let (link_id, link_key, sign_key) = <_>::decode(d)?;
+        let (Large(fixed), contact_type) = <(Large, u8)>::decode(d)?;
+        Ok(Self {
+            link_id,
+            link_key,
+            sign_key,
+            fixed,
+            contact_type,
         })
     }
 }
@@ -70,7 +92,8 @@ impl Encode for ConnRecord {
             .as_ref()
             .map(|d| big(d.as_bytes()))
             .encode(out)?;
-        (&self.switch, &self.sync).encode(out)
+        (&self.switch, &self.sync).encode(out)?;
+        (&self.link_creds, self.link_update.as_deref().map(big)).encode(out)
     }
 }
 
@@ -110,6 +133,12 @@ impl Decode for ConnRecord {
         } else {
             (None, None)
         };
+        let (link_creds, link_update) = if format >= 6 {
+            let (creds, update) = <(Option<LinkCreds>, Option<Large>)>::decode(d)?;
+            (creds, update.map(|l| l.0))
+        } else {
+            (None, None)
+        };
         Ok(Self {
             id,
             status,
@@ -130,6 +159,8 @@ impl Decode for ConnRecord {
             client_data,
             switch,
             sync,
+            link_creds,
+            link_update,
         })
     }
 }
@@ -165,6 +196,14 @@ mod tests {
             link_key: vec![4; 32],
         });
         rec.client_data = Some(r#"{"groupLinkId":"abc"}"#.into());
+        rec.link_creds = Some(LinkCreds {
+            link_id: vec![1; 24],
+            link_key: vec![2; 32],
+            sign_key: KeyPair::generate(Alg::Ed25519).unwrap().private,
+            fixed: vec![3; 2032],
+            contact_type: b'C',
+        });
+        rec.link_update = Some(vec![4; 13808]);
         rec.request = Some(ContactRequest {
             queue: SmpQueueInfo::parse(
                 "smp://AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=@fake.test/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA#/?v=1-4&dh=MCowBQYDK2VuAyEAQWIOFJ7ZTMqTFfTsHuyRYNDwszkpHQfRxObZXAWAIRU%3D&q=c",
@@ -184,8 +223,8 @@ mod tests {
     fn a_record_stored_before_requests_existed_still_reads() {
         let rec = ConnRecord::new(ConnId(3), ConnStatus::Active, Version(8), false);
         let mut bytes = rec.to_bytes().unwrap();
-        bytes[0] = 1; // format 1 had none of `request`, `client_data`, `switch`, `sync`
-        bytes.truncate(bytes.len() - 4); // the absent `Option`s are one '0' byte each
+        bytes[0] = 1; // format 1 had none of `request`, `client_data`, `switch`, `sync`, `link_*`
+        bytes.truncate(bytes.len() - 6); // the absent `Option`s are one '0' byte each
         assert_eq!(ConnRecord::from_bytes(&bytes).unwrap(), rec);
     }
 
@@ -194,6 +233,16 @@ mod tests {
         let rec = ConnRecord::new(ConnId(3), ConnStatus::Active, Version(7), false);
         let mut bytes = rec.to_bytes().unwrap();
         bytes[0] = 4; // format 5 only added a switch step
+        bytes.truncate(bytes.len() - 2); // format 6 added `link_creds` and `link_update`
+        assert_eq!(ConnRecord::from_bytes(&bytes).unwrap(), rec);
+    }
+
+    #[test]
+    fn a_record_stored_at_format_5_still_reads_without_link_creds() {
+        let rec = ConnRecord::new(ConnId(4), ConnStatus::Address, Version(8), false);
+        let mut bytes = rec.to_bytes().unwrap();
+        bytes[0] = 5;
+        bytes.truncate(bytes.len() - 2);
         assert_eq!(ConnRecord::from_bytes(&bytes).unwrap(), rec);
     }
 

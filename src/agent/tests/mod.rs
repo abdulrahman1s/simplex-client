@@ -1,6 +1,7 @@
 //! Agent connection layer tests against the in-memory server, and ignored live tests.
 mod address;
 mod address_dr;
+mod channel_link;
 mod chat_bytes;
 pub(crate) mod cli;
 mod delete_wait;

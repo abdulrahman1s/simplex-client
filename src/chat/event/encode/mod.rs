@@ -2,6 +2,7 @@
 mod group;
 mod misc;
 mod msg;
+mod relay;
 
 use super::types::ChatEvent as E;
 use crate::chat::error::{ChatError, Result};
@@ -57,6 +58,21 @@ fn params(ev: &E) -> Map<String, Value> {
         | E::GrpInfo(_)
         | E::GrpPrefs(_)
         | E::GrpDirectInv { .. } => group::params(ev),
+        E::GrpRelayInv(i) => Params::new().put("groupRelayInvitation", i).done(),
+        E::GrpRelayAcpt {
+            relay_link,
+            relay_cap,
+        } => relay::acpt(relay_link, relay_cap),
+        E::GrpRelayTest {
+            challenge,
+            signature,
+        } => relay::test(challenge, signature.as_deref()),
+        E::GrpRelayNew { relay_link } => relay::link(relay_link),
+        E::GrpRelayReject { reason } => relay::reject(reason),
+        E::GrpRelayCap(cap) => Params::new().put("relayCap", cap).done(),
+        E::GrpRoster { version, file_inv } => relay::roster(*version, file_inv),
+        E::GrpRosterAck { version, error } => relay::roster_ack(*version, error.as_ref()),
+        E::GrpRosterRequest { version } => relay::roster_request(*version),
         E::InfoProbe(_)
         | E::InfoProbeCheck(_)
         | E::InfoProbeOk(_)

@@ -18,7 +18,7 @@ fn dropped(why: &str) -> crate::engine::error::EngineError {
 }
 
 /// The forward header's broker time in milliseconds; the binary form has whole seconds.
-fn forward_time(fwd: &GrpMsgForward) -> Option<i64> {
+pub(crate) fn forward_time(fwd: &GrpMsgForward) -> Option<i64> {
     let bytes = fwd.encode().ok()?;
     let secs = bytes.rchunks(8).next()?;
     Some(i64::from_be_bytes(secs.try_into().ok()?).saturating_mul(1000))

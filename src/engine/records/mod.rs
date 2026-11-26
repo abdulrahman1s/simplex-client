@@ -1,6 +1,7 @@
 //! The engine's records in the store, namespace "chat", versioned JSON.
 
 pub mod address;
+pub mod channel;
 pub mod conn;
 pub mod file;
 pub mod format;
@@ -15,6 +16,7 @@ pub mod settings;
 pub mod user;
 
 pub use address::{AddressRecord, MemberInvite, RequestRecord};
+pub use channel::{ChannelRecord, Lookup, RelayRecord, RelayStatus};
 pub use conn::{ConnKind, ConnRecord};
 pub use format::{NS, VERSION, decode, encode};
 pub use friend::FriendRecord;

@@ -28,11 +28,12 @@ fn parse(text: &str) -> Option<ConnectionLink> {
 }
 
 /// What a link joins: a friend's one-time invitation (we send `x.info`), an address (we send
-/// `x.contact`) or a group's link (the same, PQ off).
+/// `x.contact`), a group's link (the same, PQ off) or a channel's (through its relays).
 enum Kind {
     Invitation,
     Address,
     Group,
+    Channel,
 }
 
 /// A contact link whose client data names a group is a group link (`CRDataGroup`).
@@ -42,9 +43,10 @@ fn is_group_data(client_data: Option<&str>) -> bool {
         .is_some_and(|v| v.get("groupLinkId").is_some())
 }
 
-/// A channel's or relay's link is not one of ours to join.
+/// A relay's own address is not joined by a client (`CCTRelay`: "chat relay links are not
+/// supported", Commands.hs `connectPlan`).
 fn kind_of(link: &ConnectionLink) -> Result<Kind> {
-    let refused = || Err(fail(Code::BadLink, "not a link to a group or a person"));
+    let refused = || Err(fail(Code::BadLink, "chat relay links are not joined"));
     match link {
         ConnectionLink::Full(ConnectionRequestUri::Invitation { .. })
         | ConnectionLink::Short(ConnShortLink::Invitation { .. }) => Ok(Kind::Invitation),
@@ -58,7 +60,8 @@ fn kind_of(link: &ConnectionLink) -> Result<Kind> {
         ConnectionLink::Short(ConnShortLink::Contact { contact_type, .. }) => match contact_type {
             ContactConnType::Contact => Ok(Kind::Address),
             ContactConnType::Group => Ok(Kind::Group),
-            ContactConnType::Channel | ContactConnType::Relay => refused(),
+            ContactConnType::Channel => Ok(Kind::Channel),
+            ContactConnType::Relay => refused(),
         },
     }
 }
@@ -97,11 +100,14 @@ impl<A: AgentPort> Engine<A> {
         }
         // Incognito, whoever answers knows the user only by a random name (`APIConnect`). Groups
         // would get the user's own profile from their members, so none is joined incognito here.
-        if incognito && matches!(kind, Kind::Group) {
+        if incognito && matches!(kind, Kind::Group | Kind::Channel) {
             return Err(fail(
                 Code::NotAllowed,
                 "a group is not joined incognito here",
             ));
+        }
+        if matches!(kind, Kind::Channel) {
+            return self.join_channel(&uri);
         }
         let incognito = incognito.then(random_name).flatten();
         let me = incognito
@@ -111,6 +117,7 @@ impl<A: AgentPort> Engine<A> {
             Kind::Invitation => conn_info(&me)?,
             Kind::Address => contact_conn_info(&me, request_id()?)?,
             Kind::Group => group_contact_info(&self.state.user, request_id()?)?,
+            Kind::Channel => return Ok(()),
         };
         // Group connections are PQ off.
         let pq = !matches!(kind, Kind::Group);
@@ -138,7 +145,10 @@ impl<A: AgentPort> Engine<A> {
             ConnKind::Invitation { full, short, .. } => {
                 [full, short].into_iter().flatten().any(same)
             }
-            ConnKind::Friend { .. } | ConnKind::Member { .. } | ConnKind::GroupLink { .. } => false,
+            ConnKind::Friend { .. }
+            | ConnKind::Member { .. }
+            | ConnKind::GroupLink { .. }
+            | ConnKind::Lookup(_) => false,
         });
         let group_link = self
             .state

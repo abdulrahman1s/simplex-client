@@ -17,7 +17,7 @@ mod delete_items;
 mod direct_accept;
 mod direct_inv;
 mod element;
-mod forward;
+pub(crate) mod forward;
 pub(crate) mod fwd_batch;
 mod history;
 mod history_item;
@@ -32,7 +32,7 @@ mod leave;
 mod link;
 mod link_accept;
 pub(crate) mod link_cap;
-mod link_data;
+pub(crate) mod link_data;
 mod link_event;
 mod link_join;
 mod link_request;
@@ -63,8 +63,7 @@ mod send_action;
 mod unknown;
 pub(crate) mod verify;
 
-#[cfg(test)]
-#[cfg(feature = "native")]
+pub(crate) use conn_info::{group_conn_info, parse_conn_info, peer_range};
 pub(crate) use inbound::GroupCtx;
 pub(crate) use invitation::Via;
 pub(crate) use link_join::group_contact_info;

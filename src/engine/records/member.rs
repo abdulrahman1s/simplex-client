@@ -48,6 +48,9 @@ pub struct MemberRecord {
     /// An invitee's invitation link, so a repeated AddMember sends the same one (`getMemberInvitation`).
     #[serde(default)]
     pub invitation: Option<String>,
+    /// A channel relay's link for the channel (`GroupMember.relayLink`).
+    #[serde(default)]
+    pub relay_link: Option<String>,
 }
 
 /// `MemberRelation` as far as the host acts on it: introduced and not yet connected, or connected.

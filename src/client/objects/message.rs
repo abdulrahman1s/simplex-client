@@ -73,6 +73,10 @@ impl Message {
             (MessageAuthor::Member(name), ChatRef::Group(g)) => {
                 Author::Member(Member::named(self.client.clone(), g, name.clone()))
             }
+            (MessageAuthor::Channel(_), ChatRef::Group(g)) => Author::Channel(g),
+            (MessageAuthor::Channel(_), ChatRef::Direct(id)) => {
+                Author::Friend(self.client.friend_or_id(id))
+            }
         }
     }
 

@@ -25,6 +25,18 @@ impl<A: AgentPort> Engine<A> {
         json: &Map<String, Value>,
         fallback: &str,
     ) -> Result<()> {
+        self.send_data_as(chat, tag, json, fallback, false)
+    }
+
+    /// `signed`: in a channel, signed with the user's member key (`sign=on`).
+    pub(crate) fn send_data_as(
+        &mut self,
+        chat: ChatRef,
+        tag: &str,
+        json: &Map<String, Value>,
+        fallback: &str,
+        signed: bool,
+    ) -> Result<()> {
         if let Some(why) = app_data::refusal(tag, json) {
             return Err(fail(Code::RequestFailed, why));
         }
@@ -41,9 +53,14 @@ impl<A: AgentPort> Engine<A> {
                 self.agent_send(&f.conn, f.pq, body)?;
             }
             ChatRef::Group(group) => {
-                Self::assert_my_role(&self.group(group)?, &ROLE_TO_SEND)?;
+                let g = self.group(group)?;
+                Self::assert_my_role(&g, &ROLE_TO_SEND)?;
                 sized(&msg)?;
-                self.send_to_group(group, &msg, None)?;
+                if g.channel.is_some() {
+                    self.send_to_channel(group, &msg, signed)?;
+                } else {
+                    self.send_to_group(group, &msg, None)?;
+                }
             }
         }
         Ok(())

@@ -81,6 +81,7 @@ pub(super) fn answer(e: &Event) -> Option<(Want, bool, Result<Payload, Value>)> 
         | Event::OpenFile { .. }
         | Event::Located { .. }
         | Event::GroupLink { .. }
+        | Event::ChannelRelay { .. }
         | Event::Call(_)
         | Event::Stream(_)
         | Event::Exited { .. } => None,

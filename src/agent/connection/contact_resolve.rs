@@ -1,7 +1,8 @@
-//! An address's link data resolved with LGET: the queue it names is who the request goes to (Agent.hs `getConnShortLink'`).
+//! An address's link data resolved with LGET: the queue it names is who the request goes to, or, for a lookup, the caller (Agent.hs `getConnShortLink'`).
 use crate::smp::{Response, SmpServer};
 use crate::store::Store;
 
+use super::lookup::LinkLookup;
 use crate::agent::SmpQueueUri;
 use crate::agent::client::{AgentClient, ConnId};
 use crate::agent::error::{AgentError, Result};
@@ -36,6 +37,7 @@ impl AgentClient {
             user: data.user,
         };
         let (fixed, user) = decrypt_link_data(ConnectionMode::Contact, &link_key, &key, &enc)?;
+        let fixed_data = fixed.clone();
         let (BinaryConnReq::Contact { mut data }, ConnLinkData::Contact { data: ucd, .. }) =
             (fixed.link_conn_req, user)
         else {
@@ -48,8 +50,11 @@ impl AgentClient {
         link_queue(&server, &sender_id, q)?;
         let req = ConnectionRequestUri::Contact {
             data,
-            ratchet_keys: ucd.ratchet_keys,
+            ratchet_keys: ucd.ratchet_keys.clone(),
         };
+        if rec.conn_info.is_none() {
+            return self.finish_lookup(store, id, LinkLookup::new(&fixed_data, ucd, req));
+        }
         let ratchet = self.begin_request(&mut rec, &req)?;
         rec.link = None;
         self.save(store, rec, ratchet, Batch::default())?;

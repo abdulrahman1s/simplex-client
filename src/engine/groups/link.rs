@@ -82,7 +82,9 @@ impl<A: AgentPort> Engine<A> {
             | AgentEvent::Err { .. }
             | AgentEvent::DecryptError { .. }
             | AgentEvent::RatchetSync { .. }
-            | AgentEvent::Switch { .. } => Ok(()),
+            | AgentEvent::Switch { .. }
+            | AgentEvent::LinkData { .. }
+            | AgentEvent::LinkUpdated { .. } => Ok(()),
         }
     }
 
@@ -102,7 +104,11 @@ impl<A: AgentPort> Engine<A> {
         }
         let link = short.unwrap_or(full);
         g.link = Some(link.clone());
+        let channel = g.channel.is_some();
         self.save_group(g)?;
+        if channel {
+            self.invite_channel_relays(group)?;
+        }
         self.emit(Event::GroupLink {
             group,
             link: Some(link),

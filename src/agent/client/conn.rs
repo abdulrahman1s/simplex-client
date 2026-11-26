@@ -20,6 +20,8 @@ pub(crate) struct StepState {
     /// The NEW, LKEY or SKEY of the current status is waiting for its answer.
     pub in_flight: bool,
     pub retry_at: i64,
+    /// The user data the LSET in flight carries: a newer update made meanwhile is sent after it.
+    pub lset_sent: Option<Vec<u8>>,
 }
 
 #[derive(Debug, Default)]

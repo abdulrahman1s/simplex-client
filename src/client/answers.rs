@@ -30,6 +30,7 @@ pub(super) fn answers(event: &Event) -> Option<(usize, Option<Want>)> {
         | Event::OpenFile { .. }
         | Event::Located { .. }
         | Event::GroupLink { .. }
+        | Event::ChannelRelay { .. }
         | Event::Call(_)
         | Event::Stream(_)
         | Event::Exited { .. } => None,

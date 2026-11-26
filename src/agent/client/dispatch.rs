@@ -150,9 +150,12 @@ impl AgentClient {
             return;
         }
         let r = match kind {
-            OpKind::NewQueue | OpKind::Lkey | OpKind::Lget | OpKind::Skey | OpKind::Request => {
-                self.on_step_answer(store, id, kind, answer)
-            }
+            OpKind::NewQueue
+            | OpKind::Lkey
+            | OpKind::Lget
+            | OpKind::Lset
+            | OpKind::Skey
+            | OpKind::Request => self.on_step_answer(store, id, kind, answer),
             OpKind::Sub => {
                 self.on_subscribed(id, answer);
                 Ok(())

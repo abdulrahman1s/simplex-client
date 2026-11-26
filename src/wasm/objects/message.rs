@@ -96,8 +96,9 @@ impl Message {
         }
     }
 
-    /// Who wrote it: a `Friend` or a `Member`; `null` for the user's own.
-    #[wasm_bindgen(getter, unchecked_return_type = "Friend | Member | null")]
+    /// Who wrote it: a `Friend` or a `Member`, the channel's `Group` for a post as the
+    /// channel; `null` for the user's own.
+    #[wasm_bindgen(getter, unchecked_return_type = "Friend | Member | Group | null")]
     pub fn author(&self) -> JsValue {
         let member = |name: &str, g| Member::named(Rc::clone(&self.shared), g, name.to_owned());
         match (&self.info.author, self.info.chat) {
@@ -107,6 +108,10 @@ impl Message {
             }
             (MessageAuthor::Friend, ChatRef::Group(g)) => member("", g).into(),
             (MessageAuthor::Member(name), ChatRef::Group(g)) => member(name, g).into(),
+            (MessageAuthor::Channel(_), ChatRef::Group(g)) => {
+                Group::new(Rc::clone(&self.shared), self.shared.group(g)).into()
+            }
+            (MessageAuthor::Channel(_), ChatRef::Direct(id)) => self.friend(id),
         }
     }
 

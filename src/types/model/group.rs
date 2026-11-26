@@ -55,6 +55,9 @@ pub struct ChatGroup {
     /// Seconds new messages last, when the group has disappearing messages on.
     #[serde(default)]
     pub timer: Option<i64>,
+    /// A channel's part (`useRelays`); `None` for a classic group.
+    #[serde(default)]
+    pub channel: Option<super::ChannelInfo>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

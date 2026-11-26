@@ -32,7 +32,7 @@ pub(super) fn link_data(profile: &GroupProfile) -> Result<Vec<u8>> {
 }
 
 /// `encodeJSON (CRDataGroup groupLinkId)`.
-pub(super) fn client_data() -> Result<String> {
+pub(crate) fn client_data() -> Result<String> {
     let id = GroupLinkId(random_vec(16).map_err(|_| fail(Code::RequestFailed, "no randomness"))?);
     serde_json::to_string(&serde_json::json!({ "groupLinkId": id }))
         .map_err(|e| fail(Code::RequestFailed, e.to_string()))

@@ -60,6 +60,12 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
             json,
             fallback_text,
             ..
+        }
+        | Request::SendSignedData {
+            tag,
+            json,
+            fallback_text,
+            ..
         } => {
             if let Some(why) = crate::chat::app_data::refusal(tag, json) {
                 return refuse(ErrorCode::RequestFailed, why);
@@ -75,7 +81,9 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
             ..
         }
         | Request::UpdateLive { text, .. } => text_fits(text),
-        Request::NewGroup(name) | Request::SetGroupProfile { name, .. } => {
+        Request::NewGroup(name)
+        | Request::NewChannel(name)
+        | Request::SetGroupProfile { name, .. } => {
             if !is_valid_name(name.trim()) {
                 return refuse(
                     ErrorCode::InvalidName,
@@ -133,6 +141,7 @@ pub fn check(request: &Request) -> Result<(), Refusal> {
         | Request::MarkRead(_)
         | Request::History { .. }
         | Request::Refresh
+        | Request::SetChatRelays(_)
         | Request::AddMember { .. }
         | Request::JoinGroup(_)
         | Request::LeaveGroup(_)

@@ -117,6 +117,15 @@ impl<A: AgentPort> Engine<A> {
             | ChatEvent::CallAnswer { .. }
             | ChatEvent::CallExtra { .. }
             | ChatEvent::CallEnd { .. }
+            | ChatEvent::GrpRelayInv(_)
+            | ChatEvent::GrpRelayAcpt { .. }
+            | ChatEvent::GrpRelayTest { .. }
+            | ChatEvent::GrpRelayNew { .. }
+            | ChatEvent::GrpRelayReject { .. }
+            | ChatEvent::GrpRelayCap(_)
+            | ChatEvent::GrpRoster { .. }
+            | ChatEvent::GrpRosterAck { .. }
+            | ChatEvent::GrpRosterRequest { .. }
             | ChatEvent::Ok
             | ChatEvent::Unknown { .. } => Ok(()),
         }

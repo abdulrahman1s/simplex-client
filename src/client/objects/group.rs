@@ -51,6 +51,7 @@ impl Group {
         self.client.add_member(self.id(), friend.id())
     }
 
+    /// In a channel the leave goes signed to every relay, as 7.1.4 requires.
     pub fn leave(&self) -> Result<()> {
         self.client.leave_group(self.id())
     }

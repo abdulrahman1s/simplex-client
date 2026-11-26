@@ -46,6 +46,13 @@ impl<A: AgentPort> Engine<A> {
         conn_info: &[u8],
     ) -> Result<()> {
         let g = self.group(group)?;
+        // Subscriber.hs: a channel is joined through its relays, never on its own link.
+        if g.channel.is_some() {
+            self.log.line(format_args!(
+                "ignored direct join request (group uses relays)"
+            ));
+            return Ok(());
+        }
         let admin = assert_user_role(&g, &GroupMemberRole::Admin).is_ok();
         let (Some((profile, key, v)), true) = (parse_join(conn_info), admin) else {
             // Subscriber.hs 1650: "ignored join request because host is no longer admin"

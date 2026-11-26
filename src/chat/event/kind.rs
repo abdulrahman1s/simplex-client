@@ -2,7 +2,7 @@
 
 macro_rules! event_kinds {
     ($($var:ident = $name:literal),+ $(,)?) => {
-        /// Every `x.*` event name 7.1.4 knows, including channel and roster ones that are kept as `Unknown`.
+        /// Every `x.*` event name 7.1.4 knows.
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
         pub enum EventKind {
             $($var,)+

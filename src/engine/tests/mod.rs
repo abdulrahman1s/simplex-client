@@ -5,6 +5,7 @@ mod address_join;
 mod address_settings;
 mod calls;
 mod change;
+mod channels;
 mod chats_changed;
 mod codes;
 mod conn_events;

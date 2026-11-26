@@ -1,9 +1,10 @@
 //! Create a contact address: a contact-mode queue with its short link, made in one NEW (Agent.hs `prepareConnectionLink'`, `createConnectionForLink'`, `encryptContactLinkData`).
-use crate::crypto::{Alg, KeyPair, random_vec, sha256};
+use crate::crypto::{Alg, KeyPair, sha256};
 use crate::encoding::VersionRange;
 use crate::smp::QueueIds;
 use crate::store::Store;
 
+use super::link_seal::sealed_link;
 use super::queues::{contact_address, link_sender_id, new_rcv_queue};
 use crate::agent::SmpQueueUri;
 use crate::agent::client::{AgentClient, AgentEvent, ConnId};
@@ -13,10 +14,7 @@ use crate::agent::links::{
     ShortLinkScheme, shorten_short_link,
 };
 use crate::agent::records::{Batch, ConnRecord, ConnStatus, NewLink, RcvQueue};
-use crate::agent::short_link::{
-    UserConnLinkData, UserContactData, UserLinkData, contact_short_link_kdf,
-    encode_sign_fixed_data, encode_sign_user_data, encrypt_fixed_data, encrypt_user_data,
-};
+use crate::agent::short_link::{UserContactData, UserLinkData};
 use crate::agent::version::supported_client_range;
 
 impl AgentClient {
@@ -78,12 +76,13 @@ impl AgentClient {
                 if link_sender_id(&l.corr_id) != ids.snd_id {
                     return Err(AgentError::Link("sender id differs from the link's".into()));
                 }
+                let typed = rec.link_creds.as_ref().map(|c| char::from(c.contact_type));
                 let link = ConnShortLink::Contact {
                     scheme: ShortLinkScheme::Server,
-                    contact_type: if rec.client_data.is_some() {
-                        ContactConnType::Group
-                    } else {
-                        ContactConnType::Contact
+                    contact_type: match typed.map(ContactConnType::from_char) {
+                        Some(Ok(t)) => t,
+                        _ if rec.client_data.is_some() => ContactConnType::Group,
+                        _ => ContactConnType::Contact,
                     },
                     server: rq.server,
                     link_key: l.link_key,
@@ -106,7 +105,7 @@ impl AgentClient {
 }
 
 /// `CRContactUri` of our queue; `sender_id` comes from IDS, or from the corrId for a short link.
-fn contact_uri(
+pub(super) fn contact_uri(
     rq: &RcvQueue,
     vr: VersionRange,
     sender_id: Vec<u8>,
@@ -134,24 +133,14 @@ fn address_link(
     user_data: Vec<u8>,
     client_data: Option<String>,
 ) -> Result<NewLink> {
-    let corr_id = random_vec(24)?;
     let root = KeyPair::generate(Alg::Ed25519)?;
-    let req = contact_uri(rq, vr, link_sender_id(&corr_id), client_data)?;
     let entity_id = sha256(root.public.as_bytes()).to_vec();
-    let (link_key, fixed) = encode_sign_fixed_data(&root.private, vr, &req, Some(entity_id))?;
-    let user_link = UserConnLinkData::Contact(UserContactData {
+    let ucd = UserContactData {
         direct: true,
         owners: Vec::new(),
         relays: Vec::new(),
         user_data: UserLinkData(user_data),
         ratchet_keys: None,
-    });
-    let user = encode_sign_user_data(&root.private, vr, user_link)?;
-    let (_, key) = contact_short_link_kdf(&link_key)?;
-    Ok(NewLink {
-        corr_id,
-        fixed: encrypt_fixed_data(&key, &fixed)?,
-        user: encrypt_user_data(&key, &user)?,
-        link_key,
-    })
+    };
+    Ok(sealed_link(rq, vr, &root.private, entity_id, client_data, |_| Ok(ucd))?.0)
 }
